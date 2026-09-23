@@ -1,0 +1,5 @@
+{
+  // Live Server no puede ejecutar TypeScript: sirve el frontend ya compilado.
+  // Antes de usarlo ejecuta: npm run build:web
+  "liveServer.settings.root": "/apps/web/dist"
+}

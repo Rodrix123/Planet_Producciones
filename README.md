@@ -1,43 +1,93 @@
-# my-app
+# Planet Producciones — Cotizador VIP 2026
 
-Created with [Better Fullstack](https://github.com/Marve10s/Better-Fullstack).
+Monorepo del sistema de cotizaciones de **Planet Producciones**. Contiene el
+frontend (`apps/web`) y el backend (`apps/server`) como workspaces
+independientes, además de configuración compartida en `packages/`.
 
-## Applications and resources
+## Estructura
 
-- **vanilla-vite** (typescript, frontend): `apps/web`; part `frontend:typescript:vanilla-vite`
-- **hono** (typescript, backend): `apps/server`; part `backend:typescript:hono`
-- **postgres** (universal, database): `packages/db`; part `database:universal:postgres`
-- **turborepo** (universal, workspaceRunner): `.`; part `workspacerunner:universal:turborepo`
-- **graphql-codegen** (universal, codeGeneration): `.`; part `codegeneration:universal:graphql-codegen`
-- **devcontainer** (universal, developerEnvironment): `.`; part `developerenvironment:universal:devcontainer`
-- **github-actions** (universal, continuousIntegration): `.`; part `continuousintegration:universal:github-actions`
+```
+.
+├── .devcontainer/        # Configuración de Dev Container
+├── .github/workflows/    # CI
+├── apps/
+│   ├── server/            # API Express (TypeScript) — cálculo, PDF, Excel, envío de correo
+│   │   └── src/index.ts
+│   └── web/                # Frontend estático (Vite + TypeScript)
+│       └── src/main.ts
+├── packages/
+│   └── config/            # tsconfig base compartido
+├── docker-compose.yml
+├── bts.jsonc / bts.lock.json
+└── package.json           # workspaces raíz
+```
 
-## Setup
+## Requisitos
 
-Install the SDKs for the selected languages before preparing dependencies. SwiftUI needs macOS, Xcode, and XcodeGen; Kotlin Android apps need a JDK and Android SDK; Flutter needs the Flutter SDK. Rust web apps also need the WebAssembly target and Trunk or Dioxus CLI.
+- Node.js >= 18
+- npm >= 9
 
-JavaScript dependencies are installed at the workspace root. Each native application keeps its own toolchain. Native package scripts require `bash` on PATH; install Git Bash on Windows. Run the shell commands below in Bash.
+## Instalación
 
-If dependencies were not prepared during creation, run:
-
-```sh
+```bash
 npm install
 ```
 
-Copy each application's `.env.example` to `.env` when present and configure database credentials before starting database-backed services.
+Esto instala las dependencias de todos los workspaces (`apps/server`,
+`apps/web`, `packages/config`).
 
-## Local development
+## Desarrollo
 
-Start the selected web applications and backend services together:
+```bash
+# Backend (http://localhost:3000)
+npm run dev:server
 
-```sh
+# Frontend (Vite dev server)
+npm run dev:web
+
+# Ambos a la vez
 npm run dev
 ```
 
-The supervisor stops the other services when one exits. Native mobile applications run separately so you can choose a simulator or device. Open Kotlin applications in Android Studio.
+Abrir la app en http://localhost:5173 (Vite). El navegador no ejecuta
+TypeScript directamente, por eso `apps/web/index.html` no funciona abierto
+con doble clic ni con Live Server sin compilar.
 
-## Connections
+## Build de producción
 
-See each application's README and environment file for its local endpoint.
+```bash
+npm run build
+npm start
+```
 
-Cross-language clients communicate over HTTP. Framework-specific clients such as tRPC are used only with compatible backends. Generated connection files identify the default backend; additional services retain their own paths and endpoints.
+Tras el build, el servidor sirve también el frontend compilado en
+http://localhost:3000.
+
+### Live Server (VS Code)
+
+`.vscode/settings.json` apunta Live Server a `apps/web/dist`. Ejecuta
+`npm run build:web` antes de pulsar "Go Live".
+
+## Variables de entorno
+
+Copia `apps/server/.env.example` a `apps/server/.env` y completa los valores
+reales (usuario/clave SMTP, correo de destino, puerto).
+
+## Docker
+
+```bash
+docker compose up --build
+```
+
+Levanta el backend en `:3000` y el frontend (servido por Nginx) en `:8080`.
+
+## Funcionalidad
+
+El sitio permite armar una cotización de producción técnica/eventos VIP,
+calcular el total en vivo, generar un PDF con marca de agua y un Excel
+ejecutivo del lado del cliente, y opcionalmente enviar la cotización al
+backend, que reenvía por correo el PDF/Excel a la gerencia.
+
+> Esta migración solo reorganiza el proyecto en un monorepo `apps/web` +
+> `apps/server` y convierte el código a TypeScript. No se modificó el
+> estilo visual ni el comportamiento funcional original.

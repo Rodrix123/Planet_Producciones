@@ -1,43 +1,20 @@
-# Dockerfile for my-app server
-# Optimized multi-stage build for Railway deployment
-
-# Build stage
-FROM node:20-alpine AS builder
-
+# Contexto de build: raíz del monorepo (ver docker-compose.yml)
+FROM node:20-alpine AS build
 WORKDIR /app
+COPY packages/config ./packages/config
+COPY apps/server/package*.json ./apps/server/
+WORKDIR /app/apps/server
+RUN npm install
+COPY apps/server ./
+RUN npm run build
 
-# Install pnpm/yarn if needed
-
-# Copy package files
-COPY package.json package-lock.json ./
-COPY apps/server/package.json ./apps/server/
-COPY packages/db/package.json ./packages/db/
-
-# Install dependencies
-RUN npm ci
-
-# Copy source code
-COPY . .
-
-# Build the application
-RUN npm run build --workspace=apps/server
-
-# Production stage
-FROM node:20-alpine AS runner
-
+FROM node:20-alpine
 WORKDIR /app
-
 ENV NODE_ENV=production
-ENV PORT=3000
-
-
-# Copy built application
-COPY --from=builder /app/apps/server/dist ./dist
-COPY --from=builder /app/apps/server/package.json ./
-
-# Install production dependencies only
-RUN npm ci --omit=dev
+COPY apps/server/package*.json ./
+RUN npm install --omit=dev
+COPY --from=build /app/apps/server/dist ./dist
+COPY --from=build /app/apps/server/assets ./assets
 
 EXPOSE 3000
-
 CMD ["node", "dist/index.js"]

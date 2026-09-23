@@ -1,7 +1,16 @@
-import tailwindcss from "@tailwindcss/vite";
-import { defineConfig } from "vite";
+import { defineConfig } from 'vite';
 
 export default defineConfig({
-  plugins: [tailwindcss()],
-  server: { port: 5173 },
+    root: '.',
+    // Rutas relativas en el build para que dist/ funcione desde cualquier
+    // servidor estático (Live Server, Express, Nginx).
+    base: './',
+    publicDir: 'public',
+    build: {
+        outDir: 'dist',
+        emptyOutDir: true
+    },
+    server: {
+        port: 5173
+    }
 });
