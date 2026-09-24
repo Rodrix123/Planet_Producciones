@@ -434,5 +434,51 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // --- Botón flotante de contacto rápido: WhatsApp o Correo ---
+    const WHATSAPP_NUMERO = '573185101502';
+    const CORREO_ASISTENCIA = 'mcluis004@gmail.com';
+    const btnContacto = document.getElementById('btnContacto') as HTMLButtonElement | null;
+
+    function construirMensajeAsistencia(): string {
+        const nombre = (document.getElementById('nombre') as HTMLInputElement)?.value.trim();
+        const tipoEvento = (document.getElementById('tipoEvento') as HTMLSelectElement)?.value;
+        const ciudad = (document.getElementById('ciudad') as HTMLSelectElement)?.value.split('(')[0].trim();
+        const totalActual = calcularCotizacion().total;
+
+        let mensaje = `Hola Planet Producciones,${nombre ? ` soy ${nombre} y` : ''} me gustaría recibir asesoría sobre sus servicios de eventos VIP.`;
+        if (tipoEvento) mensaje += `\nTipo de evento: ${tipoEvento}.`;
+        if (ciudad) mensaje += `\nUbicación: ${ciudad}.`;
+        if (totalActual > 0) mensaje += `\nPresupuesto estimado en el cotizador: ${formatterCOP.format(totalActual)}.`;
+        mensaje += '\n¿Podrían contactarme para ampliar la información?';
+        return mensaje;
+    }
+
+    btnContacto?.addEventListener('click', () => {
+        Swal.fire({
+            title: '¿Cómo deseas recibir asistencia?',
+            text: 'Elige el canal por el cual quieres que te contactemos.',
+            icon: 'question',
+            showDenyButton: true,
+            showCancelButton: true,
+            confirmButtonText: '<i class="fa-brands fa-whatsapp"></i> WhatsApp',
+            denyButtonText: '<i class="fa-solid fa-envelope"></i> Correo',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#25D366',
+            denyButtonColor: '#f97316',
+            cancelButtonColor: '#374151'
+        }).then((result: any) => {
+            const mensaje = construirMensajeAsistencia();
+
+            if (result.isConfirmed) {
+                const url = `https://wa.me/${WHATSAPP_NUMERO}?text=${encodeURIComponent(mensaje)}`;
+                window.open(url, '_blank', 'noopener,noreferrer');
+            } else if (result.isDenied) {
+                const asunto = 'Solicitud de Asistencia - Planet Producciones';
+                const url = `mailto:${CORREO_ASISTENCIA}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(mensaje)}`;
+                window.location.href = url;
+            }
+        });
+    });
+
     calcularCotizacion();
 });
