@@ -92,6 +92,26 @@ header {
     transform: translateY(-1px);
 }
 
+.back-home-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-light);
+    background-color: var(--bg-input);
+    border: 1px solid var(--border-color);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    text-decoration: none;
+    transition: border-color 0.2s, transform 0.2s;
+}
+
+.back-home-btn:hover {
+    border-color: var(--orange-main);
+    transform: translateY(-1px);
+}
+
 main {
     max-width: 1400px;
     margin: 1.5rem auto;
@@ -178,6 +198,7 @@ label {
 input[type="text"],
 input[type="email"],
 input[type="tel"],
+input[type="number"],
 select {
     width: 100%;
     background-color: var(--bg-input);
@@ -192,6 +213,72 @@ select {
 
 input:focus, select:focus {
     border-color: var(--orange-main);
+}
+
+.field-hint {
+    display: block;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 0.45rem;
+    line-height: 1.45;
+}
+
+.field-hint:empty {
+    display: none;
+}
+
+.field-hint strong {
+    color: #d1d5db;
+}
+
+.qty-box {
+    background-color: rgba(0,0,0,0.25);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 0.5rem 1.25rem;
+}
+
+.qty-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.7rem 0;
+    border-bottom: 1px dashed rgba(255,255,255,0.08);
+}
+
+.qty-row:last-child {
+    border-bottom: none;
+}
+
+.qty-name {
+    font-size: 0.85rem;
+    color: #e5e7eb;
+}
+
+.qty-price {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-left: 0.4rem;
+}
+
+.qty-row input[type="number"] {
+    width: 84px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.subsection-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin: 1rem 0 0.6rem;
+}
+
+.subsection-title:first-child {
+    margin-top: 0;
 }
 
 .checkbox-box {

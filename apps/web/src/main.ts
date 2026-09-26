@@ -63,99 +63,79 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Cálculo dinámico de cotización
+    // Lee el atributo data-incluye (lista separada por "|") y la devuelve como texto legible
+    function obtenerIncluye(el: Element): string {
+        const raw = el.getAttribute('data-incluye');
+        if (!raw) return '';
+        const partes = raw.split('|').map(p => p.trim()).filter(Boolean);
+        return partes.join(' • ');
+    }
+
+    // Cálculo dinámico de cotización: lee genéricamente cualquier <select>, checkbox o
+    // input de cantidad marcado con las clases .precio-select / .precio-check / .precio-qty
+    // y sus atributos data-precio / data-tag / data-nombre / data-incluye. Esto permite
+    // ampliar el catálogo de precios (apps/web/index.html) sin tocar esta lógica.
     function calcularCotizacion(): DatosCotizacion {
         let total = 0;
         const itemsSeleccionados: ItemSeleccionado[] = [];
 
-        // 1. Ubicación
-        const ciudadSelect = document.getElementById('ciudad') as HTMLSelectElement | null;
-        if (ciudadSelect && ciudadSelect.selectedIndex > 0) {
-            const opt = ciudadSelect.options[ciudadSelect.selectedIndex];
-            const precio = parseFloat(opt.getAttribute('data-precio') || '') || 0;
-            if (precio > 0) {
-                total += precio;
-                itemsSeleccionados.push({
-                    tag: 'UBICACIÓN & LOGÍSTICA',
-                    nombre: opt.value.split('(')[0].trim(),
-                    descripcion: 'Cobertura técnica y traslado de personal especializado.',
-                    precio: precio
-                });
-            }
-        }
+        // 1. Selects de catálogo (una sola opción por categoría)
+        const selects = form.querySelectorAll<HTMLSelectElement>('select.precio-select');
+        selects.forEach(select => {
+            const hint = document.getElementById(`${select.id}-hint`);
+            const opt = select.options[select.selectedIndex];
+            const incluye = opt ? obtenerIncluye(opt) : '';
 
-        // 2. Montaje
-        const espacioSelect = document.getElementById('tipoEspacio') as HTMLSelectElement | null;
-        if (espacioSelect && espacioSelect.selectedIndex > 0) {
-            const opt = espacioSelect.options[espacioSelect.selectedIndex];
-            const precio = parseFloat(opt.getAttribute('data-precio') || '') || 0;
-            if (precio > 0) {
-                total += precio;
-                itemsSeleccionados.push({
-                    tag: 'MONTAJE & ESTRUCTURA',
-                    nombre: opt.value.split('(')[0].trim(),
-                    descripcion: 'Estructura modular de alta resistencia con acabados de lujo.',
-                    precio: precio
-                });
+            if (hint) {
+                hint.innerHTML = (select.selectedIndex > 0 && incluye) ? `<strong>Incluye:</strong> ${incluye}` : '';
             }
-        }
 
-        // 3. Audio
-        const sonidoSelect = document.getElementById('tipoSonido') as HTMLSelectElement | null;
-        if (sonidoSelect && sonidoSelect.selectedIndex > 0) {
-            const opt = sonidoSelect.options[sonidoSelect.selectedIndex];
+            if (select.selectedIndex <= 0 || !opt) return;
             const precio = parseFloat(opt.getAttribute('data-precio') || '') || 0;
-            if (precio > 0) {
-                total += precio;
-                itemsSeleccionados.push({
-                    tag: 'SISTEMA DE AUDIO',
-                    nombre: opt.value.split('-')[0].trim(),
-                    descripcion: 'Sistema de sonido profesional de alta fidelidad para gran cobertura.',
-                    precio: precio
-                });
-            }
-        }
+            if (precio <= 0) return;
 
-        // 4. Iluminación
-        const ilumSelect = document.getElementById('iluminacion') as HTMLSelectElement | null;
-        if (ilumSelect && ilumSelect.selectedIndex > 0) {
-            const opt = ilumSelect.options[ilumSelect.selectedIndex];
-            const precio = parseFloat(opt.getAttribute('data-precio') || '') || 0;
-            if (precio > 0) {
-                total += precio;
-                itemsSeleccionados.push({
-                    tag: 'ILUMINACIÓN',
-                    nombre: opt.value.split('-')[0].trim(),
-                    descripcion: 'Luces móviles DMX, cabezas robóticas y diseño atmosférico.',
-                    precio: precio
-                });
-            }
-        }
-
-        // 5. Efectos Especiales FX
-        const chkSparkulas = document.getElementById('chkSparkulas') as HTMLInputElement | null;
-        if (chkSparkulas && chkSparkulas.checked) {
-            const precio = parseFloat(chkSparkulas.getAttribute('data-precio') || '') || 0;
             total += precio;
             itemsSeleccionados.push({
-                tag: 'EFECTO ESPECIAL FX',
-                nombre: '2 Sparkulas (Chispas Frías)',
-                descripcion: 'Chispas para entrada triunfal y momentos cumbre del evento.',
-                precio: precio
+                tag: select.dataset.tag || 'SERVICIO',
+                nombre: opt.value,
+                descripcion: incluye,
+                precio
             });
-        }
+        });
 
-        const chkNiebla = document.getElementById('chkNiebla') as HTMLInputElement | null;
-        if (chkNiebla && chkNiebla.checked) {
-            const precio = parseFloat(chkNiebla.getAttribute('data-precio') || '') || 0;
+        // 2. Checkboxes de efectos / add-ons
+        const checks = form.querySelectorAll<HTMLInputElement>('input.precio-check');
+        checks.forEach(chk => {
+            if (!chk.checked) return;
+            const precio = parseFloat(chk.getAttribute('data-precio') || '') || 0;
+            if (precio <= 0) return;
+
             total += precio;
             itemsSeleccionados.push({
-                tag: 'EFECTO ESPECIAL FX',
-                nombre: 'Niebla Baja (Efecto Nube)',
-                descripcion: 'Nube densa a ras de piso ideal para baile principal.',
-                precio: precio
+                tag: chk.dataset.tag || 'SERVICIO',
+                nombre: chk.dataset.nombre || chk.id,
+                descripcion: obtenerIncluye(chk),
+                precio
             });
-        }
+        });
+
+        // 3. Ítems por cantidad (mobiliario y extras cobrados "c/u")
+        const qtys = form.querySelectorAll<HTMLInputElement>('input.precio-qty');
+        qtys.forEach(input => {
+            const cantidad = parseInt(input.value, 10) || 0;
+            if (cantidad <= 0) return;
+            const precioUnit = parseFloat(input.getAttribute('data-precio-unit') || '') || 0;
+            const precio = cantidad * precioUnit;
+            if (precio <= 0) return;
+
+            total += precio;
+            itemsSeleccionados.push({
+                tag: input.dataset.tag || 'SERVICIO',
+                nombre: `${cantidad} x ${input.dataset.nombre || input.id} (${formatterCOP.format(precioUnit)} c/u)`,
+                descripcion: obtenerIncluye(input),
+                precio
+            });
+        });
 
         // Actualizar UI en vivo
         precioTotalEl.textContent = formatterCOP.format(total);
@@ -178,6 +158,8 @@ document.addEventListener('DOMContentLoaded', () => {
     form.addEventListener('change', calcularCotizacion);
 
     // Plantilla HTML de Alta Resolución para PDF con Marca de Agua
+    // Los ítems se agrupan por categoría (tag) para que el desglose quede organizado,
+    // y cada fila muestra debajo del nombre lo que incluye el paquete (si aplica).
     function construirHTMLCotizacion(
         datosCliente: DatosCliente,
         datosCotizacion: DatosCotizacion,
@@ -185,20 +167,33 @@ document.addEventListener('DOMContentLoaded', () => {
         refNum: string,
         fechaHoy: string
     ): HTMLDivElement {
+        const grupos = new Map<string, ItemSeleccionado[]>();
+        datosCotizacion.itemsSeleccionados.forEach(item => {
+            if (!grupos.has(item.tag)) grupos.set(item.tag, []);
+            grupos.get(item.tag)!.push(item);
+        });
+
         let filasTabla = '';
-        datosCotizacion.itemsSeleccionados.forEach((item, index) => {
+        let contador = 0;
+        grupos.forEach((items, tag) => {
             filasTabla += `
-                <tr style="border-bottom: 1px solid #e2e8f0; background-color: ${index % 2 === 0 ? 'rgba(255,255,255,0.85)' : 'rgba(248,250,252,0.85)'};">
-                    <td style="padding: 10px; text-align: center; font-weight: bold; color: #64748b; font-size: 11px;">${index + 1}</td>
-                    <td style="padding: 10px;">
-                        <span style="background-color: #ffedd5; color: #c2410c; font-size: 8px; font-weight: 800; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 4px; text-transform: uppercase;">${item.tag}</span>
-                        <div style="font-weight: 700; color: #0f172a; font-size: 11px;">
-                            ${item.nombre} <span style="font-weight: 400; color: #64748b;">— ${item.descripcion}</span>
-                        </div>
-                    </td>
-                    <td style="padding: 10px; text-align: right; font-weight: 800; color: #0f172a; font-size: 11px;">$ ${item.precio.toLocaleString('es-CO')}</td>
+                <tr style="page-break-inside: avoid;">
+                    <td colspan="3" style="padding: 7px 10px; background-color: #ffedd5; color: #c2410c; font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px;">${tag}</td>
                 </tr>
             `;
+            items.forEach(item => {
+                contador++;
+                filasTabla += `
+                    <tr style="border-bottom: 1px solid #e2e8f0; background-color: ${contador % 2 === 0 ? 'rgba(255,255,255,0.92)' : 'rgba(248,250,252,0.92)'}; page-break-inside: avoid;">
+                        <td style="padding: 8px 10px; text-align: center; font-weight: bold; color: #94a3b8; font-size: 10px; vertical-align: top;">${contador}</td>
+                        <td style="padding: 8px 10px;">
+                            <div style="font-weight: 700; color: #0f172a; font-size: 10.5px;">${item.nombre}</div>
+                            ${item.descripcion ? `<div style="font-size: 8.5px; color: #64748b; margin-top: 2px; line-height: 1.35;">Incluye: ${item.descripcion}</div>` : ''}
+                        </td>
+                        <td style="padding: 8px 10px; text-align: right; font-weight: 800; color: #0f172a; font-size: 10.5px; white-space: nowrap; vertical-align: top;">$ ${item.precio.toLocaleString('es-CO')}</td>
+                    </tr>
+                `;
+            });
         });
 
         const container = document.createElement('div');
@@ -207,10 +202,9 @@ document.addEventListener('DOMContentLoaded', () => {
         container.style.backgroundColor = '#ffffff';
         container.style.fontFamily = "'Segoe UI', Arial, sans-serif";
         container.style.position = 'relative';
-        container.style.overflow = 'hidden';
 
         container.innerHTML = `
-            <!-- Marca de Agua con logo.png (Capasuperpuesta z-index:10 con opacidad suave) -->
+            <!-- Marca de Agua con logo.png (Capa superpuesta z-index:10 con opacidad suave) -->
             <div style="position: absolute; top: 52%; left: 50%; transform: translate(-50%, -50%); opacity: 0.12; pointer-events: none; z-index: 10; text-align: center; width: 100%;">
                 <img src="${logoBase64}" style="width: 380px; max-width: 80%; height: auto; display: block; margin: 0 auto;">
             </div>
@@ -235,7 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
 
                 <!-- Datos del Cliente -->
-                <div style="margin-top: 15px; background-color: rgba(248, 250, 252, 0.88); border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 16px;">
+                <div style="margin-top: 15px; background-color: rgba(248, 250, 252, 0.88); border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 16px; page-break-inside: avoid;">
                     <div style="font-size: 10px; font-weight: 800; color: #ea580c; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">1. INFORMACIÓN DEL CLIENTE Y DETALLES DEL EVENTO</div>
                     <table style="width: 100%; font-size: 10.5px; border-collapse: collapse; color: #334155;">
                         <tr>
@@ -248,7 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </tr>
                         <tr>
                             <td style="padding: 2px 0;"><strong>WhatsApp:</strong> ${datosCliente.telefono}</td>
-                            <td style="padding: 2px 0;"><strong>Ubicación / Sede:</strong> ${datosCliente.ciudad} (${datosCliente.lugar || 'Sede a confirmar'})</td>
+                            <td style="padding: 2px 0;"><strong>Ubicación / Sede:</strong> ${datosCliente.ciudad || 'Por confirmar'} (${datosCliente.lugar || 'Sede a confirmar'})</td>
                         </tr>
                     </table>
                 </div>
@@ -265,13 +259,17 @@ document.addEventListener('DOMContentLoaded', () => {
                             </tr>
                         </thead>
                         <tbody>
-                            ${filasTabla}
+                            ${filasTabla || `
+                                <tr>
+                                    <td colspan="3" style="padding: 14px; text-align: center; color: #94a3b8; font-size: 10px;">No se seleccionaron servicios adicionales.</td>
+                                </tr>
+                            `}
                         </tbody>
                     </table>
                 </div>
 
                 <!-- Bloque Inferior: Garantía y Total Verde -->
-                <div style="margin-top: 18px; display: flex; gap: 12px; align-items: center;">
+                <div style="margin-top: 18px; display: flex; gap: 12px; align-items: center; page-break-inside: avoid;">
                     <div style="flex: 1.2; border: 1px dashed #cbd5e1; border-radius: 10px; padding: 10px; background-color: rgba(255,255,255,0.9);">
                         <div style="font-size: 9px; font-weight: 800; color: #475569; text-transform: uppercase; margin-bottom: 3px;">GARANTÍA & COMPROMISO PLANET PRODUCCIONES</div>
                         <div style="font-size: 8.5px; color: #64748b; line-height: 1.3;">
@@ -285,13 +283,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
 
                 <!-- Términos y Condiciones -->
-                <div style="margin-top: 15px; background-color: rgba(248, 250, 252, 0.9); border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px;">
+                <div style="margin-top: 15px; background-color: rgba(248, 250, 252, 0.9); border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; page-break-inside: avoid;">
                     <div style="font-size: 9px; font-weight: 800; color: #475569; text-transform: uppercase; margin-bottom: 4px;">TÉRMINOS Y CONDICIONES DE RESERVA</div>
                     <ol style="font-size: 8px; color: #64748b; margin: 0; padding-left: 12px; line-height: 1.35;">
-                        <li>Esta cotización tiene una validez de 15 días calendario a partir de la fecha de emisión.</li>
-                        <li>Para congelar la fecha se requiere un anticipo del 50% y firma del contrato de servicio.</li>
-                        <li>El saldo restante (50%) debe cancelarse máximo 3 días antes de la realización del evento.</li>
-                        <li>Precios sujetos a verificación en caso de modificaciones en el requerimiento técnico o cambio de locación.</li>
+                        <li>El tiempo máximo para reservar la fecha del evento será de 30 días a partir de la fecha de esta cotización.</li>
+                        <li>La fecha se separa con el 30% del valor total del evento.</li>
+                        <li>El evento debe estar cancelado en su totalidad máximo 8 días antes de su realización.</li>
+                        <li>La planta eléctrica de backup, si se usa, tiene un costo adicional de $100.000 por hora después de agotarse el combustible inicial con el que viene la planta.</li>
+                        <li>Precios sujetos a verificación en caso de modificaciones en el requerimiento técnico, Rider/Backline de artistas o cambio de locación.</li>
                     </ol>
                 </div>
             </div>
@@ -324,7 +323,7 @@ document.addEventListener('DOMContentLoaded', () => {
             aoaData.push([
                 index + 1,
                 item.tag,
-                `${item.nombre} - ${item.descripcion}`,
+                item.descripcion ? `${item.nombre} — Incluye: ${item.descripcion}` : item.nombre,
                 item.precio
             ]);
         });
@@ -337,7 +336,7 @@ document.addEventListener('DOMContentLoaded', () => {
         worksheet['!cols'] = [
             { wch: 8 },  // Ítem
             { wch: 26 }, // Categoría
-            { wch: 65 }, // Descripción
+            { wch: 75 }, // Descripción
             { wch: 18 }  // Precio COP
         ];
 
@@ -402,7 +401,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const correo = (document.getElementById('correo') as HTMLInputElement).value.trim();
         const telefono = (document.getElementById('telefono') as HTMLInputElement).value.trim();
         const tipoEvento = (document.getElementById('tipoEvento') as HTMLSelectElement).value;
-        const ciudad = (document.getElementById('ciudad') as HTMLSelectElement).value.split('(')[0].trim();
+        const ciudad = (document.getElementById('transporte') as HTMLSelectElement).value;
         const lugar = (document.getElementById('lugar') as HTMLSelectElement).value;
 
         if (!nombre || !correo || !telefono) {
@@ -434,6 +433,8 @@ document.addEventListener('DOMContentLoaded', () => {
             didOpen: () => { Swal.showLoading(); }
         });
 
+        let elementoHTML: HTMLDivElement | null = null;
+
         try {
             const datosCliente: DatosCliente = { nombre, correo, telefono, tipoEvento, ciudad, lugar };
             const refNum = `PL-2026-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -443,22 +444,38 @@ document.addEventListener('DOMContentLoaded', () => {
             const logoBase64 = await obtenerLogoBase64();
 
             // Renderizado PDF HD
-            const elementoHTML = construirHTMLCotizacion(datosCliente, datosCotizacion, logoBase64, refNum, fechaHoy);
+            elementoHTML = construirHTMLCotizacion(datosCliente, datosCotizacion, logoBase64, refNum, fechaHoy);
             document.body.appendChild(elementoHTML);
 
-            const nombreArchivoPdf = `Cotizacion_Planet_${nombre.replace(/\s+/g, '_')}.pdf`;
+            // Vuelve el scroll al origen: si la página quedó desplazada (formulario largo)
+            // html2canvas calcula mal el recorte del elemento y el PDF sale en blanco.
+            window.scrollTo(0, 0);
+
+            // Espera a que el navegador termine de pintar el layout completo (incluida
+            // la imagen del logo) antes de capturarlo.
+            await new Promise<void>(resolve => {
+                requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+            });
+
             const opt = {
                 margin:       [0.2, 0.2, 0.2, 0.2],
                 filename:     nombreArchivoPdf,
                 image:        { type: 'jpeg', quality: 1.0 },
-                html2canvas:  { scale: 3, useCORS: true, allowTaint: true, logging: false },
-                jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+                html2canvas:  {
+                    scale: 2,
+                    useCORS: true,
+                    allowTaint: true,
+                    logging: false
+                },
+                jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' },
+                // Evita que una fila de la tabla quede cortada entre dos páginas del PDF
+                // (usa el "page-break-inside: avoid" de cada <tr>, ver construirHTMLCotizacion).
+                pagebreak:    { mode: ['css', 'legacy'] }
             };
 
-            const workerPdf = html2pdf().set(opt).from(elementoHTML);
-            await workerPdf.save();
-            const pdfBlob: Blob = await workerPdf.outputPdf('blob');
+            await html2pdf().set(opt).from(elementoHTML).save();
             document.body.removeChild(elementoHTML);
+            elementoHTML = null;
 
             // Exportación Excel Profesional
             const { blob: excelBlob, nombreArchivo: nombreArchivoExcel } =
@@ -496,6 +513,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (error) {
             console.error(error);
+            if (elementoHTML && elementoHTML.parentNode) {
+                document.body.removeChild(elementoHTML);
+            }
             Swal.fire({
                 icon: 'error',
                 title: 'Error de Procesamiento',
