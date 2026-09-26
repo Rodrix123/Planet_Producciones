@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión | Planet Producciones</title>
+
+    <link rel="icon" type="image/png" href="logo.png?v=2">
+    <link rel="shortcut icon" type="image/png" href="logo.png?v=2">
+    <link rel="apple-touch-icon" href="logo.png?v=2">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="landing-body">
+
+    <header class="promo-header">
+        <div class="header-container">
+            <a href="index.html" class="logo-box" style="text-decoration:none;">
+                <img src="logo.png?v=2" alt="Planet Producciones Logo" class="logo-img">
+                <div class="logo-text">
+                    <h1>Planet Producciones</h1>
+                    <p>Eventos VIP & Producción Técnica</p>
+                </div>
+            </a>
+
+            <a href="index.html" class="back-home-btn">
+                <i class="fa-solid fa-arrow-left"></i> Volver al Inicio
+            </a>
+        </div>
+    </header>
+
+    <main>
+        <section class="login-section">
+            <div class="login-card">
+                <div class="login-card-header">
+                    <img src="logo.png?v=2" alt="Planet Producciones">
+                    <h2>Iniciar Sesión</h2>
+                    <p>Acceso para el equipo de Planet Producciones</p>
+                </div>
+
+                <form id="loginForm" onsubmit="return false;">
+                    <div class="login-form-group">
+                        <label for="loginUsuario">Usuario o Correo</label>
+                        <input type="text" id="loginUsuario" placeholder="usuario@planetproducciones.com" autocomplete="username">
+                    </div>
+                    <div class="login-form-group">
+                        <label for="loginPassword">Contraseña</label>
+                        <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
+                    </div>
+
+                    <div class="login-options-row">
+                        <label class="checkbox-label" style="margin-bottom:0;">
+                            <input type="checkbox" id="loginRecordar">
+                            <span>Recordarme</span>
+                        </label>
+                        <a href="#">¿Olvidaste tu contraseña?</a>
+                    </div>
+
+                    <button type="submit" id="btnLogin" class="submit-btn">
+                        <i class="fa-solid fa-right-to-bracket"></i>
+                        <span>Iniciar Sesión</span>
+                    </button>
+
+                    <div id="loginStatusMsg" class="login-status-msg">
+                        <i class="fa-solid fa-circle-info"></i> El inicio de sesión estará disponible próximamente.
+                    </div>
+                </form>
+
+                <a href="index.html" class="login-back-link">← Volver a la página principal</a>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="/src/login.ts"></script>
+</body>
+</html>

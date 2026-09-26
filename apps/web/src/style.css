@@ -92,6 +92,26 @@ header {
     transform: translateY(-1px);
 }
 
+.back-home-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-light);
+    background-color: var(--bg-input);
+    border: 1px solid var(--border-color);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    text-decoration: none;
+    transition: border-color 0.2s, transform 0.2s;
+}
+
+.back-home-btn:hover {
+    border-color: var(--orange-main);
+    transform: translateY(-1px);
+}
+
 main {
     max-width: 1400px;
     margin: 1.5rem auto;

@@ -3,29 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Planet Producciones | Cotizador VIP 2026</title>
+    <title>Planet Producciones | Producción Técnica & Eventos VIP</title>
+    <meta name="description" content="Sonido, iluminación, pantallas LED y efectos especiales para bodas, fiestas de 15 años, grados y eventos corporativos VIP en el Eje Cafetero.">
 
-    <!-- Favicon optimizado con Cache-Buster para forzar actualización en la pestaña -->
     <link rel="icon" type="image/png" href="logo.png?v=2">
     <link rel="shortcut icon" type="image/png" href="logo.png?v=2">
     <link rel="apple-touch-icon" href="logo.png?v=2">
 
-    <!-- CDN LIBRERÍAS EXTERNAS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-    <!-- LIBRERÍA HTML2PDF (Motor PDF Alta Resolución) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-
-    <!-- LIBRERÍA EXCEL (SheetJS) -->
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
-<body>
+<body class="landing-body">
 
-    <header>
+    <header class="promo-header">
         <div class="header-container">
             <div class="logo-box">
-                <!-- Logo real cargado desde logo.png -->
                 <img src="logo.png?v=2" alt="Planet Producciones Logo" class="logo-img">
                 <div class="logo-text">
                     <h1>Planet Producciones</h1>
@@ -33,441 +24,181 @@
                 </div>
             </div>
 
-            <a href="https://www.instagram.com/planet.producciones/" target="_blank" rel="noopener noreferrer" class="insta-btn">
-                <i class="fa-brands fa-instagram"></i> @planet.producciones
-            </a>
+            <nav class="promo-nav">
+                <a href="#inicio">Inicio</a>
+                <a href="#servicios">Servicios</a>
+                <a href="#nosotros">Por Qué Elegirnos</a>
+                <a href="#contacto">Contacto</a>
+            </nav>
+
+            <div class="nav-cta-group">
+                <a href="login.html" class="login-link"><i class="fa-solid fa-right-to-bracket"></i> Iniciar Sesión</a>
+                <a href="cotizador.html" class="submit-btn nav-cta-btn"><i class="fa-solid fa-file-invoice-dollar"></i> Cotizar Ahora</a>
+            </div>
         </div>
     </header>
 
-    <main>
-        <div class="layout-grid">
+    <main class="promo-main">
 
-            <div class="card-panel">
-                <div class="section-header">
-                    <h2><i class="fa-solid fa-sliders" style="color: var(--orange-main);"></i> Diseña tu Cotización</h2>
-                    <p>Selecciona los componentes para tu evento en 2026 y descarga tus archivos en PDF y Excel.</p>
+        <!-- HERO -->
+        <section class="hero-section" id="inicio">
+            <div class="hero-content">
+                <div class="hero-logo-box">
+                    <img src="logo.png?v=2" alt="Planet Producciones">
                 </div>
 
-                <form id="quoteForm" onsubmit="return false;">
+                <div class="pill-badge">
+                    <i class="fa-solid fa-star"></i> +10 Años de Experiencia &nbsp;•&nbsp; Eventos VIP en el Eje Cafetero
+                </div>
 
-                    <!-- 1. Datos del Cliente -->
-                    <div class="form-group">
-                        <div class="form-section-title">
-                            <i class="fa-solid fa-user-astronaut"></i> 1. Datos de Contacto
-                        </div>
-                        <div class="grid-3">
-                            <div>
-                                <label for="nombre">Nombre Completo *</label>
-                                <input type="text" id="nombre" required placeholder="Ej. Valentina Gómez">
-                            </div>
-                            <div>
-                                <label for="correo">Correo Electrónico *</label>
-                                <input type="email" id="correo" required placeholder="correo@ejemplo.com">
-                            </div>
-                            <div>
-                                <label for="telefono">Teléfono / WhatsApp *</label>
-                                <input type="tel" id="telefono" required placeholder="+57 300 123 4567">
-                            </div>
-                        </div>
-                    </div>
+                <h1 class="hero-title">Producción Técnica de Alto Impacto para tu Evento VIP</h1>
 
-                    <!-- 2. Ubicación y Tipo de Evento -->
-                    <div class="form-group">
-                        <div class="form-section-title">
-                            <i class="fa-solid fa-location-dot"></i> 2. Cobertura & Evento
-                        </div>
-                        <div class="grid-2">
-                            <div>
-                                <label for="tipoEvento">Tipo de Evento</label>
-                                <select id="tipoEvento">
-                                    <option value="" selected>-- Selecciona Tipo de Evento --</option>
-                                    <option value="Boda VIP / Matrimonio">Boda VIP / Matrimonio</option>
-                                    <option value="Fiesta de 15 Años Deluxe">Fiesta de 15 Años Deluxe</option>
-                                    <option value="Evento Corporativo / Gala">Evento Corporativo / Gala</option>
-                                    <option value="Grado / Prom Night">Grado / Prom Night</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="lugar">Sede / Recinto</label>
-                                <select id="lugar">
-                                    <option value="" selected>-- Selecciona Sede --</option>
-                                    <option value="Hacienda La Soledad">Hacienda La Soledad</option>
-                                    <option value="Centro de Eventos VIP">Centro de Eventos VIP</option>
-                                    <option value="Recinto Privado">Recinto Privado / Sede Propia</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
+                <p class="hero-desc">
+                    Sonido profesional, iluminación robótica, pantallas LED y efectos especiales para
+                    bodas, fiestas de 15 años, grados y eventos corporativos. Equipos de primer nivel
+                    y un equipo técnico dedicado, de principio a fin.
+                </p>
 
-                    <!-- 3. Transporte -->
-                    <div class="form-group">
-                        <div class="form-section-title">
-                            <i class="fa-solid fa-truck-fast"></i> 3. Transporte y Gastos de Viaje
-                        </div>
-                        <div class="grid-2">
-                            <div>
-                                <label for="transporte">Destino del Evento</label>
-                                <select id="transporte" class="precio-select" data-tag="TRANSPORTE Y LOGÍSTICA">
-                                    <option value="" data-precio="0" selected>-- Selecciona Destino --</option>
-                                    <option value="Manizales" data-precio="450000">Manizales — $450.000</option>
-                                    <option value="Chinchiná - Santágueda" data-precio="550000">Chinchiná - Santágueda — $550.000</option>
-                                    <option value="Pereira" data-precio="900000">Pereira — $900.000</option>
-                                    <option value="Armenia" data-precio="1000000">Armenia — $1.000.000</option>
-                                </select>
-                                <small class="field-hint" id="transporte-hint"></small>
-                            </div>
-                        </div>
-                    </div>
+                <div class="hero-buttons">
+                    <a href="cotizador.html" class="submit-btn hero-btn-primary"><i class="fa-solid fa-file-invoice-dollar"></i> Cotizar Ahora</a>
+                    <a href="#servicios" class="hero-btn-outline"><i class="fa-solid fa-circle-play"></i> Ver Servicios</a>
+                </div>
 
-                    <!-- 4. Montaje / Carpa -->
-                    <div class="form-group">
-                        <div class="form-section-title">
-                            <i class="fa-solid fa-building-columns"></i> 4. Montaje & Carpas Convencionales
-                        </div>
-                        <div class="grid-2">
-                            <div>
-                                <label for="carpa">Carpa Convencional Blanca</label>
-                                <select id="carpa" class="precio-select" data-tag="MONTAJE & CARPAS">
-                                    <option value="" data-precio="0" selected>-- Sin Carpa / No Aplica --</option>
-                                    <option value="Carpa de 3 x 3 Blanca" data-precio="200000">Carpa de 3 x 3 Blanca — $200.000</option>
-                                    <option value="Carpa de 4 x 3 Blanca" data-precio="300000">Carpa de 4 x 3 Blanca — $300.000</option>
-                                    <option value="Carpa de 4 x 4 Blanca" data-precio="400000">Carpa de 4 x 4 Blanca — $400.000</option>
-                                    <option value="Carpa de 6 x 4 Blanca" data-precio="450000">Carpa de 6 x 4 Blanca — $450.000</option>
-                                </select>
-                                <small class="field-hint" id="carpa-hint"></small>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 5. Amplificación / Sonido -->
-                    <div class="form-group">
-                        <div class="form-section-title">
-                            <i class="fa-solid fa-volume-high"></i> 5. Amplificación y Sonido
-                        </div>
-                        <div class="grid-2">
-                            <div>
-                                <label for="sonidoCeremonia">Sonido para Ceremonia</label>
-                                <select id="sonidoCeremonia" class="precio-select" data-tag="SONIDO PARA CEREMONIA">
-                                    <option value="" data-precio="0" selected>-- No incluir --</option>
-                                    <option value="Set de Sonido para Ceremonia" data-precio="700000" data-incluye="2 Sistemas lineales de rango completo|1 Consola con efectos|1 Micrófono Inalámbrico Shure Beta 58|Nota: este valor puede variar según exigencias del grupo">Set de Sonido para Ceremonia — $700.000</option>
-                                    <option value="Set de Sonido para Ceremonia con Amplificación (1 voz + 1-2 instrumentos)" data-precio="800000" data-incluye="2 Sistemas lineales de rango completo|1 QSC K12 para retorno|1 Micrófono Inalámbrico Shure Beta 58|1 Consola de 12 canales|Micrófonos y líneas|Stand para micrófonos">Sonido Ceremonia con Amplificación (1 voz + instr.) — $800.000</option>
-                                </select>
-                                <small class="field-hint" id="sonidoCeremonia-hint"></small>
-                            </div>
-                            <div>
-                                <label for="sonidoCoctel">Sonido para Cóctel de Bienvenida</label>
-                                <select id="sonidoCoctel" class="precio-select" data-tag="SONIDO PARA CÓCTEL DE BIENVENIDA">
-                                    <option value="" data-precio="0" selected>-- No incluir --</option>
-                                    <option value="Set de Sonido para Cóctel de Bienvenida" data-precio="750000" data-incluye="2 Sistemas lineales de rango completo|1 Micrófono Inalámbrico Shure Beta 58|1 Mesa Profesional para DJ|Nota: este valor puede variar según exigencias del grupo">Set de Sonido para Cóctel — $750.000</option>
-                                    <option value="Set de Sonido para Cóctel con Amplificación (1 voz + 1-2 instrumentos)" data-precio="800000" data-incluye="2 Sistemas lineales de rango completo|1 QSC K12 para retorno|1 Micrófono Inalámbrico Shure Beta 58 (únicamente si hay brindis)|1 Consola de 12 canales|1 Mesa Profesional para DJ|Micrófonos y líneas|Stand para micrófonos">Sonido Cóctel con Amplificación (1 voz + instr.) — $800.000</option>
-                                </select>
-                                <small class="field-hint" id="sonidoCoctel-hint"></small>
-                            </div>
-                            <div>
-                                <label for="sonidoPrincipal">Sonido Principal</label>
-                                <select id="sonidoPrincipal" class="precio-select" data-tag="SONIDO PRINCIPAL">
-                                    <option value="" data-precio="0" selected>-- No incluir --</option>
-                                    <option value="Sonido Principal Ambiental" data-precio="1050000" data-incluye="2 Sistemas Lineales EV|2 QSC K12 para retorno|1 Mesa Profesional para DJ|1 Micrófono Inalámbrico Shure Beta 58">Sonido Principal Ambiental — $1.050.000</option>
-                                    <option value="Sonido Principal Convencional" data-precio="2200000" data-incluye="2 QSC KW|2 Bajos QSC KW 181|2 QSC K12 para retorno|1 Consola Digital|1 Procesador Digital Fane|1 Computador|1 Mesa Profesional para DJ|1 Micrófono Inalámbrico Shure Beta 58">Sonido Principal Convencional — $2.200.000</option>
-                                    <option value="Sonido Principal Line Array (4 Cajas RCF HDL20-A)" data-precio="2700000" data-incluye="4 Cajas RCF HDL20-A|2 Subwoofer Dobles JBL SRX828 SP|2 QSC K12 para retorno|1 Consola Digital|1 Procesador Digital Fane|1 Computador|1 Mesa Profesional para DJ|1 Micrófono Inalámbrico Shure Beta 58">Line Array — 4 Cajas RCF HDL20-A — $2.700.000</option>
-                                    <option value="Sonido Principal Line Array (6 Cajas RCF HDL20-A)" data-precio="3200000" data-incluye="6 Cajas RCF HDL20-A|3 Subwoofer Dobles JBL SRX828 SP|2 QSC K12 para retorno|1 Consola Digital|1 Procesador Digital Fane|1 Computador|1 Mesa Profesional para DJ|1 Micrófono Inalámbrico Shure Beta 58">Line Array — 6 Cajas RCF HDL20-A — $3.200.000</option>
-                                    <option value="Sonido Principal Line Array (8 Cajas RCF HDL20-A)" data-precio="3700000" data-incluye="8 Cajas RCF HDL20-A|4 Subwoofer Dobles JBL SRX828 SP|2 QSC K12 para retorno|1 Consola Digital|1 Computador|1 Procesador Digital Fane|1 Mesa Profesional para DJ|1 Micrófono Inalámbrico Shure Beta 58">Line Array — 8 Cajas RCF HDL20-A — $3.700.000</option>
-                                </select>
-                                <small class="field-hint" id="sonidoPrincipal-hint"></small>
-                            </div>
-                            <div>
-                                <label for="controladorDJ">Controladores y Unidades para DJ's</label>
-                                <select id="controladorDJ" class="precio-select" data-tag="CONTROLADORES Y UNIDADES DJ">
-                                    <option value="" data-precio="0" selected>-- No incluir --</option>
-                                    <option value="2 Unidades Pioneer CDJ 2000 Nexus 2 - Mixer Pioneer DJM 900 Nexus 2" data-precio="800000">2 CDJ 2000 Nexus 2 - Mixer DJM 900 Nexus 2 — $800.000</option>
-                                    <option value="2 Unidades Pioneer CDJ 3000 - Mixer DJM A9" data-precio="1200000">2 CDJ 3000 - Mixer DJM A9 — $1.200.000</option>
-                                    <option value="3 Unidades Pioneer CDJ 3000 - Mixer DJM A9" data-precio="1700000">3 CDJ 3000 - Mixer DJM A9 — $1.700.000</option>
-                                    <option value="1 Controlador Pioneer RX2" data-precio="500000">1 Controlador Pioneer RX2 — $500.000</option>
-                                    <option value="1 Controlador Pioneer RX3" data-precio="700000">1 Controlador Pioneer RX3 — $700.000</option>
-                                </select>
-                                <small class="field-hint" id="controladorDJ-hint"></small>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 6. Truss, Iluminación y Pantallas -->
-                    <div class="form-group">
-                        <div class="form-section-title">
-                            <i class="fa-solid fa-bolt"></i> 6. Estructura, Iluminación y Pantallas LED
-                        </div>
-                        <div class="grid-2">
-                            <div>
-                                <label for="truss">Estructura Truss (Forrada de Negro)</label>
-                                <select id="truss" class="precio-select" data-tag="ESTRUCTURA TRUSS">
-                                    <option value="" data-precio="0" selected>-- No incluir --</option>
-                                    <option value="Estructura Truss para Iluminación" data-precio="550000">Truss para Iluminación — $550.000</option>
-                                    <option value="Estructura Truss + Pantalla Led de 6 metros" data-precio="700000">Truss + Pantalla Led 6 mtrs — $700.000</option>
-                                    <option value="Estructura Truss + Pantalla Led de 8 metros" data-precio="800000">Truss + Pantalla Led 8 mtrs — $800.000</option>
-                                    <option value="Estructura Truss + Pantalla Led de 10 metros" data-precio="950000">Truss + Pantalla Led 10 mtrs — $950.000</option>
-                                    <option value="Estructura Truss + Pantalla Led de 12 metros" data-precio="1100000">Truss + Pantalla Led 12 mtrs — $1.100.000</option>
-                                    <option value="Estructura Truss + Pantalla Led de 16 metros" data-precio="1500000">Truss + Pantalla Led 16 mtrs — $1.500.000</option>
-                                    <option value="Estructura Truss + Pantalla Led de 18 metros" data-precio="1700000">Truss + Pantalla Led 18 mtrs — $1.700.000</option>
-                                </select>
-                                <small class="field-hint" id="truss-hint"></small>
-                            </div>
-                            <div>
-                                <label for="iluminacion">Iluminación Profesional</label>
-                                <select id="iluminacion" class="precio-select" data-tag="ILUMINACIÓN PROFESIONAL">
-                                    <option value="" data-precio="0" selected>-- No incluir --</option>
-                                    <option value="Iluminación Profesional Básica" data-precio="700000" data-incluye="2 Truss de 2 Mtrs Forrados de Negro|2 Cabezas Móviles">Iluminación Básica (2 Truss + 2 Cabezas Móviles) — $700.000</option>
-                                    <option value="Iluminación Profesional Completa" data-precio="2200000" data-incluye="6 Cabezas Móviles Beam Chauvet|6 Cabezas Móviles Color Wash|2 Blinder|2 Matrices de Led|6 Par Led LP 006|2 Atomic|2 Barras Led|1 Consola NX Touch Martin|1 Computador|1 Ingeniero de Iluminación|1 Máquina de Humo">Iluminación Profesional Completa — $2.200.000</option>
-                                    <option value="Iluminación Profesional Vintage" data-precio="2800000" data-incluye="6 Cabezas Móviles Beam Chauvet|6 Cabezas Móviles Color Wash|2 Patt Retro|2 P1 Retro Lamp Liro|2 Blinder|6 Par Led LP006|2 Atomic|2 Barras Led|1 Consola NX Touch Martin|1 Computador|1 Ingeniero de Iluminación|1 Máquina de Humo">Iluminación Profesional Vintage — $2.800.000</option>
-                                    <option value="Iluminación Profesional Artista y Grupos" data-precio="3500000" data-incluye="8 Cabezas Móviles Beam Chauvet|6 Cabezas Móviles Color Wash|2 Blinder|12 Par Led LP 006|4 Matrices de Led|2 Atomic|2 Barras Led|1 Computador|1 Ingeniero de Iluminación|1 Máquina de Humo|Nota: puede variar según show especial o exigencias del artista">Iluminación Artista y Grupos — $3.500.000</option>
-                                </select>
-                                <small class="field-hint" id="iluminacion-hint"></small>
-                            </div>
-                            <div>
-                                <label for="lucesAmbientacion">Luces de Ambientación (Reflectores)</label>
-                                <select id="lucesAmbientacion" class="precio-select" data-tag="LUCES DE AMBIENTACIÓN">
-                                    <option value="" data-precio="0" selected>-- No incluir --</option>
-                                    <option value="8 Par Led Ambientación del Sitio" data-precio="520000">8 Par Led Ambientación — $520.000</option>
-                                    <option value="12 Par Led Ambientación del Sitio" data-precio="780000">12 Par Led Ambientación — $780.000</option>
-                                    <option value="16 Par Led Ambientación del Sitio" data-precio="1040000">16 Par Led Ambientación — $1.040.000</option>
-                                    <option value="20 Par Led Ambientación del Sitio" data-precio="1300000">20 Par Led Ambientación — $1.300.000</option>
-                                    <option value="8 Par Led Inalámbricos Ambientación del Sitio" data-precio="600000">8 Par Led Inalámbricos — $600.000</option>
-                                    <option value="12 Par Led Inalámbricos Ambientación del Sitio" data-precio="900000">12 Par Led Inalámbricos — $900.000</option>
-                                    <option value="20 Spot Inalámbrico para Mesas Principales y Postres" data-precio="1300000">20 Spot Inalámbrico Mesas Principales — $1.300.000</option>
-                                </select>
-                                <small class="field-hint" id="lucesAmbientacion-hint"></small>
-                            </div>
-                            <div>
-                                <label for="pantallaLed">Pantalla Led Pitch 3 (en diseño)</label>
-                                <select id="pantallaLed" class="precio-select" data-tag="PANTALLA LED">
-                                    <option value="" data-precio="0" selected>-- No incluir --</option>
-                                    <option value="3 Metros de Pantalla Led Pitch 3" data-precio="900000" data-incluye="1 Video Procesador|1 Computador|1 Ingeniero de Video">3 Metros Pantalla Led — $900.000</option>
-                                    <option value="4 Metros de Pantalla Led Pitch 3" data-precio="1200000" data-incluye="1 Video Procesador|1 Computador|1 Ingeniero de Video">4 Metros Pantalla Led — $1.200.000</option>
-                                    <option value="6 Metros de Pantalla Led Pitch 3" data-precio="1800000" data-incluye="1 Video Procesador|1 Computador|1 Ingeniero de Video">6 Metros Pantalla Led — $1.800.000</option>
-                                    <option value="8 Metros de Pantalla Led Pitch 3" data-precio="2400000" data-incluye="1 Video Procesador|1 Computador|1 Ingeniero de Video">8 Metros Pantalla Led — $2.400.000</option>
-                                    <option value="10 Metros de Pantalla Led Pitch 3" data-precio="3000000" data-incluye="1 Video Procesador|1 Computador|1 Ingeniero de Video">10 Metros Pantalla Led — $3.000.000</option>
-                                    <option value="12 Metros de Pantalla Led Pitch 3" data-precio="3600000" data-incluye="1 Video Procesador|1 Computador|1 Ingeniero de Video">12 Metros Pantalla Led — $3.600.000</option>
-                                    <option value="16 Metros de Pantalla Led Pitch 3" data-precio="4800000" data-incluye="1 Video Procesador|1 Computador|1 Ingeniero de Video">16 Metros Pantalla Led — $4.800.000</option>
-                                    <option value="18 Metros de Pantalla Led Pitch 3" data-precio="5400000" data-incluye="1 Video Procesador|1 Computador|1 Ingeniero de Video">18 Metros Pantalla Led — $5.400.000</option>
-                                </select>
-                                <small class="field-hint" id="pantallaLed-hint"></small>
-                            </div>
-                            <div>
-                                <label for="pisoPista">Piso para Pista de Baile / Pasarela</label>
-                                <select id="pisoPista" class="precio-select" data-tag="PISO PISTA DE BAILE">
-                                    <option value="" data-precio="0" selected>-- No incluir --</option>
-                                    <option value="Pista de Vidrio Negro Led 3D Infinito 3 x 3" data-precio="1400000">Pista Vidrio Led 3D 3x3 — $1.400.000</option>
-                                    <option value="Pista de Vidrio Negro Led 3D Infinito 4 x 3" data-precio="1800000">Pista Vidrio Led 3D 4x3 — $1.800.000</option>
-                                    <option value="Pista de Vidrio Negro Led 3D Infinito 4 x 4" data-precio="2400000">Pista Vidrio Led 3D 4x4 — $2.400.000</option>
-                                    <option value="Pista de Vidrio Negro Led 3D Infinito 5 x 4" data-precio="3000000">Pista Vidrio Led 3D 5x4 — $3.000.000</option>
-                                    <option value="Pista de Vidrio Negro Led 3D Infinito 5 x 5" data-precio="3800000">Pista Vidrio Led 3D 5x5 — $3.800.000</option>
-                                    <option value="Pista de Vidrio Negro Led 3D Infinito 6 x 4" data-precio="3600000">Pista Vidrio Led 3D 6x4 — $3.600.000</option>
-                                    <option value="Pista de Vidrio Negro Led 3D Infinito 6 x 5" data-precio="4500000">Pista Vidrio Led 3D 6x5 — $4.500.000</option>
-                                    <option value="Pista de Vidrio Negro Led 3D Infinito 6 x 6" data-precio="5400000">Pista Vidrio Led 3D 6x6 — $5.400.000</option>
-                                </select>
-                                <small class="field-hint" id="pisoPista-hint"></small>
-                            </div>
-                            <div>
-                                <label for="tarima">Tarima para Equipos, DJ / Grupo / Orquesta</label>
-                                <select id="tarima" class="precio-select" data-tag="TARIMA">
-                                    <option value="" data-precio="0" selected>-- No incluir --</option>
-                                    <option value="Tarima para DJ de 2 x 2 mtrs" data-precio="320000">Tarima DJ 2x2 mtrs — $320.000</option>
-                                    <option value="Tarima para Equipos y DJ de 3 x 2 mtrs" data-precio="480000">Tarima Equipos y DJ 3x2 mtrs — $480.000</option>
-                                    <option value="Tarima para Equipos, DJ y Grupo Musical de 4 x 2 mtrs" data-precio="640000">Tarima Grupo Musical 4x2 mtrs — $640.000</option>
-                                    <option value="Tarima para Equipos, DJ y Grupo Musical de 4 x 3 mtrs" data-precio="960000">Tarima Grupo Musical 4x3 mtrs — $960.000</option>
-                                    <option value="Tarima para Equipos, DJ y Grupo Musical de 4 x 4 mtrs" data-precio="1280000">Tarima Grupo Musical 4x4 mtrs — $1.280.000</option>
-                                    <option value="Tarima para Equipos, DJ y Grupo Musical de 5 x 4 mtrs" data-precio="1600000">Tarima Grupo Musical 5x4 mtrs — $1.600.000</option>
-                                    <option value="Tarima para Equipos, DJ y Orquesta de 6 x 4 mtrs" data-precio="1920000">Tarima Orquesta 6x4 mtrs — $1.920.000</option>
-                                    <option value="Tarima para Equipos, DJ y Orquesta de 6 x 5 mtrs" data-precio="2400000">Tarima Orquesta 6x5 mtrs — $2.400.000</option>
-                                    <option value="Tarima para Equipos, DJ y Orquesta de 7 x 5 mtrs" data-precio="2800000">Tarima Orquesta 7x5 mtrs — $2.800.000</option>
-                                    <option value="Tarima para Equipos, DJ y Orquesta de 8 x 5 mtrs" data-precio="3200000">Tarima Orquesta 8x5 mtrs — $3.200.000</option>
-                                </select>
-                                <small class="field-hint" id="tarima-hint"></small>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 7. Efectos Especiales -->
-                    <div class="form-group">
-                        <div class="form-section-title">
-                            <i class="fa-solid fa-wand-magic-sparkles"></i> 7. Efectos de Alto Impacto e Iluminación Extra
-                        </div>
-                        <div class="grid-2">
-                            <div>
-                                <label for="sparkulas">Sparkulas (Chispas Frías)</label>
-                                <select id="sparkulas" class="precio-select" data-tag="EFECTO ESPECIAL FX">
-                                    <option value="" data-precio="0" selected>-- No incluir --</option>
-                                    <option value="2 Sparkulas" data-precio="950000">2 Sparkulas — $950.000</option>
-                                    <option value="4 Sparkulas" data-precio="1900000">4 Sparkulas — $1.900.000</option>
-                                </select>
-                                <small class="field-hint" id="sparkulas-hint"></small>
-                            </div>
-                            <div>
-                                <label for="ventury">Ventury con Papel Metalizado</label>
-                                <select id="ventury" class="precio-select" data-tag="EFECTO ESPECIAL FX">
-                                    <option value="" data-precio="0" selected>-- No incluir --</option>
-                                    <option value="Ventury con Papel Metalizado (Todo el Evento)" data-precio="600000">Todo el Evento — $600.000</option>
-                                    <option value="Ventury con Papel Metalizado (3 Tiros)" data-precio="450000">3 Tiros — $450.000</option>
-                                    <option value="Ventury con Papel Metalizado (Salida de Ceremonia)" data-precio="450000">Salida de Ceremonia — $450.000</option>
-                                </select>
-                                <small class="field-hint" id="ventury-hint"></small>
-                            </div>
-                            <div>
-                                <label for="bolaEspejos">Bola de Espejos (Sin Instalación)</label>
-                                <select id="bolaEspejos" class="precio-select" data-tag="EFECTO ESPECIAL FX">
-                                    <option value="" data-precio="0" selected>-- No incluir --</option>
-                                    <option value="Bola de Espejos 10 cm (Pequeña)" data-precio="20000">10 cm (Pequeña) — $20.000</option>
-                                    <option value="Bola de Espejos 20 cm (Mediana)" data-precio="30000">20 cm (Mediana) — $30.000</option>
-                                    <option value="Bola de Espejos 30 cm (Mediana)" data-precio="40000">30 cm (Mediana) — $40.000</option>
-                                    <option value='Bola de Espejos 40" (Grande)' data-precio="50000">40" (Grande) — $50.000</option>
-                                    <option value='Bola de Espejos 50" (Grande)' data-precio="70000">50" (Grande) — $70.000</option>
-                                    <option value='Bola de Espejos 75" (Gigante)' data-precio="250000">75" (Gigante) — $250.000</option>
-                                    <option value='Bola de Espejos 100" (Gigante)' data-precio="500000">100" (Gigante) — $500.000</option>
-                                </select>
-                                <small class="field-hint" id="bolaEspejos-hint"></small>
-                            </div>
-                        </div>
-                        <div class="checkbox-box" style="margin-top: 1.25rem;">
-                            <label class="checkbox-label">
-                                <input type="checkbox" class="precio-check" id="chkPirotecniaIndoor" data-tag="EFECTO ESPECIAL FX" data-nombre="Fuentes de Pirotecnia Indoor (30 seg x 3 mtrs)" data-precio="130000" data-incluye="Con disparadores inalámbricos">
-                                <span>Fuentes de Pirotecnia Indoor 30 seg x 3 mtrs (+$130.000)</span>
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" class="precio-check" id="chkHumoColores" data-tag="EFECTO ESPECIAL FX" data-nombre="Fuentes con Humo de Colores (1 minuto)" data-precio="100000">
-                                <span>Fuentes con Humo de Colores 1 minuto (+$100.000)</span>
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" class="precio-check" id="chkPirotecniaAire" data-tag="EFECTO ESPECIAL FX" data-nombre="Pirotecnia al Aire (Show de 1 Minuto)" data-precio="1700000" data-incluye="Operado con disparadores inalámbricos">
-                                <span>Pirotecnia al Aire - Show de 1 Minuto (+$1.700.000)</span>
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" class="precio-check" id="chkBurbujas" data-tag="EFECTO ESPECIAL FX" data-nombre="Máquina de Burbujas (Salida de Ceremonia)" data-precio="450000">
-                                <span>Máquina de Burbujas - Salida de Ceremonia (+$450.000)</span>
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" class="precio-check" id="chkBurbujasHumo" data-tag="EFECTO ESPECIAL FX" data-nombre="Máquina de Burbujas con Humo" data-precio="500000">
-                                <span>Máquina de Burbujas con Humo (+$500.000)</span>
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" class="precio-check" id="chkVelaCraker" data-tag="EFECTO ESPECIAL FX" data-nombre="Vela Craker" data-precio="40000">
-                                <span>Vela Craker (+$40.000)</span>
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" class="precio-check" id="chkLanzaLlamas" data-tag="EFECTO ESPECIAL FX" data-nombre="2 Lanza Llamas" data-precio="700000">
-                                <span>2 Lanza Llamas (+$700.000)</span>
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" class="precio-check" id="chkKabuqui" data-tag="EFECTO ESPECIAL FX" data-nombre="Kabuqui de Serpentinas (1 Tiro)" data-precio="700000">
-                                <span>Kabuqui de Serpentinas - 1 Tiro (+$700.000)</span>
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" class="precio-check" id="chkPistolaCO2" data-tag="EFECTO ESPECIAL FX" data-nombre="Pistola de CO2 (Hora Loca)" data-precio="650000">
-                                <span>Pistola de CO2 - Hora Loca (+$650.000)</span>
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" class="precio-check" id="chkCriojets" data-tag="EFECTO ESPECIAL FX" data-nombre="2 Criojets de CO2" data-precio="1000000">
-                                <span>2 Criojets de CO2 (+$1.000.000)</span>
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" class="precio-check" id="chkNieblaBaja" data-tag="EFECTO ESPECIAL FX" data-nombre="Máquina de Niebla Baja - Hielo Seco (Baile de Novios)" data-precio="800000">
-                                <span>Máquina de Niebla Baja - Hielo Seco - Baile de Novios (+$800.000)</span>
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" class="precio-check" id="chkSeguidor" data-tag="EFECTO ESPECIAL FX" data-nombre="Seguidor" data-precio="350000">
-                                <span>Seguidor (+$350.000)</span>
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" class="precio-check" id="chkMotorBola" data-tag="EFECTO ESPECIAL FX" data-nombre="Motor para Bola de Espejos" data-precio="100000">
-                                <span>Motor para Bola de Espejos (+$100.000)</span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- 8. Generadores y Plantas -->
-                    <div class="form-group">
-                        <div class="form-section-title">
-                            <i class="fa-solid fa-plug-circle-bolt"></i> 8. Generadores Eléctricos
-                        </div>
-                        <div class="checkbox-box">
-                            <label class="checkbox-label">
-                                <input type="checkbox" class="precio-check" id="chkGenerador" data-tag="GENERADORES ELÉCTRICOS" data-nombre="Generadores Eléctricos - Todo el Evento" data-precio="2200000">
-                                <span>Generadores Eléctricos - Todo el Evento (+$2.200.000)</span>
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" class="precio-check" id="chkPlantaBackup" data-tag="GENERADORES ELÉCTRICOS" data-nombre="2 Plantas Eléctricas - Backup" data-precio="800000" data-incluye="Costo adicional de $100.000 por hora tras agotarse el combustible inicial">
-                                <span>2 Plantas Eléctricas - Backup (+$800.000)</span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- 9. Mobiliario y Cantidades -->
-                    <div class="form-group">
-                        <div class="form-section-title">
-                            <i class="fa-solid fa-chair"></i> 9. Mobiliario Cóctel de Bienvenida & Extras por Cantidad
-                        </div>
-                        <div class="qty-box">
-                            <div class="qty-row">
-                                <div class="qty-name">Mesas tipo Bar <span class="qty-price">($35.000 c/u)</span></div>
-                                <input type="number" class="precio-qty" id="qtyMesaBar" data-tag="MOBILIARIO CÓCTEL DE BIENVENIDA" data-nombre="Mesas tipo Bar" data-precio-unit="35000" min="0" step="1" value="0">
-                            </div>
-                            <div class="qty-row">
-                                <div class="qty-name">Sillas tipo Bar <span class="qty-price">($35.000 c/u)</span></div>
-                                <input type="number" class="precio-qty" id="qtySillaBar" data-tag="MOBILIARIO CÓCTEL DE BIENVENIDA" data-nombre="Sillas tipo Bar" data-precio-unit="35000" min="0" step="1" value="0">
-                            </div>
-                            <div class="qty-row">
-                                <div class="qty-name">Sala Lounge 6 Puestos <span class="qty-price">($160.000 c/u · no incluye transporte)</span></div>
-                                <input type="number" class="precio-qty" id="qtySalaLounge" data-tag="MOBILIARIO CÓCTEL DE BIENVENIDA" data-nombre="Sala Lounge 6 Puestos (1 Sofá doble con espaldar, 1 sofá doble sin espaldar, 2 Puff y 1 mesa)" data-precio-unit="160000" min="0" step="1" value="0">
-                            </div>
-                            <div class="qty-row">
-                                <div class="qty-name">Puff Adicional <span class="qty-price">($30.000 c/u)</span></div>
-                                <input type="number" class="precio-qty" id="qtyPuff" data-tag="MOBILIARIO CÓCTEL DE BIENVENIDA" data-nombre="Puff Adicional" data-precio-unit="30000" min="0" step="1" value="0">
-                            </div>
-                            <div class="qty-row">
-                                <div class="qty-name">Chispón 70 cm - Salida de Ceremonia <span class="qty-price">($14.000 c/u)</span></div>
-                                <input type="number" class="precio-qty" id="qtyChispon" data-tag="EFECTO ESPECIAL FX" data-nombre="Chispón 70 cm - Salida de Ceremonia" data-precio-unit="14000" min="0" step="1" value="0">
-                            </div>
-                            <div class="qty-row">
-                                <div class="qty-name">Metro de Bombillo Ping Pong <span class="qty-price">($6.000 c/u, sin instalación)</span></div>
-                                <input type="number" class="precio-qty" id="qtyBombillo" data-tag="EFECTO ESPECIAL FX" data-nombre="Metro de Bombillo Ping Pong (sin instalación)" data-precio-unit="6000" min="0" step="1" value="0">
-                            </div>
-                        </div>
-                    </div>
-
-                    <button type="button" id="btnSubmit" class="submit-btn">
-                        <i class="fa-solid fa-file-pdf"></i>
-                        <span>Generar Cotización (PDF & Excel)</span>
-                    </button>
-                </form>
+                <div class="hero-icons-row">
+                    <div class="hero-icon-item"><i class="fa-solid fa-volume-high"></i></div>
+                    <div class="hero-icon-item"><i class="fa-solid fa-lightbulb"></i></div>
+                    <div class="hero-icon-item"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                </div>
             </div>
+        </section>
 
-            <!-- Resumen Lateral -->
-            <div>
-                <div class="summary-card">
-                    <div>
-                        <span class="badge">Presupuesto Estimado</span>
-                        <div class="price-tag" id="precioTotal">$ 0 COP</div>
-                        <div class="price-sub">Precios actualizados para la temporada 2026.</div>
+        <!-- POR QUÉ ELEGIRNOS -->
+        <section class="features-section" id="nosotros">
+            <div class="features-grid">
+                <div class="features-text">
+                    <div class="pill-badge pill-badge-light">
+                        <i class="fa-solid fa-location-dot"></i> Cobertura Regional
                     </div>
+                    <h2 class="section-title">Producción Técnica de Primer Nivel en el Eje Cafetero</h2>
+                    <p class="section-desc">
+                        Cubrimos Manizales, Chinchiná - Santágueda, Pereira y Armenia con equipos propios,
+                        montaje profesional y un equipo técnico presente durante todo el evento.
+                    </p>
 
-                    <div>
-                        <div class="summary-list-title">Desglose de Servicios:</div>
-                        <ul id="listaResumen">
-                            <li><em>Selecciona tus opciones en el formulario para calcular el costo.</em></li>
-                        </ul>
+                    <ul class="feature-list">
+                        <li>
+                            <div class="feature-icon"><i class="fa-solid fa-bolt"></i></div>
+                            <div>
+                                <div class="feature-title">Equipos de Última Generación</div>
+                                <div class="feature-desc">Line Array RCF, iluminación robótica DMX, pantallas LED Pitch 3 y consolas digitales.</div>
+                            </div>
+                        </li>
+                        <li>
+                            <div class="feature-icon"><i class="fa-solid fa-screwdriver-wrench"></i></div>
+                            <div>
+                                <div class="feature-title">Montaje Profesional Garantizado</div>
+                                <div class="feature-desc">Instalación, pruebas de sonido y desmonte incluidos en cada servicio contratado.</div>
+                            </div>
+                        </li>
+                        <li>
+                            <div class="feature-icon"><i class="fa-solid fa-headset"></i></div>
+                            <div>
+                                <div class="feature-title">Respaldo Técnico en Sitio</div>
+                                <div class="feature-desc">Técnico dedicado durante todo el evento, con equipos de respaldo inmediato.</div>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="features-visual">
+                    <div class="visual-grid">
+                        <div class="visual-card visual-card-tall"><i class="fa-solid fa-volume-high"></i><span>Sonido Line Array</span></div>
+                        <div class="visual-card"><i class="fa-solid fa-lightbulb"></i><span>Iluminación Robótica</span></div>
+                        <div class="visual-card"><i class="fa-solid fa-tv"></i><span>Pantallas LED</span></div>
                     </div>
-
-                    <div class="info-box">
-                        <i class="fa-solid fa-circle-info" style="margin-top:2px;"></i>
-                        <span>Al hacer clic se descargarán automáticamente los archivos PDF HD (con marca de agua) y Excel profesional.</span>
+                    <div class="floating-badge-card">
+                        <i class="fa-solid fa-champagne-glasses"></i>
+                        <div>
+                            <div class="floating-badge-title">+500 Eventos</div>
+                            <div class="floating-badge-sub">Realizados con éxito</div>
+                        </div>
                     </div>
                 </div>
             </div>
+        </section>
 
-        </div>
+        <!-- CTA BAND -->
+        <section class="cta-band" id="servicios">
+            <div class="cta-content">
+                <div class="pill-badge pill-badge-white">
+                    <i class="fa-solid fa-bolt"></i> Cotización 100% Gratuita y Sin Compromiso
+                </div>
+
+                <h2 class="cta-title">Cotiza tu Evento VIP en Minutos</h2>
+
+                <p class="cta-desc">
+                    Arma tu cotización a la medida: transporte, sonido, iluminación, pantallas LED, efectos
+                    especiales y mobiliario. Descarga tu propuesta en PDF y Excel al instante.
+                </p>
+
+                <div class="cta-buttons">
+                    <a href="cotizador.html" class="cta-btn-white"><i class="fa-solid fa-file-invoice-dollar"></i> Cotizar Ahora</a>
+                    <a href="https://www.instagram.com/planet.producciones/" target="_blank" rel="noopener noreferrer" class="cta-btn-outline"><i class="fa-brands fa-instagram"></i> @planet.producciones</a>
+                </div>
+
+                <div class="cta-trust-row">
+                    <span><i class="fa-solid fa-volume-high"></i> Sonido Profesional</span>
+                    <span><i class="fa-solid fa-lightbulb"></i> Iluminación DMX</span>
+                    <span><i class="fa-solid fa-wand-magic-sparkles"></i> Efectos Especiales</span>
+                    <span><i class="fa-solid fa-tv"></i> Pantallas LED</span>
+                </div>
+            </div>
+        </section>
+
     </main>
 
-    <footer>
-        <p>© 2026 Planet Producciones. Todos los derechos reservados. Manizales - Caldas, Colombia.</p>
+    <footer class="promo-footer" id="contacto">
+        <div class="promo-footer-grid">
+            <div class="footer-col">
+                <div class="footer-brand">
+                    <img src="logo.png?v=2" alt="Planet Producciones" class="footer-logo">
+                    <div>
+                        <div class="footer-brand-name">Planet Producciones</div>
+                        <div class="footer-brand-sub">Eventos VIP & Producción Técnica</div>
+                    </div>
+                </div>
+                <p class="footer-desc">
+                    Producción técnica integral para eventos VIP: sonido, iluminación, pantallas LED y
+                    efectos especiales, con equipos propios y montaje profesional.
+                </p>
+                <div class="footer-love"><i class="fa-solid fa-heart"></i> Hecho con pasión para tus momentos únicos</div>
+            </div>
+
+            <div class="footer-col">
+                <div class="footer-col-title">Contacto</div>
+                <a href="tel:+573127817072" class="footer-contact-line"><i class="fa-solid fa-phone"></i> +57 312 781 70 72</a>
+                <a href="https://www.instagram.com/planet.producciones/" target="_blank" rel="noopener noreferrer" class="footer-contact-line"><i class="fa-brands fa-instagram"></i> @planet.producciones</a>
+                <div class="footer-contact-line"><i class="fa-solid fa-location-dot"></i> Manizales - Caldas, Colombia</div>
+            </div>
+
+            <div class="footer-col">
+                <div class="footer-col-title">Cotiza tu Evento</div>
+                <p class="footer-desc">Genera tu cotización personalizada en minutos, con PDF y Excel listos para descargar.</p>
+                <a href="cotizador.html" class="footer-cta-btn"><i class="fa-solid fa-file-invoice-dollar"></i> Cotizar Ahora</a>
+                <a href="login.html" class="footer-login-link"><i class="fa-solid fa-right-to-bracket"></i> Iniciar Sesión</a>
+            </div>
+        </div>
+
+        <div class="promo-footer-bottom">
+            <p>© 2026 Planet Producciones. Todos los derechos reservados.</p>
+            <div class="footer-bottom-links">
+                <a href="https://www.instagram.com/planet.producciones/" target="_blank" rel="noopener noreferrer">Instagram</a>
+                <a href="cotizador.html">Cotizador</a>
+                <a href="login.html">Iniciar Sesión</a>
+            </div>
+        </div>
     </footer>
 
-    <script type="module" src="/src/main.ts"></script>
+    <script type="module" src="/src/home.ts"></script>
 </body>
 </html>
