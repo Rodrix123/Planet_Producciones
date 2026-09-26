@@ -26,6 +26,8 @@ interface DatosCliente {
     lugar: string;
 }
 
+const API_URL: string = (import.meta.env.VITE_API_URL as string) || 'http://localhost:3000';
+
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('quoteForm') as HTMLFormElement;
     const precioTotalEl = document.getElementById('precioTotal') as HTMLElement;
@@ -304,7 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
         datosCotizacion: DatosCotizacion,
         refNum: string,
         fechaHoy: string
-    ): void {
+    ): { blob: Blob; nombreArchivo: string } {
         const aoaData: any[][] = [
             ["PLANET PRODUCCIONES - PRODUCCIÓN TÉCNICA & EVENTOS VIP"],
             [`COTIZACIÓN OFICIAL: ${refNum}`, "", "", `FECHA: ${fechaHoy}`],
@@ -349,7 +351,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Cotización VIP');
-        XLSX.writeFile(workbook, `Cotizacion_Planet_${datosCliente.nombre.replace(/\s+/g, '_')}.xlsx`);
+
+        const nombreArchivo = `Cotizacion_Planet_${datosCliente.nombre.replace(/\s+/g, '_')}.xlsx`;
+        const wbout: ArrayBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+        // Descarga local del Excel (mismo comportamiento que XLSX.writeFile)
+        const url = URL.createObjectURL(blob);
+        const enlace = document.createElement('a');
+        enlace.href = url;
+        enlace.download = nombreArchivo;
+        document.body.appendChild(enlace);
+        enlace.click();
+        document.body.removeChild(enlace);
+        URL.revokeObjectURL(url);
+
+        return { blob, nombreArchivo };
+    }
+
+    // Envía el PDF y Excel de la cotización recién generada al WhatsApp registrado de la dueña
+    async function enviarCotizacionWhatsApp(
+        pdfBlob: Blob,
+        nombreArchivoPdf: string,
+        excelBlob: Blob,
+        nombreArchivoExcel: string,
+        datosCliente: DatosCliente,
+        refNum: string
+    ): Promise<void> {
+        const formData = new FormData();
+        formData.append('pdf', pdfBlob, nombreArchivoPdf);
+        formData.append('excel', excelBlob, nombreArchivoExcel);
+        formData.append('nombre', datosCliente.nombre);
+        formData.append('tipoEvento', datosCliente.tipoEvento);
+        formData.append('refNum', refNum);
+
+        const respuesta = await fetch(`${API_URL}/api/enviar-whatsapp`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await respuesta.json().catch(() => ({}));
+        if (!respuesta.ok || data.status !== 'ok') {
+            throw new Error(data.message || 'No se pudo enviar la cotización por WhatsApp.');
+        }
     }
 
     // Evento Principal al Clic
@@ -402,26 +446,53 @@ document.addEventListener('DOMContentLoaded', () => {
             const elementoHTML = construirHTMLCotizacion(datosCliente, datosCotizacion, logoBase64, refNum, fechaHoy);
             document.body.appendChild(elementoHTML);
 
+            const nombreArchivoPdf = `Cotizacion_Planet_${nombre.replace(/\s+/g, '_')}.pdf`;
             const opt = {
                 margin:       [0.2, 0.2, 0.2, 0.2],
-                filename:     `Cotizacion_Planet_${nombre.replace(/\s+/g, '_')}.pdf`,
+                filename:     nombreArchivoPdf,
                 image:        { type: 'jpeg', quality: 1.0 },
                 html2canvas:  { scale: 3, useCORS: true, allowTaint: true, logging: false },
                 jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
             };
 
-            await html2pdf().set(opt).from(elementoHTML).save();
+            const workerPdf = html2pdf().set(opt).from(elementoHTML);
+            await workerPdf.save();
+            const pdfBlob: Blob = await workerPdf.outputPdf('blob');
             document.body.removeChild(elementoHTML);
 
             // Exportación Excel Profesional
-            generarExcelEjecutivo(datosCliente, datosCotizacion, refNum, fechaHoy);
+            const { blob: excelBlob, nombreArchivo: nombreArchivoExcel } =
+                generarExcelEjecutivo(datosCliente, datosCotizacion, refNum, fechaHoy);
 
             Swal.fire({
-                icon: 'success',
-                title: '¡Cotización Generada!',
-                text: 'PDF HD con Marca de Agua y Reporte de Excel descargados exitosamente.',
-                confirmButtonColor: '#f97316'
+                title: 'Enviando cotización por WhatsApp...',
+                text: 'PDF y Excel descargados. Enviando copia a la dueña.',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
             });
+
+            try {
+                await enviarCotizacionWhatsApp(
+                    pdfBlob, nombreArchivoPdf,
+                    excelBlob, nombreArchivoExcel,
+                    datosCliente, refNum
+                );
+
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Cotización Generada y Enviada!',
+                    html: `PDF HD y Excel descargados exitosamente.<br>Se envió la cotización <strong>${refNum}</strong> por WhatsApp a la dueña.`,
+                    confirmButtonColor: '#f97316'
+                });
+            } catch (whatsappError) {
+                console.error(whatsappError);
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Archivos generados, WhatsApp no enviado',
+                    html: `PDF HD y Excel se descargaron correctamente, pero no se pudo enviar la cotización <strong>${refNum}</strong> por WhatsApp a la dueña.`,
+                    confirmButtonColor: '#f97316'
+                });
+            }
 
         } catch (error) {
             console.error(error);

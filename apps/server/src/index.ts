@@ -6,6 +6,7 @@ import PDFDocument from 'pdfkit';
 import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
+import multer from 'multer';
 
 interface CotizacionRequestBody {
     nombre?: string;
@@ -41,6 +42,64 @@ const transporter = nodemailer.createTransport({
         rejectUnauthorized: false
     }
 });
+
+// Configuración WhatsApp Cloud API (Meta) para el envío automático a la dueña
+const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
+const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
+const WHATSAPP_API_VERSION = process.env.WHATSAPP_API_VERSION || 'v21.0';
+const WHATSAPP_DUENA_NUMERO = process.env.WHATSAPP_DUENA_NUMERO;
+
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 15 * 1024 * 1024 }
+});
+
+function urlWhatsApp(recurso: string): string {
+    return `https://graph.facebook.com/${WHATSAPP_API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/${recurso}`;
+}
+
+// Sube un archivo (PDF/Excel) a la API de medios de WhatsApp y devuelve su media id
+async function subirMediaWhatsApp(buffer: Buffer, filename: string, mimeType: string): Promise<string> {
+    const form = new FormData();
+    form.append('messaging_product', 'whatsapp');
+    form.append('type', mimeType);
+    form.append('file', new Blob([buffer], { type: mimeType }), filename);
+
+    const respuesta = await fetch(urlWhatsApp('media'), {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}` },
+        body: form
+    });
+
+    const data: any = await respuesta.json();
+    if (!respuesta.ok || !data.id) {
+        throw new Error(`Error subiendo archivo a WhatsApp: ${JSON.stringify(data)}`);
+    }
+    return data.id;
+}
+
+async function enviarMensajeWhatsApp(payload: Record<string, unknown>): Promise<void> {
+    const respuesta = await fetch(urlWhatsApp('messages'), {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${WHATSAPP_TOKEN}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ messaging_product: 'whatsapp', to: WHATSAPP_DUENA_NUMERO, ...payload })
+    });
+
+    if (!respuesta.ok) {
+        const data = await respuesta.json();
+        throw new Error(`Error enviando mensaje de WhatsApp: ${JSON.stringify(data)}`);
+    }
+}
+
+async function enviarDocumentoWhatsApp(mediaId: string, filename: string): Promise<void> {
+    await enviarMensajeWhatsApp({
+        type: 'document',
+        document: { id: mediaId, filename }
+    });
+}
 
 // Generador de PDF Rediseñado y Armónico
 function generarPdfBuffer(datos: CotizacionRequestBody): Promise<Buffer> {
@@ -204,6 +263,50 @@ app.post('/api/enviar-cotizacion', async (req: Request<{}, {}, CotizacionRequest
         res.status(500).json({ status: 'error', message: 'Error procesando la cotización' });
     }
 });
+
+// Envío automático de la cotización (PDF + Excel) por WhatsApp a la dueña
+app.post(
+    '/api/enviar-whatsapp',
+    upload.fields([{ name: 'pdf', maxCount: 1 }, { name: 'excel', maxCount: 1 }]),
+    async (req: Request, res: Response) => {
+        try {
+            if (!WHATSAPP_TOKEN || !WHATSAPP_PHONE_NUMBER_ID || !WHATSAPP_DUENA_NUMERO) {
+                res.status(500).json({ status: 'error', message: 'La integración de WhatsApp no está configurada en el servidor.' });
+                return;
+            }
+
+            const archivos = req.files as { pdf?: Express.Multer.File[]; excel?: Express.Multer.File[] };
+            const archivoPdf = archivos?.pdf?.[0];
+            const archivoExcel = archivos?.excel?.[0];
+            const { nombre, tipoEvento, refNum } = req.body as { nombre?: string; tipoEvento?: string; refNum?: string };
+
+            if (!archivoPdf || !archivoExcel || !nombre || !refNum) {
+                res.status(400).json({ status: 'error', message: 'Faltan datos o archivos de la cotización.' });
+                return;
+            }
+
+            const mensaje = `Nueva cotización para revisión\nCliente: ${nombre}\nEvento: ${tipoEvento || 'No especificado'}\nCotización: ${refNum}\n\nSe adjuntan los archivos PDF y Excel de la cotización para su revisión.`;
+
+            await enviarMensajeWhatsApp({ type: 'text', text: { body: mensaje } });
+
+            const pdfMediaId = await subirMediaWhatsApp(archivoPdf.buffer, archivoPdf.originalname, 'application/pdf');
+            await enviarDocumentoWhatsApp(pdfMediaId, archivoPdf.originalname);
+
+            const excelMediaId = await subirMediaWhatsApp(
+                archivoExcel.buffer,
+                archivoExcel.originalname,
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            );
+            await enviarDocumentoWhatsApp(excelMediaId, archivoExcel.originalname);
+
+            console.log(`✅ Cotización ${refNum} enviada por WhatsApp a la dueña.`);
+            res.json({ status: 'ok', message: 'Cotización enviada por WhatsApp exitosamente.' });
+        } catch (error) {
+            console.error('❌ Error enviando cotización por WhatsApp:', (error as Error).message);
+            res.status(500).json({ status: 'error', message: 'No se pudo enviar la cotización por WhatsApp.' });
+        }
+    }
+);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
