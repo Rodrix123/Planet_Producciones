@@ -18,7 +18,7 @@ eventos (Manizales, Caldas). Monorepo con dos workspaces:
 ## Convenciones
 
 - Idioma del código de negocio (nombres de variables, textos UI, correos):
-  **español**.
+  **español**. 
 - No modificar el diseño visual (colores, layout, textos) ni el
   comportamiento funcional existente sin que se pida explícitamente.
 - TypeScript estricto donde sea razonable; no romper la compilación.

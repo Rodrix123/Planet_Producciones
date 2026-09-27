@@ -8,7 +8,15 @@ export default defineConfig({
     publicDir: 'public',
     build: {
         outDir: 'dist',
-        emptyOutDir: true
+        emptyOutDir: true,
+        rollupOptions: {
+            // Sitio multi-página: landing (index), cotizador y login.
+            input: {
+                main: 'index.html',
+                cotizador: 'cotizador.html',
+                login: 'login.html'
+            }
+        }
     },
     server: {
         port: 5173

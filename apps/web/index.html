@@ -3,29 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Planet Producciones | Cotizador VIP 2026</title>
+    <title>Planet Producciones | Producción Técnica & Eventos VIP</title>
+    <meta name="description" content="Sonido, iluminación, pantallas LED y efectos especiales para bodas, fiestas de 15 años, grados y eventos corporativos VIP en el Eje Cafetero.">
 
-    <!-- Favicon optimizado con Cache-Buster para forzar actualización en la pestaña -->
     <link rel="icon" type="image/png" href="logo.png?v=2">
     <link rel="shortcut icon" type="image/png" href="logo.png?v=2">
     <link rel="apple-touch-icon" href="logo.png?v=2">
 
-    <!-- CDN LIBRERÍAS EXTERNAS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-    <!-- LIBRERÍA HTML2PDF (Motor PDF Alta Resolución) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-
-    <!-- LIBRERÍA EXCEL (SheetJS) -->
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
-<body>
+<body class="landing-body">
 
-    <header>
+    <header class="promo-header">
         <div class="header-container">
             <div class="logo-box">
-                <!-- Logo real cargado desde logo.png -->
                 <img src="logo.png?v=2" alt="Planet Producciones Logo" class="logo-img">
                 <div class="logo-text">
                     <h1>Planet Producciones</h1>
@@ -33,183 +24,181 @@
                 </div>
             </div>
 
-            <a href="https://www.instagram.com/planet.producciones/" target="_blank" rel="noopener noreferrer" class="insta-btn">
-                <i class="fa-brands fa-instagram"></i> @planet.producciones
-            </a>
+            <nav class="promo-nav">
+                <a href="#inicio">Inicio</a>
+                <a href="#servicios">Servicios</a>
+                <a href="#nosotros">Por Qué Elegirnos</a>
+                <a href="#contacto">Contacto</a>
+            </nav>
+
+            <div class="nav-cta-group">
+                <a href="login.html" class="login-link"><i class="fa-solid fa-right-to-bracket"></i> Iniciar Sesión</a>
+                <a href="cotizador.html" class="submit-btn nav-cta-btn"><i class="fa-solid fa-file-invoice-dollar"></i> Cotizar Ahora</a>
+            </div>
         </div>
     </header>
 
-    <main>
-        <div class="layout-grid">
+    <main class="promo-main">
 
-            <div class="card-panel">
-                <div class="section-header">
-                    <h2><i class="fa-solid fa-sliders" style="color: var(--orange-main);"></i> Diseña tu Cotización</h2>
-                    <p>Selecciona los componentes para tu evento en 2026 y descarga tus archivos en PDF y Excel.</p>
+        <!-- HERO -->
+        <section class="hero-section" id="inicio">
+            <div class="hero-content">
+                <div class="hero-logo-box">
+                    <img src="logo.png?v=2" alt="Planet Producciones">
                 </div>
 
-                <form id="quoteForm" onsubmit="return false;">
+                <div class="pill-badge">
+                    <i class="fa-solid fa-star"></i> +10 Años de Experiencia &nbsp;•&nbsp; Eventos VIP en el Eje Cafetero
+                </div>
 
-                    <!-- 1. Datos del Cliente -->
-                    <div class="form-group">
-                        <div class="form-section-title">
-                            <i class="fa-solid fa-user-astronaut"></i> 1. Datos de Contacto
-                        </div>
-                        <div class="grid-3">
-                            <div>
-                                <label for="nombre">Nombre Completo *</label>
-                                <input type="text" id="nombre" required placeholder="Ej. Valentina Gómez">
-                            </div>
-                            <div>
-                                <label for="correo">Correo Electrónico *</label>
-                                <input type="email" id="correo" required placeholder="correo@ejemplo.com">
-                            </div>
-                            <div>
-                                <label for="telefono">Teléfono / WhatsApp *</label>
-                                <input type="tel" id="telefono" required placeholder="+57 300 123 4567">
-                            </div>
-                        </div>
-                    </div>
+                <h1 class="hero-title">Producción Técnica de Alto Impacto para tu Evento VIP</h1>
 
-                    <!-- 2. Ubicación y Tipo de Evento -->
-                    <div class="form-group">
-                        <div class="form-section-title">
-                            <i class="fa-solid fa-location-dot"></i> 2. Cobertura & Evento
-                        </div>
-                        <div class="grid-2">
-                            <div>
-                                <label for="ciudad">Ubicación / Ciudad</label>
-                                <select id="ciudad">
-                                    <option value="" data-precio="0" selected>-- Selecciona Ciudad --</option>
-                                    <option value="Manizales (Sede Central)" data-precio="450000">Manizales (+$450.000)</option>
-                                    <option value="Pereira / Dosquebradas" data-precio="650000">Pereira / Dosquebradas (+$650.000)</option>
-                                    <option value="Armenia / Quindío" data-precio="800000">Armenia / Quindío (+$800.000)</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="tipoEvento">Tipo de Evento</label>
-                                <select id="tipoEvento">
-                                    <option value="" selected>-- Selecciona Tipo de Evento --</option>
-                                    <option value="Boda VIP / Matrimonio">Boda VIP / Matrimonio</option>
-                                    <option value="Fiesta de 15 Años Deluxe">Fiesta de 15 Años Deluxe</option>
-                                    <option value="Evento Corporativo / Gala">Evento Corporativo / Gala</option>
-                                    <option value="Grado / Prom Night">Grado / Prom Night</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
+                <p class="hero-desc">
+                    Sonido profesional, iluminación robótica, pantallas LED y efectos especiales para
+                    bodas, fiestas de 15 años, grados y eventos corporativos. Equipos de primer nivel
+                    y un equipo técnico dedicado, de principio a fin.
+                </p>
 
-                    <!-- 3. Infraestructura -->
-                    <div class="form-group">
-                        <div class="form-section-title">
-                            <i class="fa-solid fa-building-columns"></i> 3. Infraestructura & Espacio
-                        </div>
-                        <div class="grid-2 checkbox-box">
-                            <div>
-                                <label for="lugar">Sede / Recinto</label>
-                                <select id="lugar">
-                                    <option value="" selected>-- Selecciona Sede --</option>
-                                    <option value="Hacienda La Soledad">Hacienda La Soledad</option>
-                                    <option value="Centro de Eventos VIP">Centro de Eventos VIP</option>
-                                    <option value="Recinto Privado">Recinto Privado / Sede Propia</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="tipoEspacio">Preferencia de Montaje</label>
-                                <select id="tipoEspacio">
-                                    <option value="" data-precio="0" selected>-- Selecciona Montaje --</option>
-                                    <option value="Carpa Structural VIP" data-precio="600000">Carpa Structural VIP (+$600.000)</option>
-                                    <option value="Salón Cerrado Premium" data-precio="300000">Salón Cerrado Premium (+$300.000)</option>
-                                    <option value="Estructura al Aire Libre" data-precio="450000">Estructura al Aire Libre (+$450.000)</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
+                <div class="hero-buttons">
+                    <a href="cotizador.html" class="submit-btn hero-btn-primary"><i class="fa-solid fa-file-invoice-dollar"></i> Cotizar Ahora</a>
+                    <a href="#servicios" class="hero-btn-outline"><i class="fa-solid fa-circle-play"></i> Ver Servicios</a>
+                </div>
 
-                    <!-- 4. Producción Audiovisual -->
-                    <div class="form-group">
-                        <div class="form-section-title">
-                            <i class="fa-solid fa-bolt"></i> 4. Equipamiento Técnico
-                        </div>
-                        <div class="grid-2">
-                            <div>
-                                <label for="tipoSonido">Sistema de Sonido</label>
-                                <select id="tipoSonido">
-                                    <option value="" data-precio="0" selected>-- Selecciona Sonido --</option>
-                                    <option value="Sonido Ambiental VIP" data-precio="1050000">Sonido Ambiental VIP - $1.050.000</option>
-                                    <option value="Line Array Concert Pro" data-precio="2200000">Line Array Concert Pro - $2.200.000</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="iluminacion">Diseño de Iluminación</label>
-                                <select id="iluminacion">
-                                    <option value="" data-precio="0" selected>-- Selecciona Iluminación --</option>
-                                    <option value="Iluminación Ambient" data-precio="700000">Iluminación Ambient - $700.000</option>
-                                    <option value="Iluminación Robótica Pro" data-precio="1400000">Iluminación Robótica Pro - $1.400.000</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 5. Efectos Especiales -->
-                    <div class="form-group">
-                        <div class="form-section-title">
-                            <i class="fa-solid fa-wand-magic-sparkles"></i> 5. Efectos Especiales (FX)
-                        </div>
-                        <div class="checkbox-box">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="chkSparkulas" data-precio="350000">
-                                <span>2 Sparkulas (Chispas Frías) (+$350.000)</span>
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="chkNiebla" data-precio="250000">
-                                <span>Niebla Baja (Efecto Nube) (+$250.000)</span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <button type="button" id="btnSubmit" class="submit-btn">
-                        <i class="fa-solid fa-file-pdf"></i>
-                        <span>Generar Cotización (PDF & Excel)</span>
-                    </button>
-                </form>
+                <div class="hero-icons-row">
+                    <div class="hero-icon-item"><i class="fa-solid fa-volume-high"></i></div>
+                    <div class="hero-icon-item"><i class="fa-solid fa-lightbulb"></i></div>
+                    <div class="hero-icon-item"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                </div>
             </div>
+        </section>
 
-            <!-- Resumen Lateral -->
-            <div>
-                <div class="summary-card">
-                    <div>
-                        <span class="badge">Presupuesto Estimado</span>
-                        <div class="price-tag" id="precioTotal">$ 0 COP</div>
-                        <div class="price-sub">Precios actualizados para la temporada 2026.</div>
+        <!-- POR QUÉ ELEGIRNOS -->
+        <section class="features-section" id="nosotros">
+            <div class="features-grid">
+                <div class="features-text">
+                    <div class="pill-badge pill-badge-light">
+                        <i class="fa-solid fa-location-dot"></i> Cobertura Regional
                     </div>
+                    <h2 class="section-title">Producción Técnica de Primer Nivel en el Eje Cafetero</h2>
+                    <p class="section-desc">
+                        Cubrimos Manizales, Chinchiná - Santágueda, Pereira y Armenia con equipos propios,
+                        montaje profesional y un equipo técnico presente durante todo el evento.
+                    </p>
 
-                    <div>
-                        <div class="summary-list-title">Desglose de Servicios:</div>
-                        <ul id="listaResumen">
-                            <li><em>Selecciona tus opciones en el formulario para calcular el costo.</em></li>
-                        </ul>
+                    <ul class="feature-list">
+                        <li>
+                            <div class="feature-icon"><i class="fa-solid fa-bolt"></i></div>
+                            <div>
+                                <div class="feature-title">Equipos de Última Generación</div>
+                                <div class="feature-desc">Line Array RCF, iluminación robótica DMX, pantallas LED Pitch 3 y consolas digitales.</div>
+                            </div>
+                        </li>
+                        <li>
+                            <div class="feature-icon"><i class="fa-solid fa-screwdriver-wrench"></i></div>
+                            <div>
+                                <div class="feature-title">Montaje Profesional Garantizado</div>
+                                <div class="feature-desc">Instalación, pruebas de sonido y desmonte incluidos en cada servicio contratado.</div>
+                            </div>
+                        </li>
+                        <li>
+                            <div class="feature-icon"><i class="fa-solid fa-headset"></i></div>
+                            <div>
+                                <div class="feature-title">Respaldo Técnico en Sitio</div>
+                                <div class="feature-desc">Técnico dedicado durante todo el evento, con equipos de respaldo inmediato.</div>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="features-visual">
+                    <div class="visual-grid">
+                        <div class="visual-card visual-card-tall"><i class="fa-solid fa-volume-high"></i><span>Sonido Line Array</span></div>
+                        <div class="visual-card"><i class="fa-solid fa-lightbulb"></i><span>Iluminación Robótica</span></div>
+                        <div class="visual-card"><i class="fa-solid fa-tv"></i><span>Pantallas LED</span></div>
                     </div>
-
-                    <div class="info-box">
-                        <i class="fa-solid fa-circle-info" style="margin-top:2px;"></i>
-                        <span>Al hacer clic se descargarán automáticamente los archivos PDF HD (con marca de agua) y Excel profesional.</span>
+                    <div class="floating-badge-card">
+                        <i class="fa-solid fa-champagne-glasses"></i>
+                        <div>
+                            <div class="floating-badge-title">+500 Eventos</div>
+                            <div class="floating-badge-sub">Realizados con éxito</div>
+                        </div>
                     </div>
                 </div>
             </div>
+        </section>
 
-        </div>
+        <!-- CTA BAND -->
+        <section class="cta-band" id="servicios">
+            <div class="cta-content">
+                <div class="pill-badge pill-badge-white">
+                    <i class="fa-solid fa-bolt"></i> Cotización 100% Gratuita y Sin Compromiso
+                </div>
+
+                <h2 class="cta-title">Cotiza tu Evento VIP en Minutos</h2>
+
+                <p class="cta-desc">
+                    Arma tu cotización a la medida: transporte, sonido, iluminación, pantallas LED, efectos
+                    especiales y mobiliario. Descarga tu propuesta en PDF y Excel al instante.
+                </p>
+
+                <div class="cta-buttons">
+                    <a href="cotizador.html" class="cta-btn-white"><i class="fa-solid fa-file-invoice-dollar"></i> Cotizar Ahora</a>
+                    <a href="https://www.instagram.com/planet.producciones/" target="_blank" rel="noopener noreferrer" class="cta-btn-outline"><i class="fa-brands fa-instagram"></i> @planet.producciones</a>
+                </div>
+
+                <div class="cta-trust-row">
+                    <span><i class="fa-solid fa-volume-high"></i> Sonido Profesional</span>
+                    <span><i class="fa-solid fa-lightbulb"></i> Iluminación DMX</span>
+                    <span><i class="fa-solid fa-wand-magic-sparkles"></i> Efectos Especiales</span>
+                    <span><i class="fa-solid fa-tv"></i> Pantallas LED</span>
+                </div>
+            </div>
+        </section>
+
     </main>
 
-    <footer>
-        <p>© 2026 Planet Producciones. Todos los derechos reservados. Manizales - Caldas, Colombia.</p>
+    <footer class="promo-footer" id="contacto">
+        <div class="promo-footer-grid">
+            <div class="footer-col">
+                <div class="footer-brand">
+                    <img src="logo.png?v=2" alt="Planet Producciones" class="footer-logo">
+                    <div>
+                        <div class="footer-brand-name">Planet Producciones</div>
+                        <div class="footer-brand-sub">Eventos VIP & Producción Técnica</div>
+                    </div>
+                </div>
+                <p class="footer-desc">
+                    Producción técnica integral para eventos VIP: sonido, iluminación, pantallas LED y
+                    efectos especiales, con equipos propios y montaje profesional.
+                </p>
+                <div class="footer-love"><i class="fa-solid fa-heart"></i> Hecho con pasión para tus momentos únicos</div>
+            </div>
+
+            <div class="footer-col">
+                <div class="footer-col-title">Contacto</div>
+                <a href="tel:+573127817072" class="footer-contact-line"><i class="fa-solid fa-phone"></i> +57 312 781 70 72</a>
+                <a href="https://www.instagram.com/planet.producciones/" target="_blank" rel="noopener noreferrer" class="footer-contact-line"><i class="fa-brands fa-instagram"></i> @planet.producciones</a>
+                <div class="footer-contact-line"><i class="fa-solid fa-location-dot"></i> Manizales - Caldas, Colombia</div>
+            </div>
+
+            <div class="footer-col">
+                <div class="footer-col-title">Cotiza tu Evento</div>
+                <p class="footer-desc">Genera tu cotización personalizada en minutos, con PDF y Excel listos para descargar.</p>
+                <a href="cotizador.html" class="footer-cta-btn"><i class="fa-solid fa-file-invoice-dollar"></i> Cotizar Ahora</a>
+                <a href="login.html" class="footer-login-link"><i class="fa-solid fa-right-to-bracket"></i> Iniciar Sesión</a>
+            </div>
+        </div>
+
+        <div class="promo-footer-bottom">
+            <p>© 2026 Planet Producciones. Todos los derechos reservados.</p>
+            <div class="footer-bottom-links">
+                <a href="https://www.instagram.com/planet.producciones/" target="_blank" rel="noopener noreferrer">Instagram</a>
+                <a href="cotizador.html">Cotizador</a>
+                <a href="login.html">Iniciar Sesión</a>
+            </div>
+        </div>
     </footer>
 
-    <!-- Botón flotante de contacto rápido: WhatsApp o Correo -->
-    <button id="btnContacto" class="fab-contact" type="button" aria-label="Contactar por WhatsApp o Correo">
-        <i class="fa-solid fa-phone"></i>
-    </button>
-
-    <script type="module" src="/src/main.ts"></script>
+    <script type="module" src="/src/home.ts"></script>
 </body>
 </html>
