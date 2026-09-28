@@ -212,3 +212,9 @@ CREATE TABLE IF NOT EXISTS public.dispatch_stock_items (
     FOREIGN KEY (dispatch_id, package_id)
         REFERENCES public.dispatch_items (dispatch_id, package_id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS public.config (
+    id    BIGSERIAL PRIMARY KEY,
+    key   TEXT      NOT NULL UNIQUE,
+    value TEXT
+);
