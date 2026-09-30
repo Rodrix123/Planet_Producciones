@@ -507,8 +507,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Botón flotante de contacto rápido: WhatsApp o Correo ---
     const WHATSAPP_NUMERO = '573185101502';
-    const CORREO_ASISTENCIA = 'mcluis004@gmail.com';
     const btnContacto = document.getElementById('btnContacto') as HTMLButtonElement | null;
+
+    // Envía la confirmación de la solicitud de asistencia al correo ingresado por el visitante
+    async function enviarAsistenciaCorreo(correo: string, nombre: string, mensaje: string): Promise<void> {
+        const respuesta = await fetch(`${API_URL}/api/enviar-asistencia-correo`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ correo, nombre, mensaje })
+        });
+
+        const data = await respuesta.json().catch(() => ({}));
+        if (!respuesta.ok || data.status !== 'ok') {
+            throw new Error(data.message || 'No se pudo enviar el correo de asistencia.');
+        }
+    }
 
     function construirMensajeAsistencia(): string {
         const nombre = (document.getElementById('nombre') as HTMLInputElement)?.value.trim();
@@ -537,16 +550,52 @@ document.addEventListener('DOMContentLoaded', () => {
             confirmButtonColor: '#25D366',
             denyButtonColor: '#f97316',
             cancelButtonColor: '#374151'
-        }).then((result: any) => {
+        }).then(async (result: any) => {
             const mensaje = construirMensajeAsistencia();
+            const nombre = (document.getElementById('nombre') as HTMLInputElement)?.value.trim();
 
             if (result.isConfirmed) {
                 const url = `https://wa.me/${WHATSAPP_NUMERO}?text=${encodeURIComponent(mensaje)}`;
                 window.open(url, '_blank', 'noopener,noreferrer');
             } else if (result.isDenied) {
-                const asunto = 'Solicitud de Asistencia - Planet Producciones';
-                const url = `mailto:${CORREO_ASISTENCIA}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(mensaje)}`;
-                window.location.href = url;
+                const { value: correoDestino } = await Swal.fire({
+                    title: 'Ingresa tu correo',
+                    input: 'email',
+                    inputLabel: 'Te enviaremos la confirmación de tu solicitud a este correo',
+                    inputPlaceholder: 'tucorreo@ejemplo.com',
+                    showCancelButton: true,
+                    confirmButtonText: 'Enviar',
+                    cancelButtonText: 'Cancelar',
+                    confirmButtonColor: '#f97316',
+                    cancelButtonColor: '#374151',
+                    inputValidator: (value: string) => (!value ? 'Debes ingresar un correo.' : undefined)
+                });
+
+                if (!correoDestino) return;
+
+                Swal.fire({
+                    title: 'Enviando solicitud...',
+                    allowOutsideClick: false,
+                    didOpen: () => { Swal.showLoading(); }
+                });
+
+                try {
+                    await enviarAsistenciaCorreo(correoDestino, nombre, mensaje);
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Solicitud enviada!',
+                        html: `Te enviamos la confirmación a <strong>${correoDestino}</strong>. Pronto nos pondremos en contacto contigo.`,
+                        confirmButtonColor: '#f97316'
+                    });
+                } catch (error) {
+                    console.error(error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'No se pudo enviar el correo',
+                        text: 'Intenta nuevamente más tarde o contáctanos por WhatsApp.',
+                        confirmButtonColor: '#f97316'
+                    });
+                }
             }
         });
     });

@@ -8,6 +8,12 @@ import path from 'path';
 import fs from 'fs';
 import multer from 'multer';
 
+interface AsistenciaCorreoRequestBody {
+    correo?: string;
+    nombre?: string;
+    mensaje?: string;
+}
+
 interface CotizacionRequestBody {
     nombre?: string;
     correo?: string;
@@ -31,9 +37,9 @@ app.use(express.static(path.join(__dirname, '..', 'assets')));
 // Sirve el frontend compilado (apps/web/dist) para abrir la app en http://localhost:PORT
 app.use(express.static(path.join(__dirname, '..', '..', 'web', 'dist')));
 
-// Configuración SMTP para Outlook/Hotmail
+// Configuración SMTP para Gmail (EMAIL_USER es una cuenta @gmail.com)
 const transporter = nodemailer.createTransport({
-    service: 'hotmail',
+    service: 'gmail',
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
@@ -335,6 +341,34 @@ app.post(
         }
     }
 );
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Envía un correo de confirmación al correo ingresado por el visitante que pidió
+// asistencia desde el botón flotante de contacto (canal "Correo")
+app.post('/api/enviar-asistencia-correo', async (req: Request<{}, {}, AsistenciaCorreoRequestBody>, res: Response) => {
+    try {
+        const { correo, nombre, mensaje } = req.body;
+
+        if (!correo || !EMAIL_REGEX.test(correo)) {
+            res.status(400).json({ status: 'error', message: 'Ingresa un correo electrónico válido.' });
+            return;
+        }
+
+        await transporter.sendMail({
+            from: `"Planet Producciones" <${process.env.EMAIL_USER}>`,
+            to: correo,
+            subject: 'Hemos recibido tu solicitud de asistencia - Planet Producciones',
+            text: `Hola${nombre ? ` ${nombre}` : ''},\n\n¡Gracias por contactar a Planet Producciones! Hemos recibido tu solicitud de asistencia y muy pronto uno de nuestros asesores se pondrá en contacto contigo por este correo.\n\nResumen de tu solicitud:\n${mensaje || 'Sin detalles adicionales.'}\n\n¡Gracias por elegirnos para hacer inolvidable tu evento!\nEquipo Planet Producciones`
+        });
+
+        console.log(`✅ Correo de asistencia enviado a ${correo}`);
+        res.json({ status: 'ok', message: 'Correo de asistencia enviado correctamente.' });
+    } catch (error) {
+        console.error('❌ Error enviando correo de asistencia:', (error as Error).message);
+        res.status(500).json({ status: 'error', message: 'No se pudo enviar el correo de asistencia.' });
+    }
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
