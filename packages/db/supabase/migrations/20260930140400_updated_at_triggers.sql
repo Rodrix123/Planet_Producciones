@@ -45,12 +45,23 @@ CREATE OR REPLACE TRIGGER set_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION public.set_updated_at();
 
-
+CREATE OR REPLACE FUNCTION public.set_updated_at_event_quote()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    Update public.quote set updated_at = NOW() where id = NEW.quote_id;
+    Update public.events set updated_at = NOW() where id = NEW.event_id;
+    RETURN NEW;
+END;
+$$;
 
 CREATE OR REPLACE TRIGGER set_updated_at
     BEFORE UPDATE ON public.quote_items
         FOR EACH ROW 
-        EXECUTE FUNCTION public.set_updated_at();
+        EXECUTE FUNCTION public.set_updated_at_event_quote();
+
+
 -- Igual que set_updated_at, pero para el INSERT: created_at tiene
 -- DEFAULT NOW(), pero ese default solo se usa si la columna se omite
 -- del INSERT. Si alguien la manda explícita (a propósito o por error),
@@ -164,8 +175,8 @@ BEGIN
     update public.quote 
     SET total = total + (quantity * price)
     WHERE id = quote_id;
-
-end;
+   RETURN NEW;
+end;$$;
 
 Create OR REPLACE trigger update_total_quote
     AFTER INSERT OR UPDATE OR DELETE ON public.quote_items
@@ -190,7 +201,8 @@ BEGIN
         RAISE EXCEPTION 'La fecha del evento no puede ser mayor a % días a partir de hoy. (Maximo debe de ser el %)', max_date_separation, max_date_allowed;
     END IF;
     RETURN NEW;
-end;
+end; 
+$$ ;
 
 
 
@@ -214,16 +226,15 @@ RETURNS void
 LANGUAGE plpgsql
 AS $$
 declare
-    max_date_separation inTEGER;
+    max_date_separation INTEGER;
 BEGIN
     select value::INTEGER INTO max_date_separation
     from public.config
     where key = 'fecha_maxima_separacion_evento';
 
-    select from public.events where 
     DELETE FROM public.events 
     WHERE CURRENT_DATE - date > max_date_separation
-    AND (confirmed = false or total_paid < (SELECT sum(total) FROM public.quote WHERE id = quote_id));
+    AND (confirmed = false OR total_paid < (SELECT sum(total) FROM public.quote WHERE id = quote_id));
 
     ---completar segun las direcciones de la administradora
 END;

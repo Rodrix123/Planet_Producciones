@@ -135,29 +135,52 @@ ALTER TABLE public.dispatch_stock_items     ENABLE ROW LEVEL SECURITY;
 --    de cada tabla; sirve de válvula de escape sin tener que usar la
 --    service_role key para probar la app como usuario normal.
 -- ================================================================
-CREATE POLICY "components_dev_all"               ON public.components               FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
-CREATE POLICY "venue_dev_all"                    ON public.venue                    FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
-CREATE POLICY "vehicles_dev_all"                 ON public.vehicles                 FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
-CREATE POLICY "role_dev_all"                     ON public.role                     FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
-CREATE POLICY "inventory_dev_all"                ON public.inventory                FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
-CREATE POLICY "inventory_components_dev_all"     ON public.inventory_components     FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
-CREATE POLICY "users_dev_all"                    ON public.users                    FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
-CREATE POLICY "transportation_dev_all"           ON public.transportation           FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
-CREATE POLICY "inventory_variants_dev_all"       ON public.inventory_variants       FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
-CREATE POLICY "stock_dev_all"                    ON public.stock                    FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
-CREATE POLICY "quote_dev_all"                    ON public.quote                    FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
-CREATE POLICY "quote_items_dev_all"              ON public.quote_items              FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
-CREATE POLICY "events_dev_all"                   ON public.events                   FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
-CREATE POLICY "transactions_dev_all"             ON public.transactions             FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
-CREATE POLICY "event_staff_dev_all"              ON public.event_staff              FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
-CREATE POLICY "unavailability_users_dev_all"     ON public.unavailability_users     FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
+DROP POLICY IF EXISTS "components_dev_all" ON public.components;
+CREATE POLICY "components_dev_all" ON public.components               FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
+DROP POLICY IF EXISTS "venue_dev_all" ON public.venue;
+CREATE POLICY "venue_dev_all" ON public.venue                    FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
+DROP POLICY IF EXISTS "vehicles_dev_all" ON public.vehicles;
+CREATE POLICY "vehicles_dev_all" ON public.vehicles                 FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
+DROP POLICY IF EXISTS "role_dev_all" ON public.role;
+CREATE POLICY "role_dev_all" ON public.role                     FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
+DROP POLICY IF EXISTS "inventory_dev_all" ON public.inventory;
+CREATE POLICY "inventory_dev_all" ON public.inventory                FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
+DROP POLICY IF EXISTS "inventory_components_dev_all" ON public.inventory_components;
+CREATE POLICY "inventory_components_dev_all" ON public.inventory_components     FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
+DROP POLICY IF EXISTS "users_dev_all" ON public.users;
+CREATE POLICY "users_dev_all" ON public.users                    FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
+DROP POLICY IF EXISTS "transportation_dev_all" ON public.transportation;
+CREATE POLICY "transportation_dev_all" ON public.transportation           FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
+DROP POLICY IF EXISTS "inventory_variants_dev_all" ON public.inventory_variants;
+CREATE POLICY "inventory_variants_dev_all" ON public.inventory_variants       FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
+DROP POLICY IF EXISTS "stock_dev_all" ON public.stock;
+CREATE POLICY "stock_dev_all" ON public.stock                    FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
+DROP POLICY IF EXISTS "quote_dev_all" ON public.quote;
+CREATE POLICY "quote_dev_all" ON public.quote                    FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
+DROP POLICY IF EXISTS "quote_items_dev_all" ON public.quote_items;
+CREATE POLICY "quote_items_dev_all" ON public.quote_items              FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
+DROP POLICY IF EXISTS "events_dev_all" ON public.events;
+CREATE POLICY "events_dev_all" ON public.events                   FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
+DROP POLICY IF EXISTS "transactions_dev_all" ON public.transactions;
+CREATE POLICY "transactions_dev_all" ON public.transactions             FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
+DROP POLICY IF EXISTS "event_staff_dev_all" ON public.event_staff;
+CREATE POLICY "event_staff_dev_all" ON public.event_staff              FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
+DROP POLICY IF EXISTS "unavailability_users_dev_all" ON public.unavailability_users;
+CREATE POLICY "unavailability_users_dev_all" ON public.unavailability_users     FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
+DROP POLICY IF EXISTS "unavailability_inventory_dev_all" ON public.unavailability_inventory;
 CREATE POLICY "unavailability_inventory_dev_all" ON public.unavailability_inventory FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
-CREATE POLICY "package_dev_all"                  ON public.package                  FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
-CREATE POLICY "package_items_dev_all"            ON public.package_items            FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
-CREATE POLICY "dispatch_dev_all"                 ON public.dispatch                 FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
-CREATE POLICY "dispatch_audit_dev_all"           ON public.dispatch_audit           FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
-CREATE POLICY "dispatch_items_dev_all"           ON public.dispatch_items           FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
-CREATE POLICY "dispatch_stock_items_dev_all"     ON public.dispatch_stock_items     FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
+DROP POLICY IF EXISTS "package_dev_all" ON public.package;
+CREATE POLICY "package_dev_all" ON public.package                  FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
+DROP POLICY IF EXISTS "package_items_dev_all" ON public.package_items;
+CREATE POLICY "package_items_dev_all" ON public.package_items            FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
+DROP POLICY IF EXISTS "dispatch_dev_all" ON public.dispatch;
+CREATE POLICY "dispatch_dev_all" ON public.dispatch                 FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
+DROP POLICY IF EXISTS "dispatch_audit_dev_all" ON public.dispatch_audit;
+CREATE POLICY "dispatch_audit_dev_all" ON public.dispatch_audit           FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
+DROP POLICY IF EXISTS "dispatch_items_dev_all" ON public.dispatch_items;
+CREATE POLICY "dispatch_items_dev_all" ON public.dispatch_items           FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
+DROP POLICY IF EXISTS "dispatch_stock_items_dev_all" ON public.dispatch_stock_items;
+CREATE POLICY "dispatch_stock_items_dev_all" ON public.dispatch_stock_items     FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
 
 -- profiles se maneja aparte más abajo (sección 8), porque además de dev_all
 -- necesita blindaje contra auto-ascenso a admin/desarrollador.
@@ -168,43 +191,59 @@ CREATE POLICY "dispatch_stock_items_dev_all"     ON public.dispatch_stock_items 
 --    (venue, vehicles, role, inventory, inventory_components,
 --     components, transportation, inventory_variants)
 -- ================================================================
+DROP POLICY IF EXISTS "components_admin_all" ON public.components;
 CREATE POLICY "components_admin_all" ON public.components
     FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+DROP POLICY IF EXISTS "components_staff_select" ON public.components;
 CREATE POLICY "components_staff_select" ON public.components
     FOR SELECT TO authenticated USING (public.is_staff());
 
+DROP POLICY IF EXISTS "venue_admin_all" ON public.venue;
 CREATE POLICY "venue_admin_all" ON public.venue
     FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+DROP POLICY IF EXISTS "venue_staff_select" ON public.venue;
 CREATE POLICY "venue_staff_select" ON public.venue
     FOR SELECT TO authenticated USING (public.is_staff());
 
+DROP POLICY IF EXISTS "vehicles_admin_all" ON public.vehicles;
 CREATE POLICY "vehicles_admin_all" ON public.vehicles
     FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+DROP POLICY IF EXISTS "vehicles_staff_select" ON public.vehicles;
 CREATE POLICY "vehicles_staff_select" ON public.vehicles
     FOR SELECT TO authenticated USING (public.is_staff());
 
+DROP POLICY IF EXISTS "role_admin_all" ON public.role;
 CREATE POLICY "role_admin_all" ON public.role
     FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+DROP POLICY IF EXISTS "role_staff_select" ON public.role;
 CREATE POLICY "role_staff_select" ON public.role
     FOR SELECT TO authenticated USING (public.is_staff());
 
+DROP POLICY IF EXISTS "inventory_admin_all" ON public.inventory;
 CREATE POLICY "inventory_admin_all" ON public.inventory
     FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+DROP POLICY IF EXISTS "inventory_staff_select" ON public.inventory;
 CREATE POLICY "inventory_staff_select" ON public.inventory
     FOR SELECT TO authenticated USING (public.is_staff());
 
+DROP POLICY IF EXISTS "inventory_components_admin_all" ON public.inventory_components;
 CREATE POLICY "inventory_components_admin_all" ON public.inventory_components
     FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+DROP POLICY IF EXISTS "inventory_components_staff_select" ON public.inventory_components;
 CREATE POLICY "inventory_components_staff_select" ON public.inventory_components
     FOR SELECT TO authenticated USING (public.is_staff());
 
+DROP POLICY IF EXISTS "transportation_admin_all" ON public.transportation;
 CREATE POLICY "transportation_admin_all" ON public.transportation
     FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+DROP POLICY IF EXISTS "transportation_staff_select" ON public.transportation;
 CREATE POLICY "transportation_staff_select" ON public.transportation
     FOR SELECT TO authenticated USING (public.is_staff());
 
+DROP POLICY IF EXISTS "inventory_variants_admin_all" ON public.inventory_variants;
 CREATE POLICY "inventory_variants_admin_all" ON public.inventory_variants
     FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+DROP POLICY IF EXISTS "inventory_variants_staff_select" ON public.inventory_variants;
 CREATE POLICY "inventory_variants_staff_select" ON public.inventory_variants
     FOR SELECT TO authenticated USING (public.is_staff());
 
@@ -212,12 +251,16 @@ CREATE POLICY "inventory_variants_staff_select" ON public.inventory_variants
 -- 6) stock: dato operativo (cambia de estado seguido) -> trabajador
 --    puede leer/crear/actualizar; borrar queda solo para admin/dev.
 -- ================================================================
+DROP POLICY IF EXISTS "stock_admin_all" ON public.stock;
 CREATE POLICY "stock_admin_all" ON public.stock
     FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+DROP POLICY IF EXISTS "stock_staff_select" ON public.stock;
 CREATE POLICY "stock_staff_select" ON public.stock
     FOR SELECT TO authenticated USING (public.is_staff());
+DROP POLICY IF EXISTS "stock_staff_insert" ON public.stock;
 CREATE POLICY "stock_staff_insert" ON public.stock
     FOR INSERT TO authenticated WITH CHECK (public.is_staff());
+DROP POLICY IF EXISTS "stock_staff_update" ON public.stock;
 CREATE POLICY "stock_staff_update" ON public.stock
     FOR UPDATE TO authenticated USING (public.is_staff()) WITH CHECK (public.is_staff());
 
@@ -230,18 +273,24 @@ CREATE POLICY "stock_staff_update" ON public.stock
 --    ya no incluye "authenticated": si lo incluyera, un trabajador logueado
 --    podría crear/editar cotizaciones desde su propia sesión.
 -- ================================================================
+DROP POLICY IF EXISTS "users_admin_all" ON public.users;
 CREATE POLICY "users_admin_all" ON public.users
     FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+DROP POLICY IF EXISTS "users_public_insert" ON public.users;
 CREATE POLICY "users_public_insert" ON public.users
     FOR INSERT TO anon WITH CHECK (true);
 
+DROP POLICY IF EXISTS "quote_admin_all" ON public.quote;
 CREATE POLICY "quote_admin_all" ON public.quote
     FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+DROP POLICY IF EXISTS "quote_public_insert" ON public.quote;
 CREATE POLICY "quote_public_insert" ON public.quote
     FOR INSERT TO anon WITH CHECK (true);
 
+DROP POLICY IF EXISTS "quote_items_admin_all" ON public.quote_items;
 CREATE POLICY "quote_items_admin_all" ON public.quote_items
     FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+DROP POLICY IF EXISTS "quote_items_public_insert" ON public.quote_items;
 CREATE POLICY "quote_items_public_insert" ON public.quote_items
     FOR INSERT TO anon WITH CHECK (true);
 
@@ -255,9 +304,11 @@ CREATE POLICY "quote_items_public_insert" ON public.quote_items
 --    'desarrollador' (ni a otros ni a sí mismo): solo el propio
 --    desarrollador (o el seed, que corre con service_role) puede.
 -- ================================================================
+DROP POLICY IF EXISTS "profiles_dev_all" ON public.profiles;
 CREATE POLICY "profiles_dev_all" ON public.profiles
     FOR ALL TO authenticated USING (public.is_developer()) WITH CHECK (public.is_developer());
 
+DROP POLICY IF EXISTS "profiles_admin_all" ON public.profiles;
 CREATE POLICY "profiles_admin_all" ON public.profiles
     FOR ALL TO authenticated
     USING (public.is_admin())
@@ -269,6 +320,7 @@ CREATE POLICY "profiles_admin_all" ON public.profiles
         )
     );
 
+DROP POLICY IF EXISTS "profiles_self_select" ON public.profiles;
 CREATE POLICY "profiles_self_select" ON public.profiles
     FOR SELECT TO authenticated USING (id = auth.uid());
 
@@ -283,6 +335,7 @@ CREATE POLICY "profiles_self_select" ON public.profiles
 --    El resto (despachos, paquetes) sigue: cualquier staff puede
 --    leer/crear/actualizar, borrar queda para admin/dev.
 -- ================================================================
+DROP POLICY IF EXISTS "events_admin_all" ON public.events;
 CREATE POLICY "events_admin_all" ON public.events
     FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
 
@@ -309,55 +362,78 @@ WHERE public.is_staff();
 
 GRANT SELECT ON public.events_dispatch TO authenticated;
 
+DROP POLICY IF EXISTS "event_staff_admin_all" ON public.event_staff;
 CREATE POLICY "event_staff_admin_all" ON public.event_staff
     FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+DROP POLICY IF EXISTS "event_staff_staff_select" ON public.event_staff;
 CREATE POLICY "event_staff_staff_select" ON public.event_staff
     FOR SELECT TO authenticated USING (public.is_staff());
+DROP POLICY IF EXISTS "event_staff_staff_insert" ON public.event_staff;
 CREATE POLICY "event_staff_staff_insert" ON public.event_staff
     FOR INSERT TO authenticated WITH CHECK (public.is_staff());
 
+DROP POLICY IF EXISTS "package_admin_all" ON public.package;
 CREATE POLICY "package_admin_all" ON public.package
     FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+DROP POLICY IF EXISTS "package_staff_select" ON public.package;
 CREATE POLICY "package_staff_select" ON public.package
     FOR SELECT TO authenticated USING (public.is_staff());
+DROP POLICY IF EXISTS "package_staff_insert" ON public.package;
 CREATE POLICY "package_staff_insert" ON public.package
     FOR INSERT TO authenticated WITH CHECK (public.is_staff());
+DROP POLICY IF EXISTS "package_staff_update" ON public.package;
 CREATE POLICY "package_staff_update" ON public.package
     FOR UPDATE TO authenticated USING (public.is_staff()) WITH CHECK (public.is_staff());
 
+DROP POLICY IF EXISTS "package_items_admin_all" ON public.package_items;
 CREATE POLICY "package_items_admin_all" ON public.package_items
     FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+DROP POLICY IF EXISTS "package_items_staff_select" ON public.package_items;
 CREATE POLICY "package_items_staff_select" ON public.package_items
     FOR SELECT TO authenticated USING (public.is_staff());
+DROP POLICY IF EXISTS "package_items_staff_insert" ON public.package_items;
 CREATE POLICY "package_items_staff_insert" ON public.package_items
     FOR INSERT TO authenticated WITH CHECK (public.is_staff());
+DROP POLICY IF EXISTS "package_items_staff_update" ON public.package_items;
 CREATE POLICY "package_items_staff_update" ON public.package_items
     FOR UPDATE TO authenticated USING (public.is_staff()) WITH CHECK (public.is_staff());
 
+DROP POLICY IF EXISTS "dispatch_admin_all" ON public.dispatch;
 CREATE POLICY "dispatch_admin_all" ON public.dispatch
     FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+DROP POLICY IF EXISTS "dispatch_staff_select" ON public.dispatch;
 CREATE POLICY "dispatch_staff_select" ON public.dispatch
     FOR SELECT TO authenticated USING (public.is_staff());
+DROP POLICY IF EXISTS "dispatch_staff_insert" ON public.dispatch;
 CREATE POLICY "dispatch_staff_insert" ON public.dispatch
     FOR INSERT TO authenticated WITH CHECK (public.is_staff());
+DROP POLICY IF EXISTS "dispatch_staff_update" ON public.dispatch;
 CREATE POLICY "dispatch_staff_update" ON public.dispatch
     FOR UPDATE TO authenticated USING (public.is_staff()) WITH CHECK (public.is_staff());
 
+DROP POLICY IF EXISTS "dispatch_items_admin_all" ON public.dispatch_items;
 CREATE POLICY "dispatch_items_admin_all" ON public.dispatch_items
     FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+DROP POLICY IF EXISTS "dispatch_items_staff_select" ON public.dispatch_items;
 CREATE POLICY "dispatch_items_staff_select" ON public.dispatch_items
     FOR SELECT TO authenticated USING (public.is_staff());
+DROP POLICY IF EXISTS "dispatch_items_staff_insert" ON public.dispatch_items;
 CREATE POLICY "dispatch_items_staff_insert" ON public.dispatch_items
     FOR INSERT TO authenticated WITH CHECK (public.is_staff());
+DROP POLICY IF EXISTS "dispatch_items_staff_update" ON public.dispatch_items;
 CREATE POLICY "dispatch_items_staff_update" ON public.dispatch_items
     FOR UPDATE TO authenticated USING (public.is_staff()) WITH CHECK (public.is_staff());
 
+DROP POLICY IF EXISTS "dispatch_stock_items_admin_all" ON public.dispatch_stock_items;
 CREATE POLICY "dispatch_stock_items_admin_all" ON public.dispatch_stock_items
     FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+DROP POLICY IF EXISTS "dispatch_stock_items_staff_select" ON public.dispatch_stock_items;
 CREATE POLICY "dispatch_stock_items_staff_select" ON public.dispatch_stock_items
     FOR SELECT TO authenticated USING (public.is_staff());
+DROP POLICY IF EXISTS "dispatch_stock_items_staff_insert" ON public.dispatch_stock_items;
 CREATE POLICY "dispatch_stock_items_staff_insert" ON public.dispatch_stock_items
     FOR INSERT TO authenticated WITH CHECK (public.is_staff());
+DROP POLICY IF EXISTS "dispatch_stock_items_staff_delete" ON public.dispatch_stock_items;
 CREATE POLICY "dispatch_stock_items_staff_delete" ON public.dispatch_stock_items
     FOR DELETE TO authenticated USING (public.is_staff());
 
@@ -373,15 +449,20 @@ CREATE POLICY "dispatch_stock_items_staff_delete" ON public.dispatch_stock_items
 --       cualquier staff; admin sí puede corregir un registro si hace
 --       falta (bitácora operativa, no financiera).
 -- ================================================================
+DROP POLICY IF EXISTS "transactions_staff_select" ON public.transactions;
 CREATE POLICY "transactions_staff_select" ON public.transactions
     FOR SELECT TO authenticated USING (public.is_staff());
+DROP POLICY IF EXISTS "transactions_staff_insert" ON public.transactions;
 CREATE POLICY "transactions_staff_insert" ON public.transactions
     FOR INSERT TO authenticated WITH CHECK (public.is_staff());
 
+DROP POLICY IF EXISTS "dispatch_audit_admin_all" ON public.dispatch_audit;
 CREATE POLICY "dispatch_audit_admin_all" ON public.dispatch_audit
     FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+DROP POLICY IF EXISTS "dispatch_audit_staff_select" ON public.dispatch_audit;
 CREATE POLICY "dispatch_audit_staff_select" ON public.dispatch_audit
     FOR SELECT TO authenticated USING (public.is_staff());
+DROP POLICY IF EXISTS "dispatch_audit_staff_insert" ON public.dispatch_audit;
 CREATE POLICY "dispatch_audit_staff_insert" ON public.dispatch_audit
     FOR INSERT TO authenticated WITH CHECK (public.is_staff());
 
@@ -389,20 +470,28 @@ CREATE POLICY "dispatch_audit_staff_insert" ON public.dispatch_audit
 -- 11) unavailability_users: cada trabajador gestiona SU PROPIA
 --     indisponibilidad; el equipo completo puede verla (para programar).
 -- ================================================================
+DROP POLICY IF EXISTS "unavailability_users_admin_all" ON public.unavailability_users;
 CREATE POLICY "unavailability_users_admin_all" ON public.unavailability_users
     FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+DROP POLICY IF EXISTS "unavailability_users_staff_select" ON public.unavailability_users;
 CREATE POLICY "unavailability_users_staff_select" ON public.unavailability_users
     FOR SELECT TO authenticated USING (public.is_staff());
+DROP POLICY IF EXISTS "unavailability_users_self_insert" ON public.unavailability_users;
 CREATE POLICY "unavailability_users_self_insert" ON public.unavailability_users
     FOR INSERT TO authenticated WITH CHECK (id_user = auth.uid());
+DROP POLICY IF EXISTS "unavailability_users_self_delete" ON public.unavailability_users;
 CREATE POLICY "unavailability_users_self_delete" ON public.unavailability_users
     FOR DELETE TO authenticated USING (id_user = auth.uid());
 
+DROP POLICY IF EXISTS "unavailability_inventory_admin_all" ON public.unavailability_inventory;
 CREATE POLICY "unavailability_inventory_admin_all" ON public.unavailability_inventory
     FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+DROP POLICY IF EXISTS "unavailability_inventory_staff_select" ON public.unavailability_inventory;
 CREATE POLICY "unavailability_inventory_staff_select" ON public.unavailability_inventory
     FOR SELECT TO authenticated USING (public.is_staff());
+DROP POLICY IF EXISTS "unavailability_inventory_staff_insert" ON public.unavailability_inventory;
 CREATE POLICY "unavailability_inventory_staff_insert" ON public.unavailability_inventory
     FOR INSERT TO authenticated WITH CHECK (public.is_staff());
+DROP POLICY IF EXISTS "unavailability_inventory_staff_delete" ON public.unavailability_inventory;
 CREATE POLICY "unavailability_inventory_staff_delete" ON public.unavailability_inventory
     FOR DELETE TO authenticated USING (public.is_staff());
