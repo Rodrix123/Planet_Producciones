@@ -199,6 +199,8 @@ input[type="text"],
 input[type="email"],
 input[type="tel"],
 input[type="number"],
+input[type="password"],
+input[type="date"],
 select {
     width: 100%;
     background-color: var(--bg-input);

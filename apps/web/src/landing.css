@@ -651,6 +651,12 @@ a.footer-contact-line:hover {
     display: block;
 }
 
+.login-status-msg.error {
+    color: #f87171;
+    background-color: rgba(248, 113, 113, 0.1);
+    border-color: rgba(248, 113, 113, 0.3);
+}
+
 .login-back-link {
     display: block;
     text-align: center;

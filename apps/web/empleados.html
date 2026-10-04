@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Empleados | Planet Producciones</title>
+
+    <link rel="icon" type="image/png" href="logo.png?v=2">
+    <link rel="shortcut icon" type="image/png" href="logo.png?v=2">
+    <link rel="apple-touch-icon" href="logo.png?v=2">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+</head>
+<body class="landing-body">
+
+    <header class="promo-header">
+        <div class="header-container">
+            <a href="panel-admin.html" class="logo-box" style="text-decoration:none;">
+                <img src="logo.png?v=2" alt="Planet Producciones Logo" class="logo-img">
+                <div class="logo-text">
+                    <h1>Planet Producciones</h1>
+                    <p>Panel Administradora</p>
+                </div>
+            </a>
+            <nav class="panel-nav">
+                <span id="panelUserName" class="panel-user-name"></span>
+                <a href="cambiar-password.html" class="back-home-btn">
+                    <i class="fa-solid fa-key"></i> Cambiar contraseña
+                </a>
+                <button id="btnLogout" type="button" class="back-home-btn panel-logout-btn">
+                    <i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="panel-main panel-main-wide">
+        <div class="page-header">
+            <div>
+                <h2>Empleados</h2>
+                <p>Personal con y sin contrato de Planet Producciones.</p>
+            </div>
+            <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+                <a href="panel-admin.html" class="back-home-btn"><i class="fa-solid fa-arrow-left"></i> Volver al panel</a>
+                <button id="btnNuevoEmpleado" class="btn btn-primary"><i class="fa-solid fa-user-plus"></i> Nuevo empleado</button>
+            </div>
+        </div>
+
+        <div class="detail-section">
+            <h4>Con contrato</h4>
+            <div id="listaConContrato" class="item-list"></div>
+        </div>
+
+        <div class="detail-section">
+            <h4>Sin contrato</h4>
+            <div id="listaSinContrato" class="item-list"></div>
+        </div>
+    </main>
+
+    <script type="module" src="/src/empleados.ts"></script>
+</body>
+</html>

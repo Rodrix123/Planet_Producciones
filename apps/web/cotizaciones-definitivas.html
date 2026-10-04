@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cotizaciones Definitivas | Planet Producciones</title>
+
+    <link rel="icon" type="image/png" href="logo.png?v=2">
+    <link rel="shortcut icon" type="image/png" href="logo.png?v=2">
+    <link rel="apple-touch-icon" href="logo.png?v=2">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+</head>
+<body class="landing-body">
+
+    <header class="promo-header">
+        <div class="header-container">
+            <a href="panel-secretaria.html" class="logo-box" style="text-decoration:none;">
+                <img src="logo.png?v=2" alt="Planet Producciones Logo" class="logo-img">
+                <div class="logo-text">
+                    <h1>Planet Producciones</h1>
+                    <p>Panel Secretaria</p>
+                </div>
+            </a>
+            <nav class="panel-nav">
+                <span id="panelUserName" class="panel-user-name"></span>
+                <a href="cambiar-password.html" class="back-home-btn">
+                    <i class="fa-solid fa-key"></i> Cambiar contraseña
+                </a>
+                <button id="btnLogout" type="button" class="back-home-btn panel-logout-btn">
+                    <i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="panel-main panel-main-wide">
+        <div class="page-header">
+            <div>
+                <h2>Cotizaciones definitivas</h2>
+                <p>Genera y envía el contrato al cliente. No puedes editar la cotización.</p>
+            </div>
+            <a href="panel-secretaria.html" class="back-home-btn"><i class="fa-solid fa-arrow-left"></i> Volver al panel</a>
+        </div>
+
+        <div id="listaCotizaciones" class="item-list"></div>
+
+        <!-- Vista de detalle (solo lectura) -->
+        <div id="detalleCotizacion" class="hidden">
+            <button id="btnVolverLista" class="btn btn-secondary btn-sm" style="margin-bottom: 1.5rem;">
+                <i class="fa-solid fa-arrow-left"></i> Volver a la lista
+            </button>
+
+            <div class="detail-section">
+                <h4>Datos del cliente y el evento</h4>
+                <div id="resumenCliente"></div>
+            </div>
+
+            <div class="detail-section">
+                <h4>Servicios cotizados</h4>
+                <div id="listaItemsDetalle"></div>
+                <div style="display:flex; justify-content: space-between; align-items:center; margin-top: 1.25rem;">
+                    <div class="item-card-total" id="totalDetalle"></div>
+                    <a id="linkVerPdfCotizacion" href="#" target="_blank" class="btn btn-secondary btn-sm">
+                        <i class="fa-solid fa-file-pdf"></i> Ver cotización final
+                    </a>
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <h4>Contrato</h4>
+                <div id="estadoContrato" style="margin-bottom: 1.25rem; color:#d1d5db; font-size:0.95rem;"></div>
+                <button id="btnGenerarContrato" class="btn btn-primary hidden">
+                    <i class="fa-solid fa-file-signature"></i> Generar y enviar contrato al cliente
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script type="module" src="/src/cotizaciones-definitivas.ts"></script>
+</body>
+</html>

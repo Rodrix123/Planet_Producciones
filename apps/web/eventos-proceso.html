@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eventos en Proceso | Planet Producciones</title>
+
+    <link rel="icon" type="image/png" href="logo.png?v=2">
+    <link rel="shortcut icon" type="image/png" href="logo.png?v=2">
+    <link rel="apple-touch-icon" href="logo.png?v=2">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+</head>
+<body class="landing-body">
+
+    <header class="promo-header">
+        <div class="header-container">
+            <a href="panel-admin.html" class="logo-box" style="text-decoration:none;">
+                <img src="logo.png?v=2" alt="Planet Producciones Logo" class="logo-img">
+                <div class="logo-text">
+                    <h1>Planet Producciones</h1>
+                    <p>Panel Administradora</p>
+                </div>
+            </a>
+            <nav class="panel-nav">
+                <span id="panelUserName" class="panel-user-name"></span>
+                <a href="cambiar-password.html" class="back-home-btn">
+                    <i class="fa-solid fa-key"></i> Cambiar contraseña
+                </a>
+                <button id="btnLogout" type="button" class="back-home-btn panel-logout-btn">
+                    <i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="panel-main panel-main-wide">
+        <div class="page-header">
+            <div>
+                <h2>Eventos en proceso</h2>
+                <p>Cotizaciones finalizadas a la espera del contrato firmado por el cliente.</p>
+            </div>
+            <a href="panel-admin.html" class="back-home-btn"><i class="fa-solid fa-arrow-left"></i> Volver al panel</a>
+        </div>
+
+        <div id="listaEventos" class="item-list"></div>
+
+        <!-- Vista de detalle -->
+        <div id="detalleEvento" class="hidden">
+            <button id="btnVolverLista" class="btn btn-secondary btn-sm" style="margin-bottom: 1.5rem;">
+                <i class="fa-solid fa-arrow-left"></i> Volver a la lista
+            </button>
+
+            <div class="detail-section">
+                <h4>Datos del cliente y el evento</h4>
+                <div id="resumenCliente"></div>
+
+                <div class="grid-2" style="margin-top: 1.25rem;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="inpClienteDocumento">Documento / Cédula</label>
+                        <input type="text" id="inpClienteDocumento" placeholder="Necesario para generar el contrato">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="inpFechaEvento">Fecha del evento</label>
+                        <input type="date" id="inpFechaEvento">
+                    </div>
+                </div>
+                <button id="btnGuardarDatos" class="btn btn-secondary btn-sm" style="margin-top: 1rem;">
+                    <i class="fa-solid fa-floppy-disk"></i> Guardar datos
+                </button>
+            </div>
+
+            <div class="detail-section">
+                <h4>Servicios cotizados</h4>
+                <div id="listaItemsDetalle"></div>
+                <div style="display:flex; justify-content: space-between; align-items:center; margin-top: 1.25rem;">
+                    <div class="item-card-total" id="totalDetalle"></div>
+                    <a id="linkVerPdfCotizacion" href="#" target="_blank" class="btn btn-secondary btn-sm">
+                        <i class="fa-solid fa-file-pdf"></i> Ver cotización final
+                    </a>
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <h4>Contrato</h4>
+                <div id="estadoContrato" style="margin-bottom: 1.25rem; color:#d1d5db; font-size:0.95rem;"></div>
+
+                <div id="bloqueGenerarContrato" class="hidden">
+                    <button id="btnGenerarContrato" class="btn btn-primary">
+                        <i class="fa-solid fa-file-signature"></i> Generar y enviar contrato al cliente
+                    </button>
+                </div>
+
+                <div id="bloqueSubirFirmado" class="hidden">
+                    <a id="linkVerContratoGenerado" href="#" target="_blank" class="btn btn-secondary btn-sm" style="margin-bottom:1rem;">
+                        <i class="fa-solid fa-file-pdf"></i> Ver contrato enviado
+                    </a>
+                    <div class="form-group">
+                        <label for="inputArchivoFirmado">Subir contrato firmado (PDF)</label>
+                        <input type="file" id="inputArchivoFirmado" accept="application/pdf">
+                    </div>
+                    <button id="btnSubirFirmado" class="btn btn-secondary">
+                        <i class="fa-solid fa-upload"></i> Subir contrato firmado
+                    </button>
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <h4>Comentarios y seguimiento</h4>
+                <div id="listaHistorial"></div>
+                <div class="form-group" style="margin-top: 1.25rem; margin-bottom: 0.75rem;">
+                    <label for="inpComentario">Agregar comentario</label>
+                    <input type="text" id="inpComentario" placeholder="Ej. Cliente confirmó pago del 30% de anticipo">
+                </div>
+                <button id="btnAgregarComentario" class="btn btn-secondary btn-sm">
+                    <i class="fa-solid fa-comment"></i> Agregar comentario
+                </button>
+            </div>
+
+            <button id="btnMarcarDefinitivo" class="btn btn-primary hidden" style="width:100%; padding: 1.1rem;">
+                <i class="fa-solid fa-check-double"></i> Marcar evento como definitivo
+            </button>
+        </div>
+    </main>
+
+    <script type="module" src="/src/eventos-proceso.ts"></script>
+</body>
+</html>

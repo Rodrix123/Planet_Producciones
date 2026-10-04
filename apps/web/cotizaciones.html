@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cotizaciones | Planet Producciones</title>
+
+    <link rel="icon" type="image/png" href="logo.png?v=2">
+    <link rel="shortcut icon" type="image/png" href="logo.png?v=2">
+    <link rel="apple-touch-icon" href="logo.png?v=2">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+</head>
+<body class="landing-body">
+
+    <header class="promo-header">
+        <div class="header-container">
+            <a href="panel-admin.html" class="logo-box" style="text-decoration:none;">
+                <img src="logo.png?v=2" alt="Planet Producciones Logo" class="logo-img">
+                <div class="logo-text">
+                    <h1>Planet Producciones</h1>
+                    <p>Panel Administradora</p>
+                </div>
+            </a>
+            <nav class="panel-nav">
+                <span id="panelUserName" class="panel-user-name"></span>
+                <a href="cambiar-password.html" class="back-home-btn">
+                    <i class="fa-solid fa-key"></i> Cambiar contraseña
+                </a>
+                <button id="btnLogout" type="button" class="back-home-btn panel-logout-btn">
+                    <i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="panel-main panel-main-wide">
+        <div class="page-header">
+            <div>
+                <h2>Cotizaciones pendientes</h2>
+                <p>Revisa, ajusta y finaliza las cotizaciones que llegan desde el cotizador. Al exportarlas pasan a "Eventos en proceso".</p>
+            </div>
+            <a href="panel-admin.html" class="back-home-btn"><i class="fa-solid fa-arrow-left"></i> Volver al panel</a>
+        </div>
+
+        <div id="listaCotizaciones" class="item-list"></div>
+
+        <!-- Vista de detalle -->
+        <div id="detalleCotizacion" class="hidden">
+            <button id="btnVolverLista" class="btn btn-secondary btn-sm" style="margin-bottom: 1.5rem;">
+                <i class="fa-solid fa-arrow-left"></i> Volver a la lista
+            </button>
+
+            <div class="detail-section">
+                <h4>Datos del cliente y el evento</h4>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="inpClienteNombre">Nombre</label>
+                        <input type="text" id="inpClienteNombre">
+                    </div>
+                    <div class="form-group">
+                        <label for="inpClienteDocumento">Documento / Cédula</label>
+                        <input type="text" id="inpClienteDocumento" placeholder="Necesario para generar el contrato">
+                    </div>
+                    <div class="form-group">
+                        <label for="inpClienteCorreo">Correo</label>
+                        <input type="email" id="inpClienteCorreo">
+                    </div>
+                    <div class="form-group">
+                        <label for="inpClienteTelefono">Teléfono</label>
+                        <input type="text" id="inpClienteTelefono">
+                    </div>
+                    <div class="form-group">
+                        <label for="inpFechaEvento">Fecha del evento</label>
+                        <input type="date" id="inpFechaEvento">
+                    </div>
+                    <div class="form-group">
+                        <label for="inpLugar">Lugar / Sede</label>
+                        <input type="text" id="inpLugar">
+                    </div>
+                </div>
+                <button id="btnGuardarDatos" class="btn btn-secondary">
+                    <i class="fa-solid fa-floppy-disk"></i> Guardar datos
+                </button>
+            </div>
+
+            <div class="detail-section">
+                <h4>Servicios cotizados</h4>
+                <div id="listaItemsDetalle"></div>
+                <div style="display:flex; justify-content: space-between; align-items:center; margin-top: 1.25rem; flex-wrap:wrap; gap:0.75rem;">
+                    <div class="item-card-total" id="totalDetalle"></div>
+                    <div style="display:flex; gap: 0.75rem; flex-wrap:wrap;">
+                        <a id="linkVerPdf" href="#" target="_blank" class="btn btn-secondary btn-sm">
+                            <i class="fa-solid fa-file-pdf"></i> Ver PDF
+                        </a>
+                        <button id="btnAgregarManual" class="btn btn-secondary btn-sm">
+                            <i class="fa-solid fa-plus"></i> Ítem manual
+                        </button>
+                        <button id="btnAbrirCatalogo" class="btn btn-secondary btn-sm">
+                            <i class="fa-solid fa-sliders"></i> Agregar / cambiar servicios
+                        </button>
+                        <button id="btnGuardarItems" class="btn btn-primary btn-sm">
+                            <i class="fa-solid fa-floppy-disk"></i> Guardar cambios
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Editor de catálogo (igual al cotizador público), oculto hasta que se abre -->
+            <div id="editorCatalogo" class="detail-section hidden">
+                <h4>Catálogo de servicios</h4>
+                <div id="catalogoContenedor"></div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 1.5rem; flex-wrap:wrap; gap:0.75rem;">
+                    <div class="item-card-total" id="catalogoTotal"></div>
+                    <div style="display:flex; gap:0.75rem;">
+                        <button id="btnAplicarCatalogo" class="btn btn-primary">
+                            <i class="fa-solid fa-check"></i> Aplicar cambios
+                        </button>
+                        <button id="btnCancelarCatalogo" class="btn btn-secondary">
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <h4>Comentarios y seguimiento</h4>
+                <div id="listaHistorial"></div>
+                <div class="form-group" style="margin-top: 1.25rem; margin-bottom: 0.75rem;">
+                    <label for="inpComentario">Agregar comentario</label>
+                    <input type="text" id="inpComentario" placeholder="Ej. Confirmar con el cliente el horario exacto del evento">
+                </div>
+                <button id="btnAgregarComentario" class="btn btn-secondary btn-sm">
+                    <i class="fa-solid fa-comment"></i> Agregar comentario
+                </button>
+            </div>
+
+            <button id="btnFinalizar" class="btn btn-primary" style="width:100%; padding: 1.1rem;">
+                <i class="fa-solid fa-check-double"></i> Exportar cotización final
+            </button>
+        </div>
+    </main>
+
+    <script type="module" src="/src/cotizaciones.ts"></script>
+</body>
+</html>

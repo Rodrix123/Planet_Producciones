@@ -1,21 +1,11 @@
 import './style.css';
+import { apiUrl } from './shared/api';
+import { calcularDesdeCatalogo, type ItemSeleccionado, type ResultadoCatalogo as DatosCotizacion } from './shared/catalogoCotizacion';
 
 // Librerías cargadas vía CDN en index.html (sin tipos propios en este proyecto)
 declare const Swal: any;
 declare const html2pdf: any;
 declare const XLSX: any;
-
-interface ItemSeleccionado {
-    tag: string;
-    nombre: string;
-    descripcion: string;
-    precio: number;
-}
-
-interface DatosCotizacion {
-    total: number;
-    itemsSeleccionados: ItemSeleccionado[];
-}
 
 interface DatosCliente {
     nombre: string;
@@ -24,6 +14,32 @@ interface DatosCliente {
     tipoEvento: string;
     ciudad: string;
     lugar: string;
+    fechaEvento: string;
+}
+
+/** Intenta guardar la cotización en la base de datos para que Maritza la vea en su panel.
+ *  Si falla (red/servidor caído), no interrumpe la descarga del PDF/Excel del cliente: solo
+ *  se pierde la persistencia, no la experiencia de quien está cotizando. */
+async function guardarCotizacionReal(
+    datosCliente: DatosCliente,
+    datosCotizacion: DatosCotizacion
+): Promise<string | null> {
+    try {
+        const res = await fetch(apiUrl('/api/cotizaciones'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                cliente: datosCliente,
+                items: datosCotizacion.itemsSeleccionados,
+                total: datosCotizacion.total
+            })
+        });
+        if (!res.ok) return null;
+        const datos = await res.json();
+        return datos.numeroReferencia || null;
+    } catch {
+        return null;
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -61,79 +77,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Lee el atributo data-incluye (lista separada por "|") y la devuelve como texto legible
-    function obtenerIncluye(el: Element): string {
-        const raw = el.getAttribute('data-incluye');
-        if (!raw) return '';
-        const partes = raw.split('|').map(p => p.trim()).filter(Boolean);
-        return partes.join(' • ');
-    }
-
-    // Cálculo dinámico de cotización: lee genéricamente cualquier <select>, checkbox o
-    // input de cantidad marcado con las clases .precio-select / .precio-check / .precio-qty
-    // y sus atributos data-precio / data-tag / data-nombre / data-incluye. Esto permite
-    // ampliar el catálogo de precios (apps/web/index.html) sin tocar esta lógica.
+    // Cálculo dinámico de cotización: delega en el módulo compartido (shared/catalogoCotizacion)
+    // que lee genéricamente cualquier <select>, checkbox o input de cantidad marcado con las
+    // clases .precio-select / .precio-check / .precio-qty. Esto permite ampliar el catálogo de
+    // precios (apps/web/cotizador.html) sin tocar esta lógica, y reutilizarla en el panel de Maritza.
     function calcularCotizacion(): DatosCotizacion {
-        let total = 0;
-        const itemsSeleccionados: ItemSeleccionado[] = [];
-
-        // 1. Selects de catálogo (una sola opción por categoría)
-        const selects = form.querySelectorAll<HTMLSelectElement>('select.precio-select');
-        selects.forEach(select => {
-            const hint = document.getElementById(`${select.id}-hint`);
-            const opt = select.options[select.selectedIndex];
-            const incluye = opt ? obtenerIncluye(opt) : '';
-
-            if (hint) {
-                hint.innerHTML = (select.selectedIndex > 0 && incluye) ? `<strong>Incluye:</strong> ${incluye}` : '';
-            }
-
-            if (select.selectedIndex <= 0 || !opt) return;
-            const precio = parseFloat(opt.getAttribute('data-precio') || '') || 0;
-            if (precio <= 0) return;
-
-            total += precio;
-            itemsSeleccionados.push({
-                tag: select.dataset.tag || 'SERVICIO',
-                nombre: opt.value,
-                descripcion: incluye,
-                precio
-            });
-        });
-
-        // 2. Checkboxes de efectos / add-ons
-        const checks = form.querySelectorAll<HTMLInputElement>('input.precio-check');
-        checks.forEach(chk => {
-            if (!chk.checked) return;
-            const precio = parseFloat(chk.getAttribute('data-precio') || '') || 0;
-            if (precio <= 0) return;
-
-            total += precio;
-            itemsSeleccionados.push({
-                tag: chk.dataset.tag || 'SERVICIO',
-                nombre: chk.dataset.nombre || chk.id,
-                descripcion: obtenerIncluye(chk),
-                precio
-            });
-        });
-
-        // 3. Ítems por cantidad (mobiliario y extras cobrados "c/u")
-        const qtys = form.querySelectorAll<HTMLInputElement>('input.precio-qty');
-        qtys.forEach(input => {
-            const cantidad = parseInt(input.value, 10) || 0;
-            if (cantidad <= 0) return;
-            const precioUnit = parseFloat(input.getAttribute('data-precio-unit') || '') || 0;
-            const precio = cantidad * precioUnit;
-            if (precio <= 0) return;
-
-            total += precio;
-            itemsSeleccionados.push({
-                tag: input.dataset.tag || 'SERVICIO',
-                nombre: `${cantidad} x ${input.dataset.nombre || input.id} (${formatterCOP.format(precioUnit)} c/u)`,
-                descripcion: obtenerIncluye(input),
-                precio
-            });
-        });
+        const { total, itemsSeleccionados } = calcularDesdeCatalogo(form);
 
         // Actualizar UI en vivo
         precioTotalEl.textContent = formatterCOP.format(total);
@@ -232,7 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <table style="width: 100%; font-size: 10.5px; border-collapse: collapse; color: #334155;">
                         <tr>
                             <td style="padding: 2px 0;"><strong>Cliente:</strong> ${datosCliente.nombre}</td>
-                            <td style="padding: 2px 0;"><strong>Fecha del Evento:</strong> <span style="color: #ea580c; font-weight: 700;">A convenir 2026</span></td>
+                            <td style="padding: 2px 0;"><strong>Fecha del Evento:</strong> <span style="color: #ea580c; font-weight: 700;">${datosCliente.fechaEvento ? new Date(datosCliente.fechaEvento + 'T00:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'A convenir 2026'}</span></td>
                         </tr>
                         <tr>
                             <td style="padding: 2px 0;"><strong>Email:</strong> ${datosCliente.correo}</td>
@@ -359,6 +308,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const tipoEvento = (document.getElementById('tipoEvento') as HTMLSelectElement).value;
         const ciudad = (document.getElementById('transporte') as HTMLSelectElement).value;
         const lugar = (document.getElementById('lugar') as HTMLSelectElement).value;
+        const fechaEvento = (document.getElementById('fechaEvento') as HTMLInputElement).value;
 
         if (!nombre || !correo || !telefono) {
             Swal.fire({
@@ -392,9 +342,14 @@ document.addEventListener('DOMContentLoaded', () => {
         let elementoHTML: HTMLDivElement | null = null;
 
         try {
-            const datosCliente: DatosCliente = { nombre, correo, telefono, tipoEvento, ciudad, lugar };
-            const refNum = `PL-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+            const datosCliente: DatosCliente = { nombre, correo, telefono, tipoEvento, ciudad, lugar, fechaEvento };
             const fechaHoy = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+            // Guarda la cotización real en la base de datos (panel de Maritza) y usa su
+            // número de referencia oficial; si no se pudo guardar, sigue con uno local
+            // para no bloquear la descarga del PDF/Excel del cliente.
+            const refNum = (await guardarCotizacionReal(datosCliente, datosCotizacion))
+                || `PL-2026-${Math.floor(1000 + Math.random() * 9000)}`;
 
             // Carga de Logo
             const logoBase64 = await obtenerLogoBase64();

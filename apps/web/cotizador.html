@@ -56,7 +56,7 @@
                 <form id="quoteForm" onsubmit="return false;">
 
                     <!-- 1. Datos del Cliente -->
-                    <div class="form-group">
+                    <div class="form-group" id="seccionDatosContacto">
                         <div class="form-section-title">
                             <i class="fa-solid fa-user-astronaut"></i> 1. Datos de Contacto
                         </div>
@@ -77,11 +77,11 @@
                     </div>
 
                     <!-- 2. Ubicación y Tipo de Evento -->
-                    <div class="form-group">
+                    <div class="form-group" id="seccionCoberturaEvento">
                         <div class="form-section-title">
                             <i class="fa-solid fa-location-dot"></i> 2. Cobertura & Evento
                         </div>
-                        <div class="grid-2">
+                        <div class="grid-3">
                             <div>
                                 <label for="tipoEvento">Tipo de Evento</label>
                                 <select id="tipoEvento">
@@ -101,9 +101,14 @@
                                     <option value="Recinto Privado">Recinto Privado / Sede Propia</option>
                                 </select>
                             </div>
+                            <div>
+                                <label for="fechaEvento">Fecha del Evento (tentativa)</label>
+                                <input type="date" id="fechaEvento">
+                            </div>
                         </div>
                     </div>
 
+                    <div id="seccionCatalogoServicios">
                     <!-- 3. Transporte -->
                     <div class="form-group">
                         <div class="form-section-title">
@@ -434,6 +439,7 @@
                                 <input type="number" class="precio-qty" id="qtyBombillo" data-tag="EFECTO ESPECIAL FX" data-nombre="Metro de Bombillo Ping Pong (sin instalación)" data-precio-unit="6000" min="0" step="1" value="0">
                             </div>
                         </div>
+                    </div>
                     </div>
 
                     <button type="button" id="btnSubmit" class="submit-btn">

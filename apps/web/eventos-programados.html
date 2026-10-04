@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eventos Programados | Planet Producciones</title>
+
+    <link rel="icon" type="image/png" href="logo.png?v=2">
+    <link rel="shortcut icon" type="image/png" href="logo.png?v=2">
+    <link rel="apple-touch-icon" href="logo.png?v=2">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+</head>
+<body class="landing-body">
+
+    <header class="promo-header">
+        <div class="header-container">
+            <a href="panel-admin.html" class="logo-box" style="text-decoration:none;">
+                <img src="logo.png?v=2" alt="Planet Producciones Logo" class="logo-img">
+                <div class="logo-text">
+                    <h1>Planet Producciones</h1>
+                    <p>Panel Administradora</p>
+                </div>
+            </a>
+            <nav class="panel-nav">
+                <span id="panelUserName" class="panel-user-name"></span>
+                <a href="cambiar-password.html" class="back-home-btn">
+                    <i class="fa-solid fa-key"></i> Cambiar contraseña
+                </a>
+                <button id="btnLogout" type="button" class="back-home-btn panel-logout-btn">
+                    <i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="panel-main panel-main-wide">
+        <div class="page-header">
+            <div>
+                <h2>Eventos programados</h2>
+                <p>Eventos ya definitivos, con contrato firmado.</p>
+            </div>
+            <a href="panel-admin.html" class="back-home-btn"><i class="fa-solid fa-arrow-left"></i> Volver al panel</a>
+        </div>
+
+        <div class="detail-section">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
+                <button id="btnMesAnterior" class="btn btn-secondary btn-sm"><i class="fa-solid fa-chevron-left"></i></button>
+                <h4 id="tituloMes" style="margin:0; color:#fff; text-transform:capitalize;"></h4>
+                <button id="btnMesSiguiente" class="btn btn-secondary btn-sm"><i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+            <div id="calendarioGrid" class="calendar-grid"></div>
+        </div>
+
+        <div id="listaEventos" class="item-list"></div>
+
+        <!-- Vista de detalle (solo lectura) -->
+        <div id="detalleEvento" class="hidden">
+            <button id="btnVolverLista" class="btn btn-secondary btn-sm" style="margin-bottom: 1.5rem;">
+                <i class="fa-solid fa-arrow-left"></i> Volver a la lista
+            </button>
+
+            <div class="detail-section">
+                <h4>Datos del evento</h4>
+                <div id="resumenCliente"></div>
+            </div>
+
+            <div class="detail-section">
+                <h4>Servicios cotizados</h4>
+                <div id="listaItemsDetalle"></div>
+                <div style="display:flex; justify-content: space-between; align-items:center; margin-top: 1.25rem;">
+                    <div class="item-card-total" id="totalDetalle"></div>
+                    <div style="display:flex; gap:0.75rem;">
+                        <a id="linkVerPdfCotizacion" href="#" target="_blank" class="btn btn-secondary btn-sm">
+                            <i class="fa-solid fa-file-pdf"></i> Ver cotización final
+                        </a>
+                        <a id="linkVerContratoFirmado" href="#" target="_blank" class="btn btn-secondary btn-sm">
+                            <i class="fa-solid fa-file-signature"></i> Ver contrato firmado
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script type="module" src="/src/eventos-programados.ts"></script>
+</body>
+</html>
