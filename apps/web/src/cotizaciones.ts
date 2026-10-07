@@ -3,7 +3,14 @@ import './landing.css';
 import './shared/panel.css';
 import { apiFetch, apiUrl, conManejoDeErrores, exigirSesion } from './shared/api';
 import { initPanelLayout } from './shared/layout';
-import { calcularDesdeCatalogo, preseleccionarCatalogo, type ItemSeleccionado } from './shared/catalogoCotizacion';
+import {
+    calcularDesdeCatalogo,
+    obtenerCatalogo,
+    preseleccionarCatalogo,
+    renderCatalogoEnContenedor,
+    type Catalogo,
+    type ItemSeleccionado
+} from './shared/catalogoCotizacion';
 
 declare const Swal: any;
 
@@ -15,8 +22,9 @@ interface Cotizacion {
     clienteTelefono: string;
     clienteDocumento: string | null;
     tipoEvento: string | null;
-    ciudad: string | null;
     lugar: string | null;
+    venueId: number | null;
+    transportationId: number | null;
     fechaEvento: string | null;
     items: ItemSeleccionado[];
     total: number;
@@ -47,13 +55,19 @@ const ESTADO_LABEL: Record<string, string> = {
 
 let itemsEnEdicion: ItemSeleccionado[] = [];
 let cotizacionActualId: string | null = null;
-let fragmentoCatalogoHTML: string | null = null;
 let itemsManualesPendientes: ItemSeleccionado[] = [];
+let catalogo: Catalogo | null = null;
 
 const listaCotizacionesEl = document.getElementById('listaCotizaciones') as HTMLElement;
 const detalleEl = document.getElementById('detalleCotizacion') as HTMLElement;
 const editorCatalogoEl = document.getElementById('editorCatalogo') as HTMLElement;
 const catalogoContenedorEl = document.getElementById('catalogoContenedor') as HTMLElement;
+const lugarSelect = document.getElementById('inpLugar') as HTMLSelectElement;
+const transporteSelect = document.getElementById('inpTransporte') as HTMLSelectElement;
+
+function nombreItem(item: ItemSeleccionado): string {
+    return item.cantidad > 1 ? `${item.cantidad} x ${item.nombre}` : item.nombre;
+}
 
 async function cargarLista() {
     const res = await apiFetch('/api/cotizaciones?estado=recibida,en_revision');
@@ -103,7 +117,9 @@ async function abrirDetalle(id: string) {
     (document.getElementById('inpClienteCorreo') as HTMLInputElement).value = cotizacion.clienteCorreo;
     (document.getElementById('inpClienteTelefono') as HTMLInputElement).value = cotizacion.clienteTelefono;
     (document.getElementById('inpFechaEvento') as HTMLInputElement).value = cotizacion.fechaEvento || '';
-    (document.getElementById('inpLugar') as HTMLInputElement).value = cotizacion.lugar || '';
+    (document.getElementById('inpTipoEvento') as HTMLSelectElement).value = cotizacion.tipoEvento || '';
+    lugarSelect.value = cotizacion.venueId ? String(cotizacion.venueId) : '';
+    transporteSelect.value = cotizacion.transportationId ? String(cotizacion.transportationId) : '';
 
     (document.getElementById('linkVerPdf') as HTMLAnchorElement).href = apiUrl(`/api/cotizaciones/${id}/pdf`);
 
@@ -128,12 +144,12 @@ function renderItemsDetalle() {
         row.className = 'detail-row';
         row.innerHTML = `
             <div>
-                <div class="detail-row-main"><strong>${item.nombre}</strong></div>
+                <div class="detail-row-main"><strong>${nombreItem(item)}</strong></div>
                 <div class="detail-row-sub">${item.tag}${item.descripcion ? ' · Incluye: ' + item.descripcion : ''}</div>
                 ${item.nota ? `<div class="detail-row-sub" style="color:var(--orange-main); margin-top:0.3rem;"><i class="fa-solid fa-note-sticky"></i> ${item.nota}</div>` : ''}
             </div>
             <div style="display:flex; align-items:center; gap:0.6rem;">
-                <div class="detail-row-price">${formatterCOP.format(item.precio)}</div>
+                <div class="detail-row-price">${formatterCOP.format(item.precioUnit * item.cantidad)}</div>
                 <button class="btn btn-secondary btn-sm" data-accion="nota" title="${item.nota ? 'Editar nota' : 'Agregar nota'}">
                     <i class="fa-solid fa-note-sticky"></i>
                 </button>
@@ -164,7 +180,7 @@ function renderItemsDetalle() {
         cont.appendChild(row);
     });
 
-    const total = itemsEnEdicion.reduce((acc, i) => acc + i.precio, 0);
+    const total = itemsEnEdicion.reduce((acc, i) => acc + i.precioUnit * i.cantidad, 0);
     (document.getElementById('totalDetalle') as HTMLElement).textContent = formatterCOP.format(total);
 }
 
@@ -201,24 +217,14 @@ function volverALista() {
     cargarLista();
 }
 
-/** Trae una sola vez el catálogo real de cotizador.html (nunca se duplica a mano). */
-async function obtenerFragmentoCatalogo(): Promise<string> {
-    if (fragmentoCatalogoHTML) return fragmentoCatalogoHTML;
-    const res = await fetch('cotizador.html');
-    const html = await res.text();
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-    const seccion = doc.getElementById('seccionCatalogoServicios');
-    fragmentoCatalogoHTML = seccion ? seccion.innerHTML : '';
-    return fragmentoCatalogoHTML;
-}
-
 function actualizarTotalCatalogo() {
     const { total } = calcularDesdeCatalogo(catalogoContenedorEl);
     (document.getElementById('catalogoTotal') as HTMLElement).textContent = formatterCOP.format(total);
 }
 
 async function abrirEditorCatalogo() {
-    catalogoContenedorEl.innerHTML = await obtenerFragmentoCatalogo();
+    if (!catalogo) catalogo = await obtenerCatalogo();
+    renderCatalogoEnContenedor(catalogoContenedorEl, catalogo);
 
     // Pre-marca el catálogo con lo ya seleccionado; lo que no calce con ningún control
     // (ítems manuales añadidos aparte) se conserva para no perderlo al aplicar.
@@ -243,8 +249,22 @@ function otrasSeccionesDetalle(): HTMLElement[] {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    const sesion = await exigirSesion('administradora');
+    const sesion = await exigirSesion('administrador');
     initPanelLayout(sesion);
+
+    catalogo = await obtenerCatalogo();
+    catalogo.venues.forEach((v) => {
+        const opt = document.createElement('option');
+        opt.value = String(v.id);
+        opt.textContent = v.name;
+        lugarSelect.appendChild(opt);
+    });
+    catalogo.transportation.forEach((t) => {
+        const opt = document.createElement('option');
+        opt.value = String(t.id);
+        opt.textContent = `${t.city} — ${formatterCOP.format(t.price)}`;
+        transporteSelect.appendChild(opt);
+    });
 
     document.getElementById('btnVolverLista')?.addEventListener('click', conManejoDeErrores(async () => volverALista()));
 
@@ -257,7 +277,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 clienteDocumento: (document.getElementById('inpClienteDocumento') as HTMLInputElement).value.trim(),
                 clienteCorreo: (document.getElementById('inpClienteCorreo') as HTMLInputElement).value.trim(),
                 clienteTelefono: (document.getElementById('inpClienteTelefono') as HTMLInputElement).value.trim(),
-                lugar: (document.getElementById('inpLugar') as HTMLInputElement).value.trim(),
+                tipoEvento: (document.getElementById('inpTipoEvento') as HTMLSelectElement).value || undefined,
+                venueId: lugarSelect.value ? Number(lugarSelect.value) : undefined,
+                transportationId: transporteSelect.value ? Number(transporteSelect.value) : undefined,
                 fechaEvento: (document.getElementById('inpFechaEvento') as HTMLInputElement).value || undefined
             })
         });
@@ -298,7 +320,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <input id="swalPrecio" type="number" class="swal2-input" placeholder="Precio en COP">
             `,
             preConfirm: () => {
-                const tag = (document.getElementById('swalTag') as HTMLInputElement).value.trim() || 'SERVICIO MANUAL';
+                const tag = (document.getElementById('swalTag') as HTMLInputElement).value.trim();
                 const nombre = (document.getElementById('swalNombre') as HTMLInputElement).value.trim();
                 const precio = Number((document.getElementById('swalPrecio') as HTMLInputElement).value) || 0;
                 if (!nombre || precio <= 0) {
@@ -314,7 +336,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
         if (!datos) return;
-        itemsEnEdicion.push(datos as ItemSeleccionado);
+
+        const res = await apiFetch('/api/catalogo/manual', { method: 'POST', body: JSON.stringify(datos) });
+        if (!res.ok) {
+            const error = await res.json();
+            Swal.fire({ icon: 'error', title: 'No se pudo crear el ítem', text: error.message, confirmButtonColor: '#f97316' });
+            return;
+        }
+        const creado = await res.json() as { variantId: number; tag: string; nombre: string; descripcion: string; precioUnit: number };
+        itemsEnEdicion.push({ variantId: creado.variantId, cantidad: 1, tag: creado.tag, nombre: creado.nombre, descripcion: creado.descripcion, precioUnit: creado.precioUnit });
         renderItemsDetalle();
     }));
 

@@ -1,10 +1,8 @@
 import 'dotenv/config';
 import crypto from 'crypto';
-import { pool } from '../db';
-import { hashPassword } from '../auth';
+import { supabaseAdmin } from '../supabaseAdmin';
 
 function generarPasswordTemporal(): string {
-    // 12 caracteres legibles (sin 0/O/1/l) en base32 + un número final.
     const alfabeto = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
     let password = '';
     for (let i = 0; i < 12; i++) {
@@ -20,26 +18,24 @@ async function main() {
         process.exit(1);
     }
 
-    const password = generarPasswordTemporal();
-    const passwordHash = await hashPassword(password);
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 });
+    if (error) throw error;
+    const usuario = data.users.find((u) => u.email?.toLowerCase() === correo);
 
-    const { rowCount } = await pool.query(
-        `update usuarios
-            set password_hash = $1,
-                debe_cambiar_password = true,
-                actualizado_en = now()
-          where correo = $2`,
-        [passwordHash, correo]
-    );
-
-    if (rowCount === 0) {
-        console.error(`No existe ningún usuario con el correo ${correo}`);
-    } else {
-        console.log(`\nContraseña temporal para ${correo}:\n\n  ${password}\n`);
-        console.log('Debe cambiarla al iniciar sesión.\n');
+    if (!usuario) {
+        console.error(`No existe ninguna cuenta con el correo ${correo}`);
+        process.exit(1);
     }
 
-    await pool.end();
+    const password = generarPasswordTemporal();
+    const { error: errorUpdate } = await supabaseAdmin.auth.admin.updateUserById(usuario.id, {
+        password,
+        user_metadata: { ...usuario.user_metadata, debe_cambiar_password: true }
+    });
+    if (errorUpdate) throw errorUpdate;
+
+    console.log(`\nContraseña temporal para ${correo}:\n\n  ${password}\n`);
+    console.log('Debe cambiarla al iniciar sesión.\n');
 }
 
 main().catch((err) => {

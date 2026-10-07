@@ -8,6 +8,7 @@ import { cotizacionesRouter } from './routes/cotizaciones.routes';
 import { empleadosRouter } from './routes/empleados.routes';
 import { contratosRouter } from './routes/contratos.routes';
 import { logisticaRouter } from './routes/logistica.routes';
+import { catalogoRouter } from './routes/catalogo.routes';
 
 // Red de seguridad: en Node 18+ un rechazo de promesa no manejado (fuera de una ruta
 // Express, p.ej. en un .then()/.catch() que se nos escapó) termina el proceso completo
@@ -29,6 +30,7 @@ app.use(express.static(path.join(__dirname, '..', 'assets')));
 app.use(express.static(path.join(__dirname, '..', '..', 'web', 'dist')));
 
 app.use('/api/auth', authRouter);
+app.use('/api/catalogo', catalogoRouter);
 app.use('/api/cotizaciones', cotizacionesRouter);
 app.use('/api/empleados', empleadosRouter);
 app.use('/api/contratos', contratosRouter);

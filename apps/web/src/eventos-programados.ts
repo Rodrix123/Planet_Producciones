@@ -5,10 +5,13 @@ import { apiFetch, apiUrl, conManejoDeErrores, exigirSesion } from './shared/api
 import { initPanelLayout } from './shared/layout';
 
 interface ItemSeleccionado {
+    variantId: number;
+    cantidad: number;
     tag: string;
     nombre: string;
     descripcion: string;
-    precio: number;
+    precioUnit: number;
+    nota?: string | null;
 }
 
 interface Cotizacion {
@@ -18,7 +21,6 @@ interface Cotizacion {
     clienteCorreo: string;
     clienteTelefono: string;
     tipoEvento: string | null;
-    ciudad: string | null;
     lugar: string | null;
     fechaEvento: string | null;
     items: ItemSeleccionado[];
@@ -137,17 +139,18 @@ async function abrirDetalle(c: Cotizacion) {
     document.getElementById('resumenCliente')!.innerHTML = `
         <div class="detail-row"><div class="detail-row-main"><strong>Cliente:</strong> ${c.clienteNombre}</div></div>
         <div class="detail-row"><div class="detail-row-main"><strong>Correo:</strong> ${c.clienteCorreo} &nbsp;·&nbsp; <strong>Teléfono:</strong> ${c.clienteTelefono}</div></div>
-        <div class="detail-row"><div class="detail-row-main"><strong>Evento:</strong> ${c.tipoEvento || 'N/A'} · ${c.lugar || 'N/A'} (${c.ciudad || 'N/A'})</div></div>
+        <div class="detail-row"><div class="detail-row-main"><strong>Evento:</strong> ${c.tipoEvento || 'N/A'} · ${c.lugar || 'N/A'}</div></div>
         <div class="detail-row"><div class="detail-row-main"><strong>Fecha del evento:</strong> ${c.fechaEvento ? new Date(c.fechaEvento + 'T00:00:00').toLocaleDateString('es-CO') : 'Sin definir'}</div></div>
     `;
 
     document.getElementById('listaItemsDetalle')!.innerHTML = c.items.map((item) => `
         <div class="detail-row">
             <div>
-                <div class="detail-row-main"><strong>${item.nombre}</strong></div>
+                <div class="detail-row-main"><strong>${item.cantidad > 1 ? `${item.cantidad} x ${item.nombre}` : item.nombre}</strong></div>
                 <div class="detail-row-sub">${item.tag}${item.descripcion ? ' · Incluye: ' + item.descripcion : ''}</div>
+                ${item.nota ? `<div class="detail-row-sub" style="color:var(--orange-main); margin-top:0.3rem;"><i class="fa-solid fa-note-sticky"></i> ${item.nota}</div>` : ''}
             </div>
-            <div class="detail-row-price">${formatterCOP.format(item.precio)}</div>
+            <div class="detail-row-price">${formatterCOP.format(item.precioUnit * item.cantidad)}</div>
         </div>
     `).join('');
     document.getElementById('totalDetalle')!.textContent = formatterCOP.format(c.total);
@@ -166,7 +169,7 @@ function volverALista() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    const sesion = await exigirSesion('administradora');
+    const sesion = await exigirSesion('administrador');
     initPanelLayout(sesion);
 
     document.getElementById('btnMesAnterior')?.addEventListener('click', () => {

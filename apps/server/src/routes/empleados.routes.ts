@@ -31,7 +31,7 @@ function mapEmpleado(row: EmpleadoRow) {
 
 export const empleadosRouter = Router();
 
-empleadosRouter.use(requireAuth, requireRole('administradora'));
+empleadosRouter.use(requireAuth, requireRole('administrador'));
 
 empleadosRouter.get('/', asyncHandler(async (_req, res) => {
     const { rows } = await pool.query<EmpleadoRow>(

@@ -10,10 +10,11 @@
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "seed:usuarios": "tsx src/scripts/seed-usuarios.ts",
-    "reset:password": "tsx src/scripts/reset-password.ts"
+    "reset:password": "tsx src/scripts/reset-password.ts",
+    "seed:catalogo": "tsx src/scripts/seed-catalogo.ts"
   },
   "dependencies": {
-    "bcrypt": "^6.0.0",
+    "@supabase/supabase-js": "^2.45.4",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -25,7 +26,6 @@
     "pg": "^8.12.0"
   },
   "devDependencies": {
-    "@types/bcrypt": "^5.0.2",
     "@types/cookie-parser": "^1.4.7",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",

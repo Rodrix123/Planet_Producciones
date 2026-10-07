@@ -1,12 +1,18 @@
-import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import type { NextFunction, Request, Response } from 'express';
 
-export type UsuarioRol = 'administradora' | 'secretaria' | 'jefe_logistica';
+// Debe coincidir con los valores reales en la tabla `role`. 'administrador' es
+// obligatorio tal cual porque la función is_admin() de la base lo compara literal;
+// 'secretaria'/'jefe_logistica' son libres (no hay función RLS que los distinga,
+// el control de acceso por rol lo hace esta app, igual que antes).
+export type UsuarioRol = 'administrador' | 'secretaria' | 'jefe_logistica';
 
 export interface UsuarioSesion {
     id: string;
     rol: UsuarioRol;
+    nombre: string;
+    correo: string;
+    debeCambiarPassword: boolean;
 }
 
 declare global {
@@ -24,14 +30,6 @@ if (!JWT_SECRET) {
 
 export const COOKIE_NAME = 'pp_session';
 const SESSION_DURATION = '8h';
-
-export function hashPassword(password: string): Promise<string> {
-    return bcrypt.hash(password, 12);
-}
-
-export function verifyPassword(password: string, hash: string): Promise<boolean> {
-    return bcrypt.compare(password, hash);
-}
 
 export function signSessionToken(usuario: UsuarioSesion): string {
     return jwt.sign(usuario, JWT_SECRET as string, { expiresIn: SESSION_DURATION });
@@ -53,7 +51,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
     }
     try {
         const payload = jwt.verify(token, JWT_SECRET as string) as UsuarioSesion;
-        req.usuario = { id: payload.id, rol: payload.rol };
+        req.usuario = payload;
         next();
     } catch {
         return res.status(401).json({ status: 'error', message: 'Sesión inválida o expirada' });

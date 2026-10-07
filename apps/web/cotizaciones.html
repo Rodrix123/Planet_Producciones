@@ -76,8 +76,22 @@
                         <input type="date" id="inpFechaEvento">
                     </div>
                     <div class="form-group">
+                        <label for="inpTipoEvento">Tipo de evento</label>
+                        <select id="inpTipoEvento">
+                            <option value="">-- Sin definir --</option>
+                            <option value="Boda VIP / Matrimonio">Boda VIP / Matrimonio</option>
+                            <option value="Fiesta de 15 Años Deluxe">Fiesta de 15 Años Deluxe</option>
+                            <option value="Evento Corporativo / Gala">Evento Corporativo / Gala</option>
+                            <option value="Grado / Prom Night">Grado / Prom Night</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
                         <label for="inpLugar">Lugar / Sede</label>
-                        <input type="text" id="inpLugar">
+                        <select id="inpLugar"><option value="">-- Sin definir --</option></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="inpTransporte">Destino del evento (transporte)</label>
+                        <select id="inpTransporte"><option value="">-- Sin definir --</option></select>
                     </div>
                 </div>
                 <button id="btnGuardarDatos" class="btn btn-secondary">

@@ -1,24 +1,15 @@
 import { Router } from 'express';
 import { pool } from '../db';
 import { asyncHandler } from '../asyncHandler';
+import { supabaseAdmin, supabaseAnon } from '../supabaseAdmin';
 import {
     COOKIE_NAME,
     cookieOptions,
-    hashPassword,
     requireAuth,
     signSessionToken,
-    verifyPassword
+    type UsuarioRol,
+    type UsuarioSesion
 } from '../auth';
-
-interface UsuarioRow {
-    id: string;
-    nombre: string;
-    correo: string;
-    password_hash: string;
-    rol: 'administradora' | 'secretaria' | 'jefe_logistica';
-    debe_cambiar_password: boolean;
-    activo: boolean;
-}
 
 export const authRouter = Router();
 
@@ -29,24 +20,39 @@ authRouter.post('/login', asyncHandler(async (req, res) => {
         return res.status(400).json({ status: 'error', message: 'Correo y contraseña son obligatorios' });
     }
 
-    const { rows } = await pool.query<UsuarioRow>(
-        'select * from usuarios where correo = $1',
-        [correo.trim().toLowerCase()]
-    );
-    const usuario = rows[0];
+    const { data, error } = await supabaseAnon.auth.signInWithPassword({
+        email: correo.trim().toLowerCase(),
+        password
+    });
 
-    if (!usuario || !usuario.activo || !(await verifyPassword(password, usuario.password_hash))) {
+    if (error || !data.user) {
         return res.status(401).json({ status: 'error', message: 'Correo o contraseña incorrectos' });
     }
 
-    const token = signSessionToken({ id: usuario.id, rol: usuario.rol });
-    res.cookie(COOKIE_NAME, token, cookieOptions());
+    const { rows } = await pool.query<{ rol: string }>(
+        `select r.name as rol from profiles p join role r on r.id = p.role_id where p.id = $1`,
+        [data.user.id]
+    );
+    const rol = rows[0]?.rol as UsuarioRol | undefined;
 
+    if (!rol) {
+        return res.status(403).json({ status: 'error', message: 'Tu cuenta no tiene un rol asignado. Contacta al desarrollador.' });
+    }
+
+    const sesion: UsuarioSesion = {
+        id: data.user.id,
+        rol,
+        nombre: (data.user.user_metadata?.full_name as string | undefined) || data.user.email || correo,
+        correo: data.user.email || correo,
+        debeCambiarPassword: !!data.user.user_metadata?.debe_cambiar_password
+    };
+
+    res.cookie(COOKIE_NAME, signSessionToken(sesion), cookieOptions());
     res.json({
         status: 'ok',
-        nombre: usuario.nombre,
-        rol: usuario.rol,
-        debeCambiarPassword: usuario.debe_cambiar_password
+        nombre: sesion.nombre,
+        rol: sesion.rol,
+        debeCambiarPassword: sesion.debeCambiarPassword
     });
 }));
 
@@ -55,25 +61,10 @@ authRouter.post('/logout', (_req, res) => {
     res.json({ status: 'ok' });
 });
 
-authRouter.get('/me', requireAuth, asyncHandler(async (req, res) => {
-    const { rows } = await pool.query<UsuarioRow>(
-        'select * from usuarios where id = $1',
-        [req.usuario!.id]
-    );
-    const usuario = rows[0];
-
-    if (!usuario || !usuario.activo) {
-        res.clearCookie(COOKIE_NAME, cookieOptions());
-        return res.status(401).json({ status: 'error', message: 'No autenticado' });
-    }
-
-    res.json({
-        nombre: usuario.nombre,
-        correo: usuario.correo,
-        rol: usuario.rol,
-        debeCambiarPassword: usuario.debe_cambiar_password
-    });
-}));
+authRouter.get('/me', requireAuth, (req, res) => {
+    const u = req.usuario!;
+    res.json({ nombre: u.nombre, correo: u.correo, rol: u.rol, debeCambiarPassword: u.debeCambiarPassword });
+});
 
 authRouter.put('/cambiar-password', requireAuth, asyncHandler(async (req, res) => {
     const { passwordActual, passwordNueva } = req.body as { passwordActual?: string; passwordNueva?: string };
@@ -85,21 +76,25 @@ authRouter.put('/cambiar-password', requireAuth, asyncHandler(async (req, res) =
         return res.status(400).json({ status: 'error', message: 'La nueva contraseña debe tener al menos 8 caracteres' });
     }
 
-    const { rows } = await pool.query<UsuarioRow>(
-        'select * from usuarios where id = $1',
-        [req.usuario!.id]
-    );
-    const usuario = rows[0];
+    const u = req.usuario!;
 
-    if (!usuario || !(await verifyPassword(passwordActual, usuario.password_hash))) {
+    const { error: errorVerificacion } = await supabaseAnon.auth.signInWithPassword({
+        email: u.correo,
+        password: passwordActual
+    });
+    if (errorVerificacion) {
         return res.status(401).json({ status: 'error', message: 'La contraseña actual no es correcta' });
     }
 
-    const nuevoHash = await hashPassword(passwordNueva);
-    await pool.query(
-        'update usuarios set password_hash = $1, debe_cambiar_password = false, actualizado_en = now() where id = $2',
-        [nuevoHash, usuario.id]
-    );
+    const { error: errorUpdate } = await supabaseAdmin.auth.admin.updateUserById(u.id, {
+        password: passwordNueva,
+        user_metadata: { full_name: u.nombre, debe_cambiar_password: false }
+    });
+    if (errorUpdate) {
+        return res.status(502).json({ status: 'error', message: 'No se pudo actualizar la contraseña. Intenta de nuevo.' });
+    }
 
+    const nuevaSesion: UsuarioSesion = { ...u, debeCambiarPassword: false };
+    res.cookie(COOKIE_NAME, signSessionToken(nuevaSesion), cookieOptions());
     res.json({ status: 'ok' });
 }));

@@ -1,14 +1,37 @@
-// Lógica de lectura del catálogo de precios, compartida entre el cotizador público
-// (apps/web/cotizador.html + main.ts) y el editor de servicios del panel de Maritza.
-// El catálogo en sí vive únicamente como HTML en cotizador.html (selects/checkboxes/qty
-// con data-precio, data-tag, data-nombre, data-incluye) — este módulo solo sabe LEER esa
-// estructura genérica, sin duplicar ni un solo precio.
+// Catálogo de precios: antes vivía como HTML fijo en cotizador.html; ahora se trae en
+// vivo de la base de datos (inventory/inventory_variants/venue/transportation) y este
+// módulo construye el formulario dinámicamente. Se usa tanto en el cotizador público
+// como en el editor de servicios del panel de Maritza.
+import { apiUrl } from './api';
+
+export interface VarianteCatalogo {
+    id: number;
+    simpleDescription: string;
+    detailedDescription: string;
+    price: number;
+}
+
+export interface InventoryCatalogo {
+    id: number;
+    name: string;
+    type: string;
+    controlType: 'select' | 'checkbox' | 'qty';
+    variants: VarianteCatalogo[];
+}
+
+export interface Catalogo {
+    venues: { id: number; name: string }[];
+    transportation: { id: number; city: string; price: number }[];
+    inventory: InventoryCatalogo[];
+}
 
 export interface ItemSeleccionado {
+    variantId: number;
+    cantidad: number;
     tag: string;
     nombre: string;
     descripcion: string;
-    precio: number;
+    precioUnit: number;
     nota?: string;
 }
 
@@ -17,81 +40,153 @@ export interface ResultadoCatalogo {
     itemsSeleccionados: ItemSeleccionado[];
 }
 
-const formatterCOP = new Intl.NumberFormat('es-CO', {
-    style: 'currency',
-    currency: 'COP',
-    minimumFractionDigits: 0
-});
+const formatterCOP = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
 
-/** Lee el atributo data-incluye ("a|b|c") y lo devuelve como texto legible "a • b • c". */
-export function obtenerIncluye(el: Element): string {
-    const raw = el.getAttribute('data-incluye');
-    if (!raw) return '';
-    return raw.split('|').map((p) => p.trim()).filter(Boolean).join(' • ');
+function tituloLegible(tipo: string): string {
+    return tipo
+        .toLowerCase()
+        .split(' ')
+        .map((p) => (p.length > 2 ? p.charAt(0).toUpperCase() + p.slice(1) : p))
+        .join(' ');
 }
 
-/**
- * Escanea cualquier contenedor (el <form> del cotizador, o un <div> clonado con el mismo
- * catálogo embebido) y calcula el total + la lista de ítems seleccionados, actualizando
- * en vivo los textos de ayuda (`${id}-hint`) de cada <select>. No depende de ningún id de
- * campo en particular: solo de las clases .precio-select / .precio-check / .precio-qty.
- */
+let catalogoCache: Catalogo | null = null;
+
+export async function obtenerCatalogo(): Promise<Catalogo> {
+    if (catalogoCache) return catalogoCache;
+    const res = await fetch(apiUrl('/api/catalogo'));
+    catalogoCache = (await res.json()) as Catalogo;
+    return catalogoCache;
+}
+
+/** Dibuja los controles del catálogo (selects / checkboxes / cantidades) dentro de `contenedor`. */
+export function renderCatalogoEnContenedor(contenedor: HTMLElement, catalogo: Catalogo): void {
+    const selects = catalogo.inventory.filter((i) => i.controlType === 'select');
+    const checkboxes = catalogo.inventory.filter((i) => i.controlType === 'checkbox');
+    const qtys = catalogo.inventory.filter((i) => i.controlType === 'qty');
+
+    const htmlSelects = selects.map((inv) => `
+        <div>
+            <label for="inv-${inv.id}">${inv.name || tituloLegible(inv.type)}</label>
+            <select id="inv-${inv.id}" class="precio-select" data-tag="${inv.type}">
+                <option value="" data-precio="0" data-variant-id="" selected>-- No incluir --</option>
+                ${inv.variants.map((v) => `
+                    <option value="${v.id}" data-variant-id="${v.id}" data-precio="${v.price}" data-incluye="${(v.detailedDescription || '').replace(/"/g, '&quot;')}">
+                        ${v.simpleDescription} — ${formatterCOP.format(v.price)}
+                    </option>
+                `).join('')}
+            </select>
+            <small class="field-hint" id="inv-${inv.id}-hint"></small>
+        </div>
+    `).join('');
+
+    const htmlCheckboxes = checkboxes.map((inv) => {
+        const v = inv.variants[0];
+        if (!v) return '';
+        return `
+            <label class="checkbox-label">
+                <input type="checkbox" class="precio-check" id="inv-${inv.id}" data-tag="${inv.type}"
+                    data-variant-id="${v.id}" data-nombre="${v.simpleDescription}" data-precio="${v.price}"
+                    data-incluye="${(v.detailedDescription || '').replace(/"/g, '&quot;')}">
+                <span>${v.simpleDescription} (+${formatterCOP.format(v.price)})</span>
+            </label>
+        `;
+    }).join('');
+
+    const htmlQtys = qtys.map((inv) => {
+        const v = inv.variants[0];
+        if (!v) return '';
+        return `
+            <div class="qty-row">
+                <div class="qty-name">${v.simpleDescription} <span class="qty-price">(${formatterCOP.format(v.price)} c/u)</span></div>
+                <input type="number" class="precio-qty" id="inv-${inv.id}" data-tag="${inv.type}"
+                    data-variant-id="${v.id}" data-nombre="${v.simpleDescription}" data-precio-unit="${v.price}"
+                    min="0" step="1" value="0">
+            </div>
+        `;
+    }).join('');
+
+    contenedor.innerHTML = `
+        <div class="form-group">
+            <div class="form-section-title"><i class="fa-solid fa-sliders"></i> Servicios</div>
+            <div class="grid-2">${htmlSelects}</div>
+        </div>
+        ${htmlCheckboxes ? `
+        <div class="form-group">
+            <div class="form-section-title"><i class="fa-solid fa-wand-magic-sparkles"></i> Efectos y extras</div>
+            <div class="checkbox-box">${htmlCheckboxes}</div>
+        </div>` : ''}
+        ${htmlQtys ? `
+        <div class="form-group">
+            <div class="form-section-title"><i class="fa-solid fa-chair"></i> Mobiliario y cantidades</div>
+            <div class="qty-box">${htmlQtys}</div>
+        </div>` : ''}
+    `;
+}
+
+function obtenerIncluye(el: Element): string {
+    return el.getAttribute('data-incluye') || '';
+}
+
+/** Igual que antes: escanea los controles ya dibujados y calcula total + ítems seleccionados. */
 export function calcularDesdeCatalogo(contenedor: ParentNode): ResultadoCatalogo {
     let total = 0;
     const itemsSeleccionados: ItemSeleccionado[] = [];
 
-    const selects = contenedor.querySelectorAll<HTMLSelectElement>('select.precio-select');
-    selects.forEach((select) => {
+    contenedor.querySelectorAll<HTMLSelectElement>('select.precio-select').forEach((select) => {
         const hint = select.id ? document.getElementById(`${select.id}-hint`) : null;
         const opt = select.options[select.selectedIndex];
         const incluye = opt ? obtenerIncluye(opt) : '';
+        if (hint) hint.innerHTML = (select.selectedIndex > 0 && incluye) ? `<strong>Incluye:</strong> ${incluye}` : '';
 
-        if (hint) {
-            hint.innerHTML = (select.selectedIndex > 0 && incluye) ? `<strong>Incluye:</strong> ${incluye}` : '';
-        }
-
-        if (select.selectedIndex <= 0 || !opt) return;
+        const variantId = opt?.getAttribute('data-variant-id');
+        if (!variantId || select.selectedIndex <= 0) return;
         const precio = parseFloat(opt.getAttribute('data-precio') || '') || 0;
         if (precio <= 0) return;
 
         total += precio;
         itemsSeleccionados.push({
+            variantId: Number(variantId),
+            cantidad: 1,
             tag: select.dataset.tag || 'SERVICIO',
-            nombre: opt.value,
+            nombre: opt.textContent?.split(' — ')[0].trim() || '',
             descripcion: incluye,
-            precio
+            precioUnit: precio
         });
     });
 
-    const checks = contenedor.querySelectorAll<HTMLInputElement>('input.precio-check');
-    checks.forEach((chk) => {
+    contenedor.querySelectorAll<HTMLInputElement>('input.precio-check').forEach((chk) => {
         if (!chk.checked) return;
+        const variantId = chk.getAttribute('data-variant-id');
         const precio = parseFloat(chk.getAttribute('data-precio') || '') || 0;
-        if (precio <= 0) return;
+        if (!variantId || precio <= 0) return;
 
         total += precio;
         itemsSeleccionados.push({
+            variantId: Number(variantId),
+            cantidad: 1,
             tag: chk.dataset.tag || 'SERVICIO',
-            nombre: chk.dataset.nombre || chk.id,
+            nombre: chk.dataset.nombre || '',
             descripcion: obtenerIncluye(chk),
-            precio
+            precioUnit: precio
         });
     });
 
-    const qtys = contenedor.querySelectorAll<HTMLInputElement>('input.precio-qty');
-    qtys.forEach((input) => {
+    contenedor.querySelectorAll<HTMLInputElement>('input.precio-qty').forEach((input) => {
         const cantidad = parseInt(input.value, 10) || 0;
-        if (cantidad <= 0) return;
+        const variantId = input.getAttribute('data-variant-id');
+        if (cantidad <= 0 || !variantId) return;
         const precioUnit = parseFloat(input.getAttribute('data-precio-unit') || '') || 0;
-        const precio = cantidad * precioUnit;
-        if (precio <= 0) return;
+        if (precioUnit <= 0) return;
 
-        total += precio;
+        total += cantidad * precioUnit;
         itemsSeleccionados.push({
+            variantId: Number(variantId),
+            cantidad,
             tag: input.dataset.tag || 'SERVICIO',
-            nombre: `${cantidad} x ${input.dataset.nombre || input.id} (${formatterCOP.format(precioUnit)} c/u)`,
+            nombre: input.dataset.nombre || '',
             descripcion: obtenerIncluye(input),
-            precio
+            precioUnit
         });
     });
 
@@ -99,24 +194,24 @@ export function calcularDesdeCatalogo(contenedor: ParentNode): ResultadoCatalogo
 }
 
 /**
- * Pre-marca los controles del catálogo (selects/checkboxes/cantidades) para que reflejen
- * una lista de ítems ya guardada (p. ej. al reabrir una cotización para editarla). Hace
- * match por tag+nombre; los ítems que no calcen con ningún control del catálogo (precios
- * manuales añadidos fuera del catálogo) se devuelven aparte para no perderlos.
+ * Pre-marca los controles del catálogo ya dibujado con una lista de ítems ya guardada
+ * (reabrir una cotización para editarla). Hace match por variantId — mucho más simple
+ * y confiable que adivinar por texto. Los ítems que no calcen con ningún control del
+ * catálogo (ítems manuales) se devuelven aparte para no perderlos.
  */
 export function preseleccionarCatalogo(contenedor: ParentNode, items: ItemSeleccionado[]): ItemSeleccionado[] {
     const restantes = [...items];
 
-    function tomar(tag: string, nombre: string): ItemSeleccionado | undefined {
-        const idx = restantes.findIndex((i) => i.tag === tag && i.nombre === nombre);
+    function tomar(variantId: number): ItemSeleccionado | undefined {
+        const idx = restantes.findIndex((i) => i.variantId === variantId);
         if (idx === -1) return undefined;
         return restantes.splice(idx, 1)[0];
     }
 
     contenedor.querySelectorAll<HTMLSelectElement>('select.precio-select').forEach((select) => {
-        const tag = select.dataset.tag || 'SERVICIO';
         for (const opt of Array.from(select.options)) {
-            if (tomar(tag, opt.value)) {
+            const variantId = opt.getAttribute('data-variant-id');
+            if (variantId && tomar(Number(variantId))) {
                 select.value = opt.value;
                 break;
             }
@@ -124,24 +219,15 @@ export function preseleccionarCatalogo(contenedor: ParentNode, items: ItemSelecc
     });
 
     contenedor.querySelectorAll<HTMLInputElement>('input.precio-check').forEach((chk) => {
-        const tag = chk.dataset.tag || 'SERVICIO';
-        const nombre = chk.dataset.nombre || chk.id;
-        if (tomar(tag, nombre)) chk.checked = true;
+        const variantId = chk.getAttribute('data-variant-id');
+        if (variantId && tomar(Number(variantId))) chk.checked = true;
     });
 
-    // Cantidades: el nombre guardado tiene el formato "N x <nombre> (...)"; se intenta
-    // recuperar N para ese control. Si no calza exactamente, se deja en 0 y el ítem queda
-    // disponible para quien edite (no se pierde: queda en "restantes" como manual).
     contenedor.querySelectorAll<HTMLInputElement>('input.precio-qty').forEach((input) => {
-        const tag = input.dataset.tag || 'SERVICIO';
-        const nombreBase = input.dataset.nombre || input.id;
-        const idx = restantes.findIndex((i) => i.tag === tag && i.nombre.includes(nombreBase));
-        if (idx === -1) return;
-        const match = restantes[idx].nombre.match(/^(\d+)\s*x\s/);
-        if (match) {
-            input.value = match[1];
-            restantes.splice(idx, 1);
-        }
+        const variantId = input.getAttribute('data-variant-id');
+        if (!variantId) return;
+        const item = tomar(Number(variantId));
+        if (item) input.value = String(item.cantidad);
     });
 
     return restantes;

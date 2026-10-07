@@ -7,10 +7,13 @@ import { initPanelLayout } from './shared/layout';
 declare const Swal: any;
 
 interface ItemSeleccionado {
+    variantId: number;
+    cantidad: number;
     tag: string;
     nombre: string;
     descripcion: string;
-    precio: number;
+    precioUnit: number;
+    nota?: string | null;
 }
 
 interface Cotizacion {
@@ -21,7 +24,6 @@ interface Cotizacion {
     clienteTelefono: string;
     clienteDocumento: string | null;
     tipoEvento: string | null;
-    ciudad: string | null;
     lugar: string | null;
     fechaEvento: string | null;
     items: ItemSeleccionado[];
@@ -88,17 +90,18 @@ async function abrirDetalle(id: string) {
     document.getElementById('resumenCliente')!.innerHTML = `
         <div class="detail-row"><div class="detail-row-main"><strong>Cliente:</strong> ${cotizacion.clienteNombre} ${cotizacion.clienteDocumento ? '(CC ' + cotizacion.clienteDocumento + ')' : ''}</div></div>
         <div class="detail-row"><div class="detail-row-main"><strong>Correo:</strong> ${cotizacion.clienteCorreo} &nbsp;·&nbsp; <strong>Teléfono:</strong> ${cotizacion.clienteTelefono}</div></div>
-        <div class="detail-row"><div class="detail-row-main"><strong>Evento:</strong> ${cotizacion.tipoEvento || 'N/A'} · ${cotizacion.lugar || 'N/A'} (${cotizacion.ciudad || 'N/A'})</div></div>
+        <div class="detail-row"><div class="detail-row-main"><strong>Evento:</strong> ${cotizacion.tipoEvento || 'N/A'} · ${cotizacion.lugar || 'N/A'}</div></div>
         <div class="detail-row"><div class="detail-row-main"><strong>Fecha del evento:</strong> ${cotizacion.fechaEvento ? new Date(cotizacion.fechaEvento + 'T00:00:00').toLocaleDateString('es-CO') : 'Sin definir'}</div></div>
     `;
 
     document.getElementById('listaItemsDetalle')!.innerHTML = cotizacion.items.map((item) => `
         <div class="detail-row">
             <div>
-                <div class="detail-row-main"><strong>${item.nombre}</strong></div>
+                <div class="detail-row-main"><strong>${item.cantidad > 1 ? `${item.cantidad} x ${item.nombre}` : item.nombre}</strong></div>
                 <div class="detail-row-sub">${item.tag}${item.descripcion ? ' · Incluye: ' + item.descripcion : ''}</div>
+                ${item.nota ? `<div class="detail-row-sub" style="color:var(--orange-main); margin-top:0.3rem;"><i class="fa-solid fa-note-sticky"></i> ${item.nota}</div>` : ''}
             </div>
-            <div class="detail-row-price">${formatterCOP.format(item.precio)}</div>
+            <div class="detail-row-price">${formatterCOP.format(item.precioUnit * item.cantidad)}</div>
         </div>
     `).join('');
     document.getElementById('totalDetalle')!.textContent = formatterCOP.format(cotizacion.total);

@@ -62,23 +62,49 @@ function renderGrupo(contenedorId: string, empleados: Empleado[]) {
 
 async function abrirFormulario(empleado?: Empleado) {
     const { value: datos } = await Swal.fire({
-        title: empleado ? 'Editar empleado' : 'Nuevo empleado',
+        title: `<i class="fa-solid ${empleado ? 'fa-user-pen' : 'fa-user-plus'}" style="color:var(--orange-main); margin-right:0.5rem;"></i>${empleado ? 'Editar empleado' : 'Nuevo empleado'}`,
         confirmButtonColor: '#f97316',
+        cancelButtonColor: '#374151',
         showCancelButton: true,
         confirmButtonText: empleado ? 'Guardar cambios' : 'Crear empleado',
         cancelButtonText: 'Cancelar',
         focusConfirm: false,
+        width: 'min(560px, 92vw)',
+        customClass: { popup: 'swal-tema-oscuro' },
         html: `
-            <input id="swalNombre" class="swal2-input" placeholder="Nombre completo" value="${empleado?.nombre || ''}">
-            <input id="swalDocumento" class="swal2-input" placeholder="Documento / Cédula" value="${empleado?.documento || ''}">
-            <input id="swalTelefono" class="swal2-input" placeholder="Teléfono" value="${empleado?.telefono || ''}">
-            <input id="swalSalario" type="number" class="swal2-input" placeholder="Salario" value="${empleado?.salario ?? ''}">
-            <input id="swalCuenta" class="swal2-input" placeholder="Número de cuenta bancaria" value="${empleado?.numeroCuenta || ''}">
-            <input id="swalBanco" class="swal2-input" placeholder="Banco" value="${empleado?.banco || ''}">
-            <select id="swalTipo" class="swal2-input">
-                <option value="con_contrato" ${empleado?.tipoContrato === 'con_contrato' ? 'selected' : ''}>Con contrato</option>
-                <option value="sin_contrato" ${empleado?.tipoContrato === 'sin_contrato' ? 'selected' : ''}>Sin contrato</option>
-            </select>
+            <div class="form-grid-campos">
+                <div class="campo-full">
+                    <label for="swalNombre">Nombre completo</label>
+                    <input id="swalNombre" placeholder="Ej. Juan Pérez" value="${empleado?.nombre || ''}">
+                </div>
+                <div>
+                    <label for="swalDocumento">Documento / Cédula</label>
+                    <input id="swalDocumento" placeholder="Ej. 1012345678" value="${empleado?.documento || ''}">
+                </div>
+                <div>
+                    <label for="swalTelefono">Teléfono</label>
+                    <input id="swalTelefono" placeholder="Ej. 300 123 4567" value="${empleado?.telefono || ''}">
+                </div>
+                <div>
+                    <label for="swalSalario">Salario</label>
+                    <input id="swalSalario" type="number" placeholder="Ej. 1500000" value="${empleado?.salario ?? ''}">
+                </div>
+                <div>
+                    <label for="swalTipo">Tipo de vínculo</label>
+                    <select id="swalTipo">
+                        <option value="con_contrato" ${empleado?.tipoContrato === 'con_contrato' ? 'selected' : ''}>Con contrato</option>
+                        <option value="sin_contrato" ${empleado?.tipoContrato === 'sin_contrato' ? 'selected' : ''}>Sin contrato</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="swalCuenta">Número de cuenta bancaria</label>
+                    <input id="swalCuenta" placeholder="Ej. 1234567890" value="${empleado?.numeroCuenta || ''}">
+                </div>
+                <div>
+                    <label for="swalBanco">Banco</label>
+                    <input id="swalBanco" placeholder="Ej. Bancolombia" value="${empleado?.banco || ''}">
+                </div>
+            </div>
         `,
         preConfirm: () => {
             const nombre = (document.getElementById('swalNombre') as HTMLInputElement).value.trim();
@@ -131,7 +157,7 @@ async function eliminarEmpleado(id: string) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    const sesion = await exigirSesion('administradora');
+    const sesion = await exigirSesion('administrador');
     initPanelLayout(sesion);
 
     document.getElementById('btnNuevoEmpleado')?.addEventListener('click', conManejoDeErrores(() => abrirFormulario()));

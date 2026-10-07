@@ -5,6 +5,6 @@ import { exigirSesion } from './shared/api';
 import { initPanelLayout } from './shared/layout';
 
 document.addEventListener('DOMContentLoaded', async () => {
-    const sesion = await exigirSesion('administradora');
+    const sesion = await exigirSesion('administrador');
     initPanelLayout(sesion);
 });

@@ -1,7 +1,7 @@
 import { apiFetch, type SesionActual } from './api';
 
 const NOMBRE_ROL: Record<SesionActual['rol'], string> = {
-    administradora: 'Administradora',
+    administrador: 'Administradora',
     secretaria: 'Secretaria',
     jefe_logistica: 'Jefe de Logística'
 };

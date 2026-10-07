@@ -233,6 +233,81 @@ input:focus, select:focus {
     color: #d1d5db;
 }
 
+/* Modales de SweetAlert2 con formulario (ej. "Nuevo empleado"): por defecto el
+   popup es blanco y solo los <select>/<input type=number> heredan el tema oscuro
+   de arriba, lo que se ve roto. Esta clase (via customClass.popup) lleva todo
+   el popup al tema oscuro/naranja del resto del panel. */
+.swal-tema-oscuro {
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border-color);
+    border-radius: 18px !important;
+}
+
+.swal-tema-oscuro .swal2-title {
+    color: var(--text-light) !important;
+    font-size: 1.3rem !important;
+}
+
+.swal-tema-oscuro .swal2-html-container {
+    margin-top: 1.1rem !important;
+}
+
+.swal-tema-oscuro .swal2-close {
+    color: var(--text-muted) !important;
+}
+
+.form-grid-campos {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.9rem;
+    text-align: left;
+}
+
+.form-grid-campos .campo-full {
+    grid-column: 1 / -1;
+}
+
+.form-grid-campos label {
+    display: block;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-bottom: 0.4rem;
+}
+
+.form-grid-campos input,
+.form-grid-campos select {
+    width: 100%;
+    background-color: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 0.7rem 0.85rem;
+    font-size: 0.88rem;
+    color: #fff;
+    outline: none;
+    transition: border-color 0.2s;
+    margin: 0;
+}
+
+.form-grid-campos input:focus,
+.form-grid-campos select:focus {
+    border-color: var(--orange-main);
+}
+
+.form-grid-campos select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath d='M1 1l6 6 6-6' stroke='%239ca3af' stroke-width='1.6' fill='none' fill-rule='evenodd' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.9rem center;
+    padding-right: 2.2rem;
+}
+
+@media (max-width: 480px) {
+    .form-grid-campos {
+        grid-template-columns: 1fr;
+    }
+}
+
 .qty-box {
     background-color: rgba(0,0,0,0.25);
     border: 1px solid var(--border-color);

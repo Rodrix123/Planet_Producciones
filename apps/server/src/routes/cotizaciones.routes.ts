@@ -5,262 +5,386 @@ import { asyncHandler } from '../asyncHandler';
 import { transporter } from '../mailer';
 import { generarCotizacionPdfBuffer, type ItemCotizacionPdf } from '../pdf/cotizacionPdf';
 
-interface ItemSeleccionado {
-    tag: string;
-    nombre: string;
-    descripcion: string;
-    precio: number;
-    nota?: string;
-}
-
-interface CotizacionRow {
-    id: string;
-    numero_referencia: string;
-    cliente_nombre: string;
-    cliente_correo: string;
-    cliente_telefono: string;
-    cliente_documento: string | null;
-    tipo_evento: string | null;
-    ciudad: string | null;
-    lugar: string | null;
-    fecha_evento: string | null;
-    items: ItemSeleccionado[];
-    total: string;
-    estado: string;
-    creada_en: string;
-    actualizada_en: string;
-    finalizada_en: string | null;
-    programada_en: string | null;
-}
-
-function mapCotizacion(row: CotizacionRow) {
-    return {
-        id: row.id,
-        numeroReferencia: row.numero_referencia,
-        clienteNombre: row.cliente_nombre,
-        clienteCorreo: row.cliente_correo,
-        clienteTelefono: row.cliente_telefono,
-        clienteDocumento: row.cliente_documento,
-        tipoEvento: row.tipo_evento,
-        ciudad: row.ciudad,
-        lugar: row.lugar,
-        fechaEvento: row.fecha_evento,
-        items: row.items,
-        total: Number(row.total),
-        estado: row.estado,
-        creadaEn: row.creada_en,
-        actualizadaEn: row.actualizada_en,
-        finalizadaEn: row.finalizada_en,
-        programadaEn: row.programada_en
-    };
-}
-
-function validarItems(items: unknown): items is ItemSeleccionado[] {
-    if (!Array.isArray(items)) return false;
-    return items.every((item): item is ItemSeleccionado => {
-        if (!item || typeof item !== 'object') return false;
-        const it = item as Record<string, unknown>;
-        return typeof it.tag === 'string' && typeof it.nombre === 'string' && typeof it.precio === 'number';
-    });
-}
-
-function sumarTotal(items: ItemSeleccionado[]): number {
-    return items.reduce((acc, item) => acc + (Number(item.precio) || 0), 0);
-}
+const ESTADOS_VALIDOS = ['recibida', 'en_revision', 'finalizada', 'contrato_enviado', 'programada', 'cancelada'] as const;
+type EstadoCotizacion = (typeof ESTADOS_VALIDOS)[number];
 
 // La secretaria solo puede ver cotizaciones que ya pasaron por "finalizada" en adelante;
 // nunca las que Maritza todavía está revisando.
-const ESTADOS_VISIBLES_SECRETARIA = ['finalizada', 'contrato_enviado', 'programada'];
+const ESTADOS_VISIBLES_SECRETARIA: EstadoCotizacion[] = ['finalizada', 'contrato_enviado', 'programada'];
+
+// Traduce cada estado "virtual" (no existe como columna única) a la condición SQL que lo
+// identifica a partir de quote + events, usando los alias q/e.
+const CONDICION_SQL: Record<EstadoCotizacion, string> = {
+    recibida: "q.estado = 'recibida' and e.id is null",
+    en_revision: "q.estado = 'en_revision' and e.id is null",
+    finalizada: 'e.id is not null and e.contrato_enviado_en is null',
+    contrato_enviado: 'e.id is not null and e.contrato_enviado_en is not null and e.confirmed = false',
+    programada: 'e.confirmed = true',
+    cancelada: "q.estado = 'cancelada'"
+};
+
+const SELECT_BASE = `
+    select
+        q.id,
+        q.total,
+        q.created_at,
+        q.estado as quote_estado,
+        coalesce(e.event_type, q.event_type) as event_type,
+        coalesce(e.date, q.date) as fecha_evento,
+        coalesce(e.venue_id, q.venue_id) as venue_id,
+        coalesce(e.transportation_id, q.transportation_id) as transportation_id,
+        q.client_id,
+        u.name as cliente_nombre,
+        u.email as cliente_correo,
+        u.phone as cliente_telefono,
+        u.documento as cliente_documento,
+        v.name as venue_nombre,
+        e.id as event_id,
+        e.confirmed,
+        e.contrato_enviado_en,
+        e.contrato_firmado_nombre
+    from quote q
+    left join users u on u.id = q.client_id
+    left join events e on e.quote_id = q.id
+    left join venue v on v.id = coalesce(e.venue_id, q.venue_id)
+`;
+
+interface FilaCotizacion {
+    id: number;
+    total: string;
+    created_at: string;
+    quote_estado: EstadoCotizacion;
+    event_type: string | null;
+    fecha_evento: string | null;
+    venue_id: number | null;
+    transportation_id: number | null;
+    client_id: number | null;
+    cliente_nombre: string | null;
+    cliente_correo: string | null;
+    cliente_telefono: string | null;
+    cliente_documento: string | null;
+    venue_nombre: string | null;
+    event_id: number | null;
+    confirmed: boolean | null;
+    contrato_enviado_en: string | null;
+    contrato_firmado_nombre: string | null;
+}
+
+interface ItemGuardado {
+    variantId: number;
+    cantidad: number;
+    tag: string;
+    nombre: string;
+    descripcion: string;
+    precioUnit: number;
+    nota: string | null;
+}
+
+function derivarEstado(fila: FilaCotizacion): EstadoCotizacion {
+    if (!fila.event_id) return fila.quote_estado;
+    if (fila.confirmed) return 'programada';
+    if (fila.contrato_enviado_en) return 'contrato_enviado';
+    return 'finalizada';
+}
+
+function numeroReferencia(id: number, creadaEn: string): string {
+    const anio = new Date(creadaEn).getFullYear();
+    return `PL-${anio}-${String(id).padStart(4, '0')}`;
+}
+
+function mapCotizacion(fila: FilaCotizacion, items: ItemGuardado[] = []) {
+    return {
+        id: fila.id,
+        numeroReferencia: numeroReferencia(fila.id, fila.created_at),
+        clienteNombre: fila.cliente_nombre || '',
+        clienteCorreo: fila.cliente_correo || '',
+        clienteTelefono: fila.cliente_telefono || '',
+        clienteDocumento: fila.cliente_documento,
+        tipoEvento: fila.event_type,
+        lugar: fila.venue_nombre,
+        venueId: fila.venue_id,
+        transportationId: fila.transportation_id,
+        fechaEvento: fila.fecha_evento,
+        total: Number(fila.total),
+        estado: derivarEstado(fila),
+        creadaEn: fila.created_at,
+        items
+    };
+}
+
+async function obtenerFilaCotizacion(id: string): Promise<FilaCotizacion | null> {
+    const { rows } = await pool.query<FilaCotizacion>(`${SELECT_BASE} where q.id = $1`, [id]);
+    return rows[0] || null;
+}
+
+async function obtenerItems(quoteId: string | number): Promise<ItemGuardado[]> {
+    const { rows } = await pool.query(
+        `select qi.variant_id, qi.quantity, qi.nota, iv.simple_description, iv.detailed_description, iv.price, i.type
+         from quote_items qi
+         join inventory_variants iv on iv.id = qi.variant_id
+         join inventory i on i.id = iv.inventory_id
+         where qi.quote_id = $1
+         order by i.type, iv.simple_description`,
+        [quoteId]
+    );
+    return rows.map((r) => ({
+        variantId: Number(r.variant_id),
+        cantidad: r.quantity,
+        tag: r.type,
+        nombre: r.simple_description,
+        descripcion: r.detailed_description || '',
+        precioUnit: Number(r.price),
+        nota: r.nota
+    }));
+}
+
+async function precioTransporte(transportationId: number | null): Promise<number> {
+    if (!transportationId) return 0;
+    const { rows } = await pool.query('select price from transportation where id = $1', [transportationId]);
+    return rows[0] ? Number(rows[0].price) : 0;
+}
+
+interface ItemEntrada {
+    variantId?: number;
+    cantidad?: number;
+    nota?: string;
+}
+
+function validarItems(items: unknown): items is Required<Pick<ItemEntrada, 'variantId' | 'cantidad'>>[] & ItemEntrada[] {
+    if (!Array.isArray(items)) return false;
+    return items.every((item) => {
+        if (!item || typeof item !== 'object') return false;
+        const it = item as Record<string, unknown>;
+        return typeof it.variantId === 'number' && typeof it.cantidad === 'number' && it.cantidad > 0;
+    });
+}
+
+async function reemplazarItems(quoteId: string | number, items: ItemEntrada[]): Promise<void> {
+    await pool.query('delete from quote_items where quote_id = $1', [quoteId]);
+    if (items.length === 0) return;
+
+    const values: unknown[] = [];
+    const placeholders = items.map((item, idx) => {
+        values.push(quoteId, item.variantId, item.cantidad, item.nota || null);
+        const base = idx * 4;
+        return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4})`;
+    }).join(', ');
+
+    await pool.query(`insert into quote_items (quote_id, variant_id, quantity, nota) values ${placeholders}`, values);
+}
 
 export const cotizacionesRouter = Router();
 
 // Público: lo usa el cotizador para guardar la cotización real.
 cotizacionesRouter.post('/', asyncHandler(async (req, res) => {
     const body = req.body as {
-        cliente?: {
-            nombre?: string;
-            correo?: string;
-            telefono?: string;
-            tipoEvento?: string;
-            ciudad?: string;
-            lugar?: string;
-            fechaEvento?: string;
-        };
+        cliente?: { nombre?: string; correo?: string; telefono?: string };
+        tipoEvento?: string;
+        venueId?: number;
+        transportationId?: number;
+        fechaEvento?: string;
         items?: unknown;
-        total?: number;
     };
 
     const cliente = body.cliente;
     if (!cliente?.nombre || !cliente?.correo || !cliente?.telefono) {
         return res.status(400).json({ status: 'error', message: 'Faltan los datos de contacto del cliente' });
     }
-    if (!validarItems(body.items) || body.items.length === 0) {
+    if (body.items !== undefined && !validarItems(body.items)) {
+        return res.status(400).json({ status: 'error', message: 'La lista de servicios no es válida' });
+    }
+
+    const items = (body.items as ItemEntrada[]) || [];
+    const totalTransporte = await precioTransporte(body.transportationId || null);
+
+    if (items.length === 0 && totalTransporte === 0) {
         return res.status(400).json({ status: 'error', message: 'La cotización no tiene servicios seleccionados' });
     }
 
-    const items = body.items;
-    const total = sumarTotal(items);
-
-    const { rows: seqRows } = await pool.query<{ n: string }>("select nextval('cotizaciones_numero_seq') as n");
-    const numeroReferencia = `PL-${new Date().getFullYear()}-${String(seqRows[0].n).padStart(4, '0')}`;
-
-    const { rows } = await pool.query<CotizacionRow>(
-        `insert into cotizaciones
-            (numero_referencia, cliente_nombre, cliente_correo, cliente_telefono,
-             tipo_evento, ciudad, lugar, fecha_evento, items, total)
-         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-         returning *`,
-        [
-            numeroReferencia,
-            cliente.nombre,
-            cliente.correo,
-            cliente.telefono,
-            cliente.tipoEvento || null,
-            cliente.ciudad || null,
-            cliente.lugar || null,
-            cliente.fechaEvento || null,
-            JSON.stringify(items),
-            total
-        ]
+    const { rows: userRows } = await pool.query<{ id: number }>(
+        `insert into users (email, name, phone) values ($1, $2, $3)
+         on conflict (email) do update set name = excluded.name, phone = excluded.phone
+         returning id`,
+        [cliente.correo.trim().toLowerCase(), cliente.nombre.trim(), cliente.telefono.trim()]
     );
+    const clientId = userRows[0].id;
 
-    // Aviso a Maritza (best-effort, no bloquea la respuesta al cliente)
+    // `total` arranca en solo el transporte (lo único que esta ruta no deriva de
+    // quote_items): la tabla `quote` tiene un trigger propio (update_total_quote) que
+    // suma/resta automáticamente el precio de cada quote_items al insertarlo/borrarlo,
+    // así que el total de los servicios NUNCA se fija a mano — eso es lo que provocaba
+    // que total quedara desincronizado (y hasta negativo) frente al constraint de la BD.
+    const { rows: quoteRows } = await pool.query<{ id: number; created_at: string }>(
+        `insert into quote (total, client_id, event_type, venue_id, transportation_id, date)
+         values ($1, $2, $3, $4, $5, $6)
+         returning id, created_at`,
+        [totalTransporte, clientId, body.tipoEvento || null, body.venueId || null, body.transportationId || null, body.fechaEvento || null]
+    );
+    const quoteId = quoteRows[0].id;
+
+    await reemplazarItems(quoteId, items);
+
     if (process.env.EMAIL_JEFE) {
+        const { rows: totalRows } = await pool.query<{ total: string }>('select total from quote where id = $1', [quoteId]);
+        const totalFinal = Number(totalRows[0]?.total || 0);
         transporter.sendMail({
             from: `"Planet Producciones" <${process.env.EMAIL_USER}>`,
             to: process.env.EMAIL_JEFE,
-            subject: `Nueva cotización recibida: ${cliente.nombre} (${numeroReferencia})`,
-            text: `Se recibió una nueva cotización para revisar en el panel.\n\nCliente: ${cliente.nombre}\nReferencia: ${numeroReferencia}\nTotal estimado: $ ${total.toLocaleString('es-CO')} COP\n\nIngresa a tu panel para revisarla.`
+            subject: `Nueva cotización recibida: ${cliente.nombre} (${numeroReferencia(quoteId, quoteRows[0].created_at)})`,
+            text: `Se recibió una nueva cotización para revisar en el panel.\n\nCliente: ${cliente.nombre}\nReferencia: ${numeroReferencia(quoteId, quoteRows[0].created_at)}\nTotal estimado: $ ${totalFinal.toLocaleString('es-CO')} COP\n\nIngresa a tu panel para revisarla.`
         }).catch((err: Error) => console.error('Error enviando aviso de nueva cotización:', err.message));
     }
 
-    res.status(201).json({ status: 'ok', numeroReferencia, id: rows[0].id });
+    res.status(201).json({ status: 'ok', id: quoteId, numeroReferencia: numeroReferencia(quoteId, quoteRows[0].created_at) });
 }));
 
 cotizacionesRouter.use(requireAuth);
 
-cotizacionesRouter.get('/', requireRole('administradora', 'secretaria'), asyncHandler(async (req, res) => {
+cotizacionesRouter.get('/', requireRole('administrador', 'secretaria'), asyncHandler(async (req, res) => {
     const estadoParam = req.query.estado as string | undefined;
-    let estados = estadoParam ? estadoParam.split(',').map((e) => e.trim()) : null;
+    let estados = estadoParam
+        ? (estadoParam.split(',').map((e) => e.trim()).filter((e): e is EstadoCotizacion => (ESTADOS_VALIDOS as readonly string[]).includes(e)))
+        : [...ESTADOS_VALIDOS];
 
     if (req.usuario!.rol === 'secretaria') {
-        estados = estados ? estados.filter((e) => ESTADOS_VISIBLES_SECRETARIA.includes(e)) : ESTADOS_VISIBLES_SECRETARIA;
+        estados = estados.filter((e) => ESTADOS_VISIBLES_SECRETARIA.includes(e));
     }
+    if (estados.length === 0) return res.json([]);
 
-    const { rows } = estados
-        ? await pool.query<CotizacionRow>(
-              'select * from cotizaciones where estado = any($1) order by creada_en desc',
-              [estados]
-          )
-        : await pool.query<CotizacionRow>('select * from cotizaciones order by creada_en desc');
+    const condicion = estados.map((e) => CONDICION_SQL[e]).join(' or ');
+    const { rows } = await pool.query<FilaCotizacion>(`${SELECT_BASE} where ${condicion} order by q.created_at desc`);
 
-    res.json(rows.map(mapCotizacion));
+    res.json(rows.map((f) => mapCotizacion(f)));
 }));
 
-cotizacionesRouter.get('/:id', requireRole('administradora', 'secretaria'), asyncHandler(async (req, res) => {
-    const { rows } = await pool.query<CotizacionRow>('select * from cotizaciones where id = $1', [req.params.id]);
-    const cotizacion = rows[0];
-    if (!cotizacion) return res.status(404).json({ status: 'error', message: 'Cotización no encontrada' });
-    if (req.usuario!.rol === 'secretaria' && !ESTADOS_VISIBLES_SECRETARIA.includes(cotizacion.estado)) {
+cotizacionesRouter.get('/:id', requireRole('administrador', 'secretaria'), asyncHandler(async (req, res) => {
+    const fila = await obtenerFilaCotizacion(req.params.id);
+    if (!fila) return res.status(404).json({ status: 'error', message: 'Cotización no encontrada' });
+
+    const estado = derivarEstado(fila);
+    if (req.usuario!.rol === 'secretaria' && !ESTADOS_VISIBLES_SECRETARIA.includes(estado)) {
         return res.status(403).json({ status: 'error', message: 'No tienes permiso para ver esta cotización' });
     }
-    res.json(mapCotizacion(cotizacion));
+
+    const items = await obtenerItems(fila.id);
+    res.json(mapCotizacion(fila, items));
 }));
 
-cotizacionesRouter.put('/:id/items', requireRole('administradora'), asyncHandler(async (req, res) => {
+cotizacionesRouter.put('/:id/items', requireRole('administrador'), asyncHandler(async (req, res) => {
     const { items } = req.body as { items?: unknown };
     if (!validarItems(items)) {
         return res.status(400).json({ status: 'error', message: 'La lista de servicios no es válida' });
     }
 
-    const { rows } = await pool.query<CotizacionRow>('select * from cotizaciones where id = $1', [req.params.id]);
-    const actual = rows[0];
-    if (!actual) return res.status(404).json({ status: 'error', message: 'Cotización no encontrada' });
+    const fila = await obtenerFilaCotizacion(req.params.id);
+    if (!fila) return res.status(404).json({ status: 'error', message: 'Cotización no encontrada' });
 
-    const total = sumarTotal(items);
-    const nuevoEstado = actual.estado === 'recibida' ? 'en_revision' : actual.estado;
+    const itemsAntes = await obtenerItems(fila.id);
 
-    const { rows: actualizadas } = await pool.query<CotizacionRow>(
-        `update cotizaciones
-            set items = $1, total = $2, estado = $3, actualizada_en = now()
-            where id = $4
-            returning *`,
-        [JSON.stringify(items), total, nuevoEstado, req.params.id]
-    );
+    // `quote.total` lo mantiene el trigger update_total_quote() con cada insert/delete de
+    // quote_items — no se recalcula ni se fija a mano aquí (ver nota en POST / más arriba).
+    await reemplazarItems(fila.id, items);
+
+    const nuevoEstado = fila.quote_estado === 'recibida' ? 'en_revision' : fila.quote_estado;
+
+    await pool.query('update quote set estado = $1, updated_at = now() where id = $2', [nuevoEstado, req.params.id]);
 
     await pool.query(
-        `insert into cotizacion_historial (cotizacion_id, usuario_id, tipo, items_antes, items_despues, estado_antes, estado_despues)
-         values ($1, $2, 'edicion', $3, $4, $5, $6)`,
-        [req.params.id, req.usuario!.id, JSON.stringify(actual.items), JSON.stringify(items), actual.estado, nuevoEstado]
+        `insert into quote_historial (quote_id, profile_id, profile_nombre, tipo, items_antes, items_despues, estado_antes, estado_despues)
+         values ($1, $2, $3, 'edicion', $4, $5, $6, $7)`,
+        [req.params.id, req.usuario!.id, req.usuario!.nombre, JSON.stringify(itemsAntes), JSON.stringify(items), fila.quote_estado, nuevoEstado]
     );
 
-    res.json(mapCotizacion(actualizadas[0]));
+    const filaActualizada = await obtenerFilaCotizacion(req.params.id);
+    const itemsFinal = await obtenerItems(req.params.id);
+    res.json(mapCotizacion(filaActualizada!, itemsFinal));
 }));
 
-cotizacionesRouter.put('/:id/datos', requireRole('administradora'), asyncHandler(async (req, res) => {
+cotizacionesRouter.put('/:id/datos', requireRole('administrador'), asyncHandler(async (req, res) => {
     const body = req.body as {
         clienteNombre?: string;
         clienteCorreo?: string;
         clienteTelefono?: string;
         clienteDocumento?: string;
         tipoEvento?: string;
-        ciudad?: string;
-        lugar?: string;
+        venueId?: number;
+        transportationId?: number;
         fechaEvento?: string;
     };
 
-    const { rows } = await pool.query<CotizacionRow>(
-        `update cotizaciones set
-            cliente_nombre = coalesce($1, cliente_nombre),
-            cliente_correo = coalesce($2, cliente_correo),
-            cliente_telefono = coalesce($3, cliente_telefono),
-            cliente_documento = coalesce($4, cliente_documento),
-            tipo_evento = coalesce($5, tipo_evento),
-            ciudad = coalesce($6, ciudad),
-            lugar = coalesce($7, lugar),
-            fecha_evento = coalesce($8, fecha_evento),
-            actualizada_en = now()
-         where id = $9
-         returning *`,
+    const fila = await obtenerFilaCotizacion(req.params.id);
+    if (!fila) return res.status(404).json({ status: 'error', message: 'Cotización no encontrada' });
+
+    if (fila.client_id) {
+        await pool.query(
+            `update users set
+                name = coalesce($1, name),
+                email = coalesce($2, email),
+                phone = coalesce($3, phone),
+                documento = coalesce($4, documento)
+             where id = $5`,
+            [
+                body.clienteNombre?.trim() || null,
+                body.clienteCorreo?.trim().toLowerCase() || null,
+                body.clienteTelefono?.trim() || null,
+                body.clienteDocumento?.trim() || null,
+                fila.client_id
+            ]
+        );
+    }
+
+    const destino = fila.event_id ? 'events' : 'quote';
+    await pool.query(
+        `update ${destino} set
+            event_type = coalesce($1, event_type),
+            venue_id = coalesce($2, venue_id),
+            transportation_id = coalesce($3, transportation_id),
+            date = coalesce($4, date),
+            updated_at = now()
+         where id = $5`,
         [
-            body.clienteNombre || null,
-            body.clienteCorreo || null,
-            body.clienteTelefono || null,
-            body.clienteDocumento || null,
-            body.tipoEvento || null,
-            body.ciudad || null,
-            body.lugar || null,
+            body.tipoEvento?.trim() || null,
+            body.venueId || null,
+            body.transportationId || null,
             body.fechaEvento || null,
-            req.params.id
+            fila.event_id ? fila.event_id : req.params.id
         ]
     );
 
-    if (!rows[0]) return res.status(404).json({ status: 'error', message: 'Cotización no encontrada' });
-    res.json(mapCotizacion(rows[0]));
+    // El transporte no pasa por quote_items, así que a diferencia de los servicios
+    // (que el trigger update_total_quote mantiene solo) hay que ajustar `quote.total`
+    // a mano por la diferencia exacta cuando cambia.
+    if (body.transportationId && body.transportationId !== fila.transportation_id) {
+        const [precioNuevo, precioViejo] = await Promise.all([
+            precioTransporte(body.transportationId),
+            precioTransporte(fila.transportation_id)
+        ]);
+        await pool.query('update quote set total = total + $1 where id = $2', [precioNuevo - precioViejo, fila.id]);
+    }
+
+    const filaActualizada = await obtenerFilaCotizacion(req.params.id);
+    const items = await obtenerItems(req.params.id);
+    res.json(mapCotizacion(filaActualizada!, items));
 }));
 
-cotizacionesRouter.post('/:id/comentarios', requireRole('administradora'), asyncHandler(async (req, res) => {
+cotizacionesRouter.post('/:id/comentarios', requireRole('administrador'), asyncHandler(async (req, res) => {
     const { comentario } = req.body as { comentario?: string };
     if (!comentario?.trim()) {
         return res.status(400).json({ status: 'error', message: 'El comentario no puede estar vacío' });
     }
 
     await pool.query(
-        `insert into cotizacion_historial (cotizacion_id, usuario_id, tipo, comentario)
-         values ($1, $2, 'comentario', $3)`,
-        [req.params.id, req.usuario!.id, comentario.trim()]
+        `insert into quote_historial (quote_id, profile_id, profile_nombre, tipo, comentario)
+         values ($1, $2, $3, 'comentario', $4)`,
+        [req.params.id, req.usuario!.id, req.usuario!.nombre, comentario.trim()]
     );
 
     res.status(201).json({ status: 'ok' });
 }));
 
-cotizacionesRouter.get('/:id/historial', requireRole('administradora'), asyncHandler(async (req, res) => {
+cotizacionesRouter.get('/:id/historial', requireRole('administrador'), asyncHandler(async (req, res) => {
     const { rows } = await pool.query(
-        `select h.*, u.nombre as usuario_nombre
-         from cotizacion_historial h
-         left join usuarios u on u.id = h.usuario_id
-         where h.cotizacion_id = $1
-         order by h.creado_en asc`,
+        `select * from quote_historial where quote_id = $1 order by creado_en asc`,
         [req.params.id]
     );
 
@@ -270,95 +394,94 @@ cotizacionesRouter.get('/:id/historial', requireRole('administradora'), asyncHan
         comentario: r.comentario,
         estadoAntes: r.estado_antes,
         estadoDespues: r.estado_despues,
-        usuarioNombre: r.usuario_nombre,
+        usuarioNombre: r.profile_nombre,
         creadoEn: r.creado_en
     })));
 }));
 
-cotizacionesRouter.post('/:id/finalizar', requireRole('administradora'), asyncHandler(async (req, res) => {
-    const { rows } = await pool.query<CotizacionRow>('select * from cotizaciones where id = $1', [req.params.id]);
-    const actual = rows[0];
-    if (!actual) return res.status(404).json({ status: 'error', message: 'Cotización no encontrada' });
-    if (!actual.fecha_evento) {
+cotizacionesRouter.post('/:id/finalizar', requireRole('administrador'), asyncHandler(async (req, res) => {
+    const fila = await obtenerFilaCotizacion(req.params.id);
+    if (!fila) return res.status(404).json({ status: 'error', message: 'Cotización no encontrada' });
+    if (!fila.fecha_evento) {
         return res.status(400).json({ status: 'error', message: 'Define la fecha del evento antes de exportar la cotización final' });
     }
-    if (actual.estado === 'finalizada' || actual.estado === 'contrato_enviado' || actual.estado === 'programada') {
+    if (fila.event_id) {
         return res.status(400).json({ status: 'error', message: 'Esta cotización ya fue finalizada' });
     }
 
-    const { rows: actualizadas } = await pool.query<CotizacionRow>(
-        `update cotizaciones
-            set estado = 'finalizada', finalizada_en = now(), finalizada_por = $1, actualizada_en = now()
-            where id = $2
-            returning *`,
-        [req.usuario!.id, req.params.id]
+    await pool.query(
+        `insert into events (quote_id, venue_id, transportation_id, event_type, address, date, hour, confirmed, initial_payment, client_id, total_paid)
+         values ($1, $2, $3, $4, null, $5, '00:00:00', false, false, $6, 0)`,
+        [fila.id, fila.venue_id, fila.transportation_id, fila.event_type, fila.fecha_evento, fila.client_id]
     );
+
+    await pool.query(`update quote set estado = 'finalizada', updated_at = now() where id = $1`, [fila.id]);
 
     await pool.query(
-        `insert into cotizacion_historial (cotizacion_id, usuario_id, tipo, estado_antes, estado_despues)
-         values ($1, $2, 'cambio_estado', $3, 'finalizada')`,
-        [req.params.id, req.usuario!.id, actual.estado]
+        `insert into quote_historial (quote_id, profile_id, profile_nombre, tipo, estado_antes, estado_despues)
+         values ($1, $2, $3, 'cambio_estado', $4, 'finalizada')`,
+        [fila.id, req.usuario!.id, req.usuario!.nombre, fila.quote_estado]
     );
 
-    res.json(mapCotizacion(actualizadas[0]));
+    const filaActualizada = await obtenerFilaCotizacion(req.params.id);
+    const items = await obtenerItems(req.params.id);
+    res.json(mapCotizacion(filaActualizada!, items));
 }));
 
-cotizacionesRouter.get('/:id/pdf', requireRole('administradora', 'secretaria'), asyncHandler(async (req, res) => {
-    const { rows } = await pool.query<CotizacionRow>('select * from cotizaciones where id = $1', [req.params.id]);
-    const cotizacion = rows[0];
-    if (!cotizacion) return res.status(404).json({ status: 'error', message: 'Cotización no encontrada' });
-    if (req.usuario!.rol === 'secretaria' && !ESTADOS_VISIBLES_SECRETARIA.includes(cotizacion.estado)) {
+cotizacionesRouter.get('/:id/pdf', requireRole('administrador', 'secretaria'), asyncHandler(async (req, res) => {
+    const fila = await obtenerFilaCotizacion(req.params.id);
+    if (!fila) return res.status(404).json({ status: 'error', message: 'Cotización no encontrada' });
+
+    const estado = derivarEstado(fila);
+    if (req.usuario!.rol === 'secretaria' && !ESTADOS_VISIBLES_SECRETARIA.includes(estado)) {
         return res.status(403).json({ status: 'error', message: 'No tienes permiso para ver esta cotización' });
     }
 
-    const items: ItemCotizacionPdf[] = cotizacion.items;
+    const itemsGuardados = await obtenerItems(fila.id);
+    const items: ItemCotizacionPdf[] = itemsGuardados.map((i) => ({
+        tag: i.tag,
+        nombre: i.cantidad > 1 ? `${i.cantidad} x ${i.nombre}` : i.nombre,
+        descripcion: i.descripcion,
+        precio: i.precioUnit * i.cantidad
+    }));
+
     const buffer = await generarCotizacionPdfBuffer({
-        numeroReferencia: cotizacion.numero_referencia,
-        clienteNombre: cotizacion.cliente_nombre,
-        clienteCorreo: cotizacion.cliente_correo,
-        clienteTelefono: cotizacion.cliente_telefono,
-        tipoEvento: cotizacion.tipo_evento,
-        ciudad: cotizacion.ciudad,
-        lugar: cotizacion.lugar,
-        fechaEvento: cotizacion.fecha_evento,
+        numeroReferencia: numeroReferencia(fila.id, fila.created_at),
+        clienteNombre: fila.cliente_nombre || '',
+        clienteCorreo: fila.cliente_correo || '',
+        clienteTelefono: fila.cliente_telefono || '',
+        tipoEvento: fila.event_type,
+        ciudad: null,
+        lugar: fila.venue_nombre,
+        fechaEvento: fila.fecha_evento,
         items,
-        total: Number(cotizacion.total)
+        total: Number(fila.total)
     });
 
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `inline; filename=Cotizacion_${cotizacion.numero_referencia}.pdf`);
+    res.setHeader('Content-Disposition', `inline; filename=Cotizacion_${numeroReferencia(fila.id, fila.created_at)}.pdf`);
     res.send(buffer);
 }));
 
-cotizacionesRouter.post('/:id/marcar-definitivo', requireRole('administradora'), asyncHandler(async (req, res) => {
-    const { rows } = await pool.query<CotizacionRow>('select * from cotizaciones where id = $1', [req.params.id]);
-    const actual = rows[0];
-    if (!actual) return res.status(404).json({ status: 'error', message: 'Cotización no encontrada' });
-    if (actual.estado !== 'contrato_enviado') {
+cotizacionesRouter.post('/:id/marcar-definitivo', requireRole('administrador'), asyncHandler(async (req, res) => {
+    const fila = await obtenerFilaCotizacion(req.params.id);
+    if (!fila) return res.status(404).json({ status: 'error', message: 'Cotización no encontrada' });
+    if (!fila.event_id || !fila.contrato_enviado_en) {
         return res.status(400).json({ status: 'error', message: 'Esta cotización todavía no tiene un contrato enviado al cliente' });
     }
-
-    const { rows: contratoRows } = await pool.query(
-        'select pdf_firmado_nombre from contratos where cotizacion_id = $1',
-        [req.params.id]
-    );
-    if (!contratoRows[0]?.pdf_firmado_nombre) {
+    if (!fila.contrato_firmado_nombre) {
         return res.status(400).json({ status: 'error', message: 'Sube el contrato firmado antes de marcar el evento como definitivo' });
     }
 
-    const { rows: actualizadas } = await pool.query<CotizacionRow>(
-        `update cotizaciones
-            set estado = 'programada', programada_en = now(), actualizada_en = now()
-            where id = $1
-            returning *`,
-        [req.params.id]
-    );
+    await pool.query('update events set confirmed = true, updated_at = now() where id = $1', [fila.event_id]);
 
     await pool.query(
-        `insert into cotizacion_historial (cotizacion_id, usuario_id, tipo, estado_antes, estado_despues)
-         values ($1, $2, 'cambio_estado', 'contrato_enviado', 'programada')`,
-        [req.params.id, req.usuario!.id]
+        `insert into quote_historial (quote_id, profile_id, profile_nombre, tipo, estado_antes, estado_despues)
+         values ($1, $2, $3, 'cambio_estado', 'contrato_enviado', 'programada')`,
+        [fila.id, req.usuario!.id, req.usuario!.nombre]
     );
 
-    res.json(mapCotizacion(actualizadas[0]));
+    const filaActualizada = await obtenerFilaCotizacion(req.params.id);
+    const items = await obtenerItems(req.params.id);
+    res.json(mapCotizacion(filaActualizada!, items));
 }));

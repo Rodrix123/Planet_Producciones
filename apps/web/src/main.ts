@@ -1,6 +1,13 @@
 import './style.css';
 import { apiUrl } from './shared/api';
-import { calcularDesdeCatalogo, type ItemSeleccionado, type ResultadoCatalogo as DatosCotizacion } from './shared/catalogoCotizacion';
+import {
+    calcularDesdeCatalogo,
+    obtenerCatalogo,
+    renderCatalogoEnContenedor,
+    type Catalogo,
+    type ItemSeleccionado,
+    type ResultadoCatalogo
+} from './shared/catalogoCotizacion';
 
 // Librerías cargadas vía CDN en index.html (sin tipos propios en este proyecto)
 declare const Swal: any;
@@ -17,41 +24,91 @@ interface DatosCliente {
     fechaEvento: string;
 }
 
+/** Ítem listo para mostrarse en el PDF/Excel (precio ya multiplicado por la cantidad,
+ *  nombre con el prefijo "N x" cuando aplica). */
+interface ItemParaMostrar {
+    tag: string;
+    nombre: string;
+    descripcion: string;
+    precio: number;
+}
+
+function formatearItemsParaMostrar(formatterCOP: Intl.NumberFormat, items: ItemSeleccionado[]): ItemParaMostrar[] {
+    return items.map((item) => ({
+        tag: item.tag,
+        nombre: item.cantidad > 1 ? `${item.cantidad} x ${item.nombre} (${formatterCOP.format(item.precioUnit)} c/u)` : item.nombre,
+        descripcion: item.descripcion,
+        precio: item.precioUnit * item.cantidad
+    }));
+}
+
 /** Intenta guardar la cotización en la base de datos para que Maritza la vea en su panel.
  *  Si falla (red/servidor caído), no interrumpe la descarga del PDF/Excel del cliente: solo
  *  se pierde la persistencia, no la experiencia de quien está cotizando. */
 async function guardarCotizacionReal(
     datosCliente: DatosCliente,
-    datosCotizacion: DatosCotizacion
-): Promise<string | null> {
+    venueId: number | null,
+    transportationId: number | null,
+    items: ItemSeleccionado[]
+): Promise<{ id: number; numeroReferencia: string } | null> {
     try {
         const res = await fetch(apiUrl('/api/cotizaciones'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                cliente: datosCliente,
-                items: datosCotizacion.itemsSeleccionados,
-                total: datosCotizacion.total
+                cliente: { nombre: datosCliente.nombre, correo: datosCliente.correo, telefono: datosCliente.telefono },
+                tipoEvento: datosCliente.tipoEvento,
+                venueId,
+                transportationId,
+                fechaEvento: datosCliente.fechaEvento || undefined,
+                items: items.map((i) => ({ variantId: i.variantId, cantidad: i.cantidad }))
             })
         });
         if (!res.ok) return null;
-        const datos = await res.json();
-        return datos.numeroReferencia || null;
+        return (await res.json()) as { id: number; numeroReferencia: string };
     } catch {
         return null;
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     const form = document.getElementById('quoteForm') as HTMLFormElement;
     const precioTotalEl = document.getElementById('precioTotal') as HTMLElement;
     const listaResumenEl = document.getElementById('listaResumen') as HTMLElement;
     const btnSubmit = document.getElementById('btnSubmit') as HTMLButtonElement;
+    const catalogoDinamicoEl = document.getElementById('catalogoDinamico') as HTMLElement;
+    const lugarSelect = document.getElementById('lugar') as HTMLSelectElement;
+    const transporteSelect = document.getElementById('transporte') as HTMLSelectElement;
 
     const formatterCOP = new Intl.NumberFormat('es-CO', {
         style: 'currency',
         currency: 'COP',
         minimumFractionDigits: 0
+    });
+
+    let catalogo: Catalogo;
+    try {
+        catalogo = await obtenerCatalogo();
+    } catch {
+        catalogoDinamicoEl.innerHTML = '<p style="color:#f87171;">No se pudo cargar el catálogo de precios. Recarga la página.</p>';
+        return;
+    }
+
+    renderCatalogoEnContenedor(catalogoDinamicoEl, catalogo);
+
+    catalogo.venues.forEach((v) => {
+        const opt = document.createElement('option');
+        opt.value = String(v.id);
+        opt.textContent = v.name;
+        lugarSelect.appendChild(opt);
+    });
+
+    catalogo.transportation.forEach((t) => {
+        const opt = document.createElement('option');
+        opt.value = String(t.id);
+        opt.dataset.precio = String(t.price);
+        opt.textContent = `${t.city} — ${formatterCOP.format(t.price)}`;
+        transporteSelect.appendChild(opt);
     });
 
     // Convierte logo.png local a Base64 para garantizar que html2canvas lo dibuje sin errores
@@ -77,21 +134,37 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Cálculo dinámico de cotización: delega en el módulo compartido (shared/catalogoCotizacion)
-    // que lee genéricamente cualquier <select>, checkbox o input de cantidad marcado con las
-    // clases .precio-select / .precio-check / .precio-qty. Esto permite ampliar el catálogo de
-    // precios (apps/web/cotizador.html) sin tocar esta lógica, y reutilizarla en el panel de Maritza.
-    function calcularCotizacion(): DatosCotizacion {
-        const { total, itemsSeleccionados } = calcularDesdeCatalogo(form);
+    function precioTransporteSeleccionado(): number {
+        const opt = transporteSelect.options[transporteSelect.selectedIndex];
+        return opt ? parseFloat(opt.dataset.precio || '') || 0 : 0;
+    }
 
-        // Actualizar UI en vivo
+    // Cálculo dinámico de cotización: delega en el módulo compartido (shared/catalogoCotizacion)
+    // para el catálogo propiamente dicho (inventory/inventory_variants); el transporte se suma
+    // aparte porque vive en su propia tabla, no en el catálogo de servicios.
+    function calcularCotizacion(): ResultadoCatalogo {
+        const { itemsSeleccionados } = calcularDesdeCatalogo(catalogoDinamicoEl);
+        const precioTransporte = precioTransporteSeleccionado();
+        const total = itemsSeleccionados.reduce((acc, i) => acc + i.precioUnit * i.cantidad, 0) + precioTransporte;
+
         precioTotalEl.textContent = formatterCOP.format(total);
         listaResumenEl.innerHTML = '';
 
-        if (itemsSeleccionados.length === 0) {
+        const itemsParaMostrar = formatearItemsParaMostrar(formatterCOP, itemsSeleccionados);
+        const transporteOpt = transporteSelect.options[transporteSelect.selectedIndex];
+        if (precioTransporte > 0 && transporteOpt?.value) {
+            itemsParaMostrar.unshift({
+                tag: 'TRANSPORTE Y LOGÍSTICA',
+                nombre: transporteOpt.textContent?.split(' — ')[0].trim() || '',
+                descripcion: '',
+                precio: precioTransporte
+            });
+        }
+
+        if (itemsParaMostrar.length === 0) {
             listaResumenEl.innerHTML = '<li><em>Selecciona tus opciones en el formulario para calcular el costo.</em></li>';
         } else {
-            itemsSeleccionados.forEach(item => {
+            itemsParaMostrar.forEach((item) => {
                 const li = document.createElement('li');
                 li.innerHTML = `<strong>${item.nombre}</strong>: ${formatterCOP.format(item.precio)}`;
                 listaResumenEl.appendChild(li);
@@ -109,13 +182,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // y cada fila muestra debajo del nombre lo que incluye el paquete (si aplica).
     function construirHTMLCotizacion(
         datosCliente: DatosCliente,
-        datosCotizacion: DatosCotizacion,
+        itemsParaMostrar: ItemParaMostrar[],
+        total: number,
         logoBase64: string,
         refNum: string,
         fechaHoy: string
     ): HTMLDivElement {
-        const grupos = new Map<string, ItemSeleccionado[]>();
-        datosCotizacion.itemsSeleccionados.forEach(item => {
+        const grupos = new Map<string, ItemParaMostrar[]>();
+        itemsParaMostrar.forEach(item => {
             if (!grupos.has(item.tag)) grupos.set(item.tag, []);
             grupos.get(item.tag)!.push(item);
         });
@@ -189,7 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </tr>
                         <tr>
                             <td style="padding: 2px 0;"><strong>WhatsApp:</strong> ${datosCliente.telefono}</td>
-                            <td style="padding: 2px 0;"><strong>Ubicación / Sede:</strong> ${datosCliente.ciudad || 'Por confirmar'} (${datosCliente.lugar || 'Sede a confirmar'})</td>
+                            <td style="padding: 2px 0;"><strong>Sede:</strong> ${datosCliente.lugar || 'Por confirmar'}</td>
                         </tr>
                     </table>
                 </div>
@@ -225,7 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div style="flex: 0.8; background-color: rgba(236, 253, 245, 0.95); border: 1.5px solid #6ee7b7; border-radius: 10px; padding: 10px; text-align: center;">
                         <div style="font-size: 9px; font-weight: 800; color: #047857; text-transform: uppercase; letter-spacing: 0.5px;">PRESUPUESTO TOTAL ESTIMADO</div>
-                        <div style="font-size: 20px; font-weight: 900; color: #059669; margin-top: 2px;">$ ${datosCotizacion.total.toLocaleString('es-CO')} COP</div>
+                        <div style="font-size: 20px; font-weight: 900; color: #059669; margin-top: 2px;">$ ${total.toLocaleString('es-CO')} COP</div>
                     </div>
                 </div>
 
@@ -249,7 +323,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Exportación a Excel Profesional Estructurado
     function generarExcelEjecutivo(
         datosCliente: DatosCliente,
-        datosCotizacion: DatosCotizacion,
+        itemsParaMostrar: ItemParaMostrar[],
+        total: number,
         refNum: string,
         fechaHoy: string
     ): void {
@@ -259,14 +334,14 @@ document.addEventListener('DOMContentLoaded', () => {
             [""],
             ["1. DATOS DEL CLIENTE"],
             ["Cliente:", datosCliente.nombre, "Tipo Evento:", datosCliente.tipoEvento || 'N/A'],
-            ["Correo:", datosCliente.correo, "Ubicación:", datosCliente.ciudad],
-            ["WhatsApp:", datosCliente.telefono, "Sede:", datosCliente.lugar || 'Por definir'],
+            ["Correo:", datosCliente.correo, "Sede:", datosCliente.lugar || 'Por definir'],
+            ["WhatsApp:", datosCliente.telefono, "", ""],
             [""],
             ["2. DESGLOSE PREVENTIVO DE SERVICIOS"],
             ["Item", "Categoría", "Servicio / Descripción", "Valor COP"]
         ];
 
-        datosCotizacion.itemsSeleccionados.forEach((item, index) => {
+        itemsParaMostrar.forEach((item, index) => {
             aoaData.push([
                 index + 1,
                 item.tag,
@@ -276,7 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         aoaData.push([""]);
-        aoaData.push(["", "", "TOTAL PRESUPUESTO ESTIMADO:", datosCotizacion.total]);
+        aoaData.push(["", "", "TOTAL PRESUPUESTO ESTIMADO:", total]);
 
         const worksheet = XLSX.utils.aoa_to_sheet(aoaData);
 
@@ -306,9 +381,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const correo = (document.getElementById('correo') as HTMLInputElement).value.trim();
         const telefono = (document.getElementById('telefono') as HTMLInputElement).value.trim();
         const tipoEvento = (document.getElementById('tipoEvento') as HTMLSelectElement).value;
-        const ciudad = (document.getElementById('transporte') as HTMLSelectElement).value;
-        const lugar = (document.getElementById('lugar') as HTMLSelectElement).value;
         const fechaEvento = (document.getElementById('fechaEvento') as HTMLInputElement).value;
+
+        const lugarOpt = lugarSelect.options[lugarSelect.selectedIndex];
+        const lugarNombre = lugarOpt?.textContent?.trim() || '';
+        const venueId = lugarSelect.value ? Number(lugarSelect.value) : null;
+        const transportationId = transporteSelect.value ? Number(transporteSelect.value) : null;
 
         if (!nombre || !correo || !telefono) {
             Swal.fire({
@@ -320,9 +398,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const datosCotizacion = calcularCotizacion();
+        const resultado = calcularCotizacion();
 
-        if (datosCotizacion.itemsSeleccionados.length === 0) {
+        if (resultado.itemsSeleccionados.length === 0 && !transportationId) {
             Swal.fire({
                 icon: 'info',
                 title: 'Selección Vacía',
@@ -342,20 +420,32 @@ document.addEventListener('DOMContentLoaded', () => {
         let elementoHTML: HTMLDivElement | null = null;
 
         try {
-            const datosCliente: DatosCliente = { nombre, correo, telefono, tipoEvento, ciudad, lugar, fechaEvento };
+            const datosCliente: DatosCliente = { nombre, correo, telefono, tipoEvento, ciudad: '', lugar: lugarNombre, fechaEvento };
             const fechaHoy = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
             // Guarda la cotización real en la base de datos (panel de Maritza) y usa su
             // número de referencia oficial; si no se pudo guardar, sigue con uno local
             // para no bloquear la descarga del PDF/Excel del cliente.
-            const refNum = (await guardarCotizacionReal(datosCliente, datosCotizacion))
-                || `PL-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+            const guardada = await guardarCotizacionReal(datosCliente, venueId, transportationId, resultado.itemsSeleccionados);
+            const refNum = guardada?.numeroReferencia || `PL-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+
+            const itemsParaMostrar = formatearItemsParaMostrar(formatterCOP, resultado.itemsSeleccionados);
+            const precioTransporte = precioTransporteSeleccionado();
+            const transporteOpt = transporteSelect.options[transporteSelect.selectedIndex];
+            if (precioTransporte > 0 && transporteOpt?.value) {
+                itemsParaMostrar.unshift({
+                    tag: 'TRANSPORTE Y LOGÍSTICA',
+                    nombre: transporteOpt.textContent?.split(' — ')[0].trim() || '',
+                    descripcion: '',
+                    precio: precioTransporte
+                });
+            }
 
             // Carga de Logo
             const logoBase64 = await obtenerLogoBase64();
 
             // Renderizado PDF HD
-            elementoHTML = construirHTMLCotizacion(datosCliente, datosCotizacion, logoBase64, refNum, fechaHoy);
+            elementoHTML = construirHTMLCotizacion(datosCliente, itemsParaMostrar, resultado.total, logoBase64, refNum, fechaHoy);
             document.body.appendChild(elementoHTML);
 
             // Vuelve el scroll al origen: si la página quedó desplazada (formulario largo)
@@ -389,7 +479,7 @@ document.addEventListener('DOMContentLoaded', () => {
             elementoHTML = null;
 
             // Exportación Excel Profesional
-            generarExcelEjecutivo(datosCliente, datosCotizacion, refNum, fechaHoy);
+            generarExcelEjecutivo(datosCliente, itemsParaMostrar, resultado.total, refNum, fechaHoy);
 
             Swal.fire({
                 icon: 'success',

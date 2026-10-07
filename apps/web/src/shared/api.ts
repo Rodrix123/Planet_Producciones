@@ -5,7 +5,7 @@ export function apiUrl(path: string): string {
     return `${API_BASE}${path}`;
 }
 
-export type UsuarioRol = 'administradora' | 'secretaria' | 'jefe_logistica';
+export type UsuarioRol = 'administrador' | 'secretaria' | 'jefe_logistica';
 
 export interface SesionActual {
     nombre: string;
@@ -42,7 +42,7 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
 }
 
 const RUTA_POR_ROL: Record<UsuarioRol, string> = {
-    administradora: 'panel-admin.html',
+    administrador: 'panel-admin.html',
     secretaria: 'panel-secretaria.html',
     jefe_logistica: 'panel-logistica.html'
 };
