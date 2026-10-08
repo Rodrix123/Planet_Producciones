@@ -56,23 +56,21 @@ async function main() {
             const { data, error } = await supabaseAdmin.auth.admin.createUser({
                 email: usuario.correo,
                 password,
-                email_confirm: true,
-                user_metadata: { full_name: usuario.nombre, debe_cambiar_password: true }
+                email_confirm: true
             });
             if (error || !data.user) throw error || new Error('No se pudo crear el usuario');
             authUser = data.user;
         } else {
-            const { error } = await supabaseAdmin.auth.admin.updateUserById(authUser.id, {
-                password,
-                user_metadata: { full_name: usuario.nombre, debe_cambiar_password: true }
-            });
+            const { error } = await supabaseAdmin.auth.admin.updateUserById(authUser.id, { password });
             if (error) throw error;
         }
 
+        // nombre/correo/debe_cambiar_password son atributos de perfil reales (columnas
+        // de `profiles`, montada sobre auth.users vía profiles.id), no metadata suelta.
         await pool.query(
-            `insert into profiles (id, role_id) values ($1, $2)
-             on conflict (id) do update set role_id = excluded.role_id`,
-            [authUser.id, roleId]
+            `insert into profiles (id, role_id, nombre, correo, debe_cambiar_password) values ($1, $2, $3, $4, true)
+             on conflict (id) do update set role_id = excluded.role_id, nombre = excluded.nombre, correo = excluded.correo, debe_cambiar_password = true`,
+            [authUser.id, roleId, usuario.nombre, usuario.correo]
         );
 
         credenciales.push({ correo: usuario.correo, rol: usuario.rol, password });

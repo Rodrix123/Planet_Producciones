@@ -12,7 +12,9 @@ logisticaRouter.get('/eventos', asyncHandler(async (_req, res) => {
         `select e.id as event_id, q.id as quote_id, q.created_at,
                 coalesce(e.event_type, q.event_type) as event_type,
                 coalesce(e.date, q.date) as fecha_evento,
-                v.name as venue_nombre, t.city as transportation_city,
+                coalesce(v.name, coalesce(e.venue_nombre_manual, q.venue_nombre_manual)) as venue_nombre,
+                coalesce(e.venue_direccion_manual, q.venue_direccion_manual) as venue_direccion_manual,
+                t.city as transportation_city,
                 u.name as cliente_nombre
          from events e
          join quote q on q.id = e.quote_id
@@ -52,6 +54,7 @@ logisticaRouter.get('/eventos', asyncHandler(async (_req, res) => {
         tipoEvento: e.event_type,
         ciudad: e.transportation_city,
         lugar: e.venue_nombre,
+        direccion: e.venue_direccion_manual,
         fechaEvento: e.fecha_evento,
         equipos: equiposPorQuote.get(e.quote_id) || []
     })));

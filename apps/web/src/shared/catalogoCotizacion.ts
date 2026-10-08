@@ -20,7 +20,7 @@ export interface InventoryCatalogo {
 }
 
 export interface Catalogo {
-    venues: { id: number; name: string }[];
+    venues: { id: number; name: string; city: string | null }[];
     transportation: { id: number; city: string; price: number }[];
     inventory: InventoryCatalogo[];
 }

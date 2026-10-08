@@ -8,7 +8,7 @@ export const catalogoRouter = Router();
 // Público: lo usa el cotizador para construir el formulario en vivo.
 catalogoRouter.get('/', asyncHandler(async (_req, res) => {
     const [venues, transportation, inventory, variants] = await Promise.all([
-        pool.query('select id, name from venue order by name asc'),
+        pool.query('select id, name, city from venue order by city asc, name asc'),
         pool.query('select id, city, price from transportation order by price asc'),
         pool.query(
             `select id, name, type, control_type from inventory where visible_publico = true order by id asc`
@@ -29,7 +29,7 @@ catalogoRouter.get('/', asyncHandler(async (_req, res) => {
     }
 
     res.json({
-        venues: venues.rows.map((v) => ({ id: v.id, name: v.name })),
+        venues: venues.rows.map((v) => ({ id: v.id, name: v.name, city: v.city })),
         transportation: transportation.rows.map((t) => ({ id: t.id, city: t.city, price: Number(t.price) })),
         inventory: inventory.rows.map((inv) => ({
             id: inv.id,

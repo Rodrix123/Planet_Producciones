@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import crypto from 'crypto';
+import { pool } from '../db';
 import { supabaseAdmin } from '../supabaseAdmin';
 
 function generarPasswordTemporal(): string {
@@ -28,11 +29,11 @@ async function main() {
     }
 
     const password = generarPasswordTemporal();
-    const { error: errorUpdate } = await supabaseAdmin.auth.admin.updateUserById(usuario.id, {
-        password,
-        user_metadata: { ...usuario.user_metadata, debe_cambiar_password: true }
-    });
+    const { error: errorUpdate } = await supabaseAdmin.auth.admin.updateUserById(usuario.id, { password });
     if (errorUpdate) throw errorUpdate;
+
+    await pool.query('update profiles set debe_cambiar_password = true where id = $1', [usuario.id]);
+    await pool.end();
 
     console.log(`\nContraseña temporal para ${correo}:\n\n  ${password}\n`);
     console.log('Debe cambiarla al iniciar sesión.\n');

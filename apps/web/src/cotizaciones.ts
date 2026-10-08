@@ -24,6 +24,8 @@ interface Cotizacion {
     tipoEvento: string | null;
     lugar: string | null;
     venueId: number | null;
+    venueNombreManual: string | null;
+    venueDireccionManual: string | null;
     transportationId: number | null;
     fechaEvento: string | null;
     items: ItemSeleccionado[];
@@ -62,8 +64,53 @@ const listaCotizacionesEl = document.getElementById('listaCotizaciones') as HTML
 const detalleEl = document.getElementById('detalleCotizacion') as HTMLElement;
 const editorCatalogoEl = document.getElementById('editorCatalogo') as HTMLElement;
 const catalogoContenedorEl = document.getElementById('catalogoContenedor') as HTMLElement;
+const ciudadSelect = document.getElementById('inpCiudad') as HTMLSelectElement;
 const lugarSelect = document.getElementById('inpLugar') as HTMLSelectElement;
 const transporteSelect = document.getElementById('inpTransporte') as HTMLSelectElement;
+const lugarOtroWrap = document.getElementById('inpLugarOtroWrap') as HTMLElement;
+const lugarOtroNombreInput = document.getElementById('inpLugarOtroNombre') as HTMLInputElement;
+const lugarOtroDireccionInput = document.getElementById('inpLugarOtroDireccion') as HTMLInputElement;
+const OTRO_VALUE = 'otro';
+
+/** Rellena el select de Lugar con las sedes de `ciudad` + la opción "Otro". Si
+ *  `ciudad` es null (sede manual sin ciudad conocida, guardada antes de este cambio,
+ *  o cotización nueva sin ciudad aún elegida), solo deja disponible "Otro". */
+function poblarLugarParaCiudad(ciudad: string | null) {
+    lugarSelect.innerHTML = '';
+
+    if (!ciudad) {
+        lugarSelect.disabled = false;
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = '-- Sin definir --';
+        opt.selected = true;
+        lugarSelect.appendChild(opt);
+        const optOtro = document.createElement('option');
+        optOtro.value = OTRO_VALUE;
+        optOtro.textContent = 'Otro (no está en la lista)';
+        lugarSelect.appendChild(optOtro);
+        return;
+    }
+
+    lugarSelect.disabled = false;
+    const optVacio = document.createElement('option');
+    optVacio.value = '';
+    optVacio.textContent = '-- Selecciona Sede --';
+    optVacio.selected = true;
+    lugarSelect.appendChild(optVacio);
+
+    (catalogo?.venues || []).filter((v) => v.city === ciudad).forEach((v) => {
+        const opt = document.createElement('option');
+        opt.value = String(v.id);
+        opt.textContent = v.name;
+        lugarSelect.appendChild(opt);
+    });
+
+    const optOtro = document.createElement('option');
+    optOtro.value = OTRO_VALUE;
+    optOtro.textContent = 'Otro (no está en la lista)';
+    lugarSelect.appendChild(optOtro);
+}
 
 function nombreItem(item: ItemSeleccionado): string {
     return item.cantidad > 1 ? `${item.cantidad} x ${item.nombre}` : item.nombre;
@@ -118,8 +165,29 @@ async function abrirDetalle(id: string) {
     (document.getElementById('inpClienteTelefono') as HTMLInputElement).value = cotizacion.clienteTelefono;
     (document.getElementById('inpFechaEvento') as HTMLInputElement).value = cotizacion.fechaEvento || '';
     (document.getElementById('inpTipoEvento') as HTMLSelectElement).value = cotizacion.tipoEvento || '';
-    lugarSelect.value = cotizacion.venueId ? String(cotizacion.venueId) : '';
     transporteSelect.value = cotizacion.transportationId ? String(cotizacion.transportationId) : '';
+
+    lugarOtroNombreInput.value = '';
+    lugarOtroDireccionInput.value = '';
+    lugarOtroWrap.style.display = 'none';
+
+    if (cotizacion.venueId) {
+        const venue = catalogo?.venues.find((v) => v.id === cotizacion.venueId);
+        ciudadSelect.value = venue?.city || '';
+        poblarLugarParaCiudad(venue?.city || null);
+        lugarSelect.value = String(cotizacion.venueId);
+    } else if (cotizacion.venueNombreManual) {
+        ciudadSelect.value = '';
+        poblarLugarParaCiudad(null);
+        lugarSelect.value = OTRO_VALUE;
+        lugarOtroNombreInput.value = cotizacion.venueNombreManual;
+        lugarOtroDireccionInput.value = cotizacion.venueDireccionManual || '';
+        lugarOtroWrap.style.display = 'grid';
+    } else {
+        ciudadSelect.value = '';
+        poblarLugarParaCiudad(null);
+        lugarSelect.value = '';
+    }
 
     (document.getElementById('linkVerPdf') as HTMLAnchorElement).href = apiUrl(`/api/cotizaciones/${id}/pdf`);
 
@@ -253,12 +321,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     initPanelLayout(sesion);
 
     catalogo = await obtenerCatalogo();
-    catalogo.venues.forEach((v) => {
+
+    const ciudades = Array.from(new Set([
+        ...catalogo.venues.map((v) => v.city).filter((c): c is string => !!c),
+        ...catalogo.transportation.map((t) => t.city)
+    ]));
+    ciudades.forEach((ciudad) => {
         const opt = document.createElement('option');
-        opt.value = String(v.id);
-        opt.textContent = v.name;
-        lugarSelect.appendChild(opt);
+        opt.value = ciudad;
+        opt.textContent = ciudad;
+        ciudadSelect.appendChild(opt);
     });
+
     catalogo.transportation.forEach((t) => {
         const opt = document.createElement('option');
         opt.value = String(t.id);
@@ -266,10 +340,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         transporteSelect.appendChild(opt);
     });
 
+    ciudadSelect.addEventListener('change', () => {
+        poblarLugarParaCiudad(ciudadSelect.value || null);
+        lugarOtroWrap.style.display = 'none';
+    });
+    lugarSelect.addEventListener('change', () => {
+        lugarOtroWrap.style.display = lugarSelect.value === OTRO_VALUE ? 'grid' : 'none';
+    });
+
     document.getElementById('btnVolverLista')?.addEventListener('click', conManejoDeErrores(async () => volverALista()));
 
     document.getElementById('btnGuardarDatos')?.addEventListener('click', conManejoDeErrores(async () => {
         if (!cotizacionActualId) return;
+        const esLugarManual = lugarSelect.value === OTRO_VALUE;
         const res = await apiFetch(`/api/cotizaciones/${cotizacionActualId}/datos`, {
             method: 'PUT',
             body: JSON.stringify({
@@ -278,7 +361,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 clienteCorreo: (document.getElementById('inpClienteCorreo') as HTMLInputElement).value.trim(),
                 clienteTelefono: (document.getElementById('inpClienteTelefono') as HTMLInputElement).value.trim(),
                 tipoEvento: (document.getElementById('inpTipoEvento') as HTMLSelectElement).value || undefined,
-                venueId: lugarSelect.value ? Number(lugarSelect.value) : undefined,
+                venueId: (lugarSelect.value && !esLugarManual) ? Number(lugarSelect.value) : undefined,
+                venueNombreManual: esLugarManual ? lugarOtroNombreInput.value.trim() : undefined,
+                venueDireccionManual: esLugarManual ? lugarOtroDireccionInput.value.trim() : undefined,
                 transportationId: transporteSelect.value ? Number(transporteSelect.value) : undefined,
                 fechaEvento: (document.getElementById('inpFechaEvento') as HTMLInputElement).value || undefined
             })

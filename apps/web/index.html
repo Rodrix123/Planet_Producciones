@@ -11,6 +11,7 @@
     <link rel="apple-touch-icon" href="logo.png?v=2">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body class="landing-body">
 
@@ -28,6 +29,8 @@
                 <a href="#inicio">Inicio</a>
                 <a href="#servicios">Servicios</a>
                 <a href="#nosotros">Por Qué Elegirnos</a>
+                <a href="#preguntas-frecuentes">Preguntas Frecuentes</a>
+                <a href="#pqrs">PQRS</a>
                 <a href="#contacto">Contacto</a>
             </nav>
 
@@ -152,6 +155,114 @@
                     <span><i class="fa-solid fa-wand-magic-sparkles"></i> Efectos Especiales</span>
                     <span><i class="fa-solid fa-tv"></i> Pantallas LED</span>
                 </div>
+            </div>
+        </section>
+
+        <!-- PREGUNTAS FRECUENTES -->
+        <section class="faq-section" id="preguntas-frecuentes">
+            <div class="faq-content">
+                <div class="pill-badge pill-badge-light">
+                    <i class="fa-solid fa-circle-question"></i> Resolvemos tus dudas
+                </div>
+                <h2 class="section-title">Preguntas Frecuentes</h2>
+                <p class="section-desc">
+                    Lo que más nos preguntan los clientes antes de reservar su evento. Si tu duda no
+                    está aquí, escríbenos en la sección de PQRS más abajo.
+                </p>
+
+                <div class="faq-list">
+                    <div class="faq-item">
+                        <button type="button" class="faq-question">
+                            <span>¿Cómo reservo la fecha de mi evento?</span>
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </button>
+                        <div class="faq-answer">
+                            <p>La fecha se separa con el 30% del valor total cotizado, dentro de los 30 días siguientes a la fecha de la cotización.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <button type="button" class="faq-question">
+                            <span>¿Qué ciudades cubren?</span>
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </button>
+                        <div class="faq-answer">
+                            <p>Cubrimos Manizales, Chinchiná - Santágueda, Pereira y Armenia con equipos propios y montaje profesional.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <button type="button" class="faq-question">
+                            <span>¿Hasta cuándo debo completar el pago?</span>
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </button>
+                        <div class="faq-answer">
+                            <p>El valor total del evento debe quedar cancelado máximo 8 días antes de la fecha de realización.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <button type="button" class="faq-question">
+                            <span>¿Qué incluye el servicio técnico?</span>
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </button>
+                        <div class="faq-answer">
+                            <p>Montaje previo, pruebas de sonido, técnico DMX dedicado durante todo el evento, desmonte y respaldo técnico inmediato con equipos de backup.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <button type="button" class="faq-question">
+                            <span>¿La cotización tiene algún costo?</span>
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </button>
+                        <div class="faq-answer">
+                            <p>No. Cotizar tu evento es 100% gratuito y sin ningún compromiso de contratación.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <button type="button" class="faq-question">
+                            <span>¿Qué pasa si cambio el lugar o los requerimientos después de cotizar?</span>
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </button>
+                        <div class="faq-answer">
+                            <p>Los precios quedan sujetos a verificación en caso de modificaciones en el requerimiento técnico, Rider/Backline de artistas o cambio de locación.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PQRS -->
+        <section class="pqrs-section" id="pqrs">
+            <div class="pqrs-content">
+                <div class="pill-badge pill-badge-white">
+                    <i class="fa-solid fa-comment-dots"></i> Peticiones, Quejas, Reclamos y Sugerencias
+                </div>
+                <h2 class="cta-title">¿Tienes algo que contarnos?</h2>
+                <p class="cta-desc">
+                    Escríbenos tu PQRS y te responderemos directamente al correo que nos dejes.
+                </p>
+
+                <form id="pqrsForm" class="pqrs-form">
+                    <div class="pqrs-form-grid">
+                        <div>
+                            <label for="pqrsNombre">Nombre completo *</label>
+                            <input type="text" id="pqrsNombre" required placeholder="Ej. Valentina Gómez">
+                        </div>
+                        <div>
+                            <label for="pqrsCorreo">Correo electrónico *</label>
+                            <input type="email" id="pqrsCorreo" required placeholder="correo@ejemplo.com">
+                        </div>
+                        <div>
+                            <label for="pqrsTelefono">Teléfono (opcional)</label>
+                            <input type="tel" id="pqrsTelefono" placeholder="+57 300 123 4567">
+                        </div>
+                    </div>
+                    <div class="pqrs-form-mensaje">
+                        <label for="pqrsMensaje">Tu mensaje *</label>
+                        <textarea id="pqrsMensaje" required rows="4" placeholder="Cuéntanos tu petición, queja, reclamo o sugerencia..."></textarea>
+                    </div>
+                    <button type="submit" id="btnEnviarPqrs" class="cta-btn-white">
+                        <i class="fa-solid fa-paper-plane"></i> Enviar PQRS
+                    </button>
+                </form>
             </div>
         </section>
 

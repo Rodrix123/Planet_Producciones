@@ -24,6 +24,8 @@ interface DatosCliente {
     fechaEvento: string;
 }
 
+const OTRO_VALUE = 'otro';
+
 /** Ítem listo para mostrarse en el PDF/Excel (precio ya multiplicado por la cantidad,
  *  nombre con el prefijo "N x" cuando aplica). */
 interface ItemParaMostrar {
@@ -48,6 +50,8 @@ function formatearItemsParaMostrar(formatterCOP: Intl.NumberFormat, items: ItemS
 async function guardarCotizacionReal(
     datosCliente: DatosCliente,
     venueId: number | null,
+    venueNombreManual: string | null,
+    venueDireccionManual: string | null,
     transportationId: number | null,
     items: ItemSeleccionado[]
 ): Promise<{ id: number; numeroReferencia: string } | null> {
@@ -59,6 +63,8 @@ async function guardarCotizacionReal(
                 cliente: { nombre: datosCliente.nombre, correo: datosCliente.correo, telefono: datosCliente.telefono },
                 tipoEvento: datosCliente.tipoEvento,
                 venueId,
+                venueNombreManual: venueNombreManual || undefined,
+                venueDireccionManual: venueDireccionManual || undefined,
                 transportationId,
                 fechaEvento: datosCliente.fechaEvento || undefined,
                 items: items.map((i) => ({ variantId: i.variantId, cantidad: i.cantidad }))
@@ -77,8 +83,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const listaResumenEl = document.getElementById('listaResumen') as HTMLElement;
     const btnSubmit = document.getElementById('btnSubmit') as HTMLButtonElement;
     const catalogoDinamicoEl = document.getElementById('catalogoDinamico') as HTMLElement;
+    const ciudadSelect = document.getElementById('ciudad') as HTMLSelectElement;
     const lugarSelect = document.getElementById('lugar') as HTMLSelectElement;
     const transporteSelect = document.getElementById('transporte') as HTMLSelectElement;
+    const lugarOtroWrap = document.getElementById('lugarOtroWrap') as HTMLElement;
+    const lugarOtroNombreInput = document.getElementById('lugarOtroNombre') as HTMLInputElement;
+    const lugarOtroDireccionInput = document.getElementById('lugarOtroDireccion') as HTMLInputElement;
 
     const formatterCOP = new Intl.NumberFormat('es-CO', {
         style: 'currency',
@@ -96,11 +106,60 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     renderCatalogoEnContenedor(catalogoDinamicoEl, catalogo);
 
-    catalogo.venues.forEach((v) => {
+    // Ciudades disponibles: unión de las ciudades con sede propia y las ciudades
+    // cubiertas por transporte, para que "Otro" siempre sea seleccionable aunque la
+    // ciudad todavía no tenga ninguna sede cargada en el catálogo.
+    const ciudades = Array.from(new Set([
+        ...catalogo.venues.map((v) => v.city).filter((c): c is string => !!c),
+        ...catalogo.transportation.map((t) => t.city)
+    ]));
+    ciudades.forEach((ciudad) => {
         const opt = document.createElement('option');
-        opt.value = String(v.id);
-        opt.textContent = v.name;
-        lugarSelect.appendChild(opt);
+        opt.value = ciudad;
+        opt.textContent = ciudad;
+        ciudadSelect.appendChild(opt);
+    });
+
+    function actualizarLugaresPorCiudad() {
+        const ciudad = ciudadSelect.value;
+        lugarSelect.innerHTML = '';
+
+        if (!ciudad) {
+            lugarSelect.disabled = true;
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.textContent = '-- Primero selecciona una ciudad --';
+            opt.selected = true;
+            lugarSelect.appendChild(opt);
+            lugarOtroWrap.style.display = 'none';
+            return;
+        }
+
+        lugarSelect.disabled = false;
+        const optVacio = document.createElement('option');
+        optVacio.value = '';
+        optVacio.textContent = '-- Selecciona Sede --';
+        optVacio.selected = true;
+        lugarSelect.appendChild(optVacio);
+
+        catalogo.venues.filter((v) => v.city === ciudad).forEach((v) => {
+            const opt = document.createElement('option');
+            opt.value = String(v.id);
+            opt.textContent = v.name;
+            lugarSelect.appendChild(opt);
+        });
+
+        const optOtro = document.createElement('option');
+        optOtro.value = OTRO_VALUE;
+        optOtro.textContent = 'Otro (no está en la lista)';
+        lugarSelect.appendChild(optOtro);
+
+        lugarOtroWrap.style.display = 'none';
+    }
+
+    ciudadSelect.addEventListener('change', actualizarLugaresPorCiudad);
+    lugarSelect.addEventListener('change', () => {
+        lugarOtroWrap.style.display = lugarSelect.value === OTRO_VALUE ? 'grid' : 'none';
     });
 
     catalogo.transportation.forEach((t) => {
@@ -383,9 +442,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         const tipoEvento = (document.getElementById('tipoEvento') as HTMLSelectElement).value;
         const fechaEvento = (document.getElementById('fechaEvento') as HTMLInputElement).value;
 
+        const esLugarManual = lugarSelect.value === OTRO_VALUE;
         const lugarOpt = lugarSelect.options[lugarSelect.selectedIndex];
-        const lugarNombre = lugarOpt?.textContent?.trim() || '';
-        const venueId = lugarSelect.value ? Number(lugarSelect.value) : null;
+        const venueId = (lugarSelect.value && !esLugarManual) ? Number(lugarSelect.value) : null;
+        const venueNombreManual = esLugarManual ? lugarOtroNombreInput.value.trim() : null;
+        const venueDireccionManual = esLugarManual ? lugarOtroDireccionInput.value.trim() : null;
+        const lugarNombre = esLugarManual
+            ? [venueNombreManual, venueDireccionManual].filter(Boolean).join(' — ')
+            : (lugarOpt?.textContent?.trim() || '');
         const transportationId = transporteSelect.value ? Number(transporteSelect.value) : null;
 
         if (!nombre || !correo || !telefono) {
@@ -393,6 +457,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 icon: 'warning',
                 title: 'Campos Incompletos',
                 text: 'Por favor ingresa Nombre, Correo y WhatsApp del cliente.',
+                confirmButtonColor: '#f97316'
+            });
+            return;
+        }
+
+        if (esLugarManual && !venueNombreManual) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Falta el nombre del lugar',
+                text: 'Escribe el nombre del lugar donde será el evento.',
                 confirmButtonColor: '#f97316'
             });
             return;
@@ -420,13 +494,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         let elementoHTML: HTMLDivElement | null = null;
 
         try {
-            const datosCliente: DatosCliente = { nombre, correo, telefono, tipoEvento, ciudad: '', lugar: lugarNombre, fechaEvento };
+            const datosCliente: DatosCliente = { nombre, correo, telefono, tipoEvento, ciudad: ciudadSelect.value, lugar: lugarNombre, fechaEvento };
             const fechaHoy = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
             // Guarda la cotización real en la base de datos (panel de Maritza) y usa su
             // número de referencia oficial; si no se pudo guardar, sigue con uno local
             // para no bloquear la descarga del PDF/Excel del cliente.
-            const guardada = await guardarCotizacionReal(datosCliente, venueId, transportationId, resultado.itemsSeleccionados);
+            const guardada = await guardarCotizacionReal(datosCliente, venueId, venueNombreManual, venueDireccionManual, transportationId, resultado.itemsSeleccionados);
             const refNum = guardada?.numeroReferencia || `PL-2026-${Math.floor(1000 + Math.random() * 9000)}`;
 
             const itemsParaMostrar = formatearItemsParaMostrar(formatterCOP, resultado.itemsSeleccionados);

@@ -24,7 +24,8 @@ export default defineConfig({
                 empleados: 'empleados.html',
                 eventosProceso: 'eventos-proceso.html',
                 eventosProgramados: 'eventos-programados.html',
-                cotizacionesDefinitivas: 'cotizaciones-definitivas.html'
+                cotizacionesDefinitivas: 'cotizaciones-definitivas.html',
+                pqrsAdmin: 'pqrs-admin.html'
             }
         }
     },

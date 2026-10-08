@@ -29,22 +29,23 @@ authRouter.post('/login', asyncHandler(async (req, res) => {
         return res.status(401).json({ status: 'error', message: 'Correo o contraseña incorrectos' });
     }
 
-    const { rows } = await pool.query<{ rol: string }>(
-        `select r.name as rol from profiles p join role r on r.id = p.role_id where p.id = $1`,
+    const { rows } = await pool.query<{ rol: string; nombre: string; correo: string; debe_cambiar_password: boolean }>(
+        `select r.name as rol, p.nombre, p.correo, p.debe_cambiar_password
+         from profiles p join role r on r.id = p.role_id where p.id = $1`,
         [data.user.id]
     );
-    const rol = rows[0]?.rol as UsuarioRol | undefined;
+    const perfil = rows[0];
 
-    if (!rol) {
+    if (!perfil?.rol) {
         return res.status(403).json({ status: 'error', message: 'Tu cuenta no tiene un rol asignado. Contacta al desarrollador.' });
     }
 
     const sesion: UsuarioSesion = {
         id: data.user.id,
-        rol,
-        nombre: (data.user.user_metadata?.full_name as string | undefined) || data.user.email || correo,
-        correo: data.user.email || correo,
-        debeCambiarPassword: !!data.user.user_metadata?.debe_cambiar_password
+        rol: perfil.rol as UsuarioRol,
+        nombre: perfil.nombre,
+        correo: perfil.correo,
+        debeCambiarPassword: perfil.debe_cambiar_password
     };
 
     res.cookie(COOKIE_NAME, signSessionToken(sesion), cookieOptions());
@@ -87,12 +88,13 @@ authRouter.put('/cambiar-password', requireAuth, asyncHandler(async (req, res) =
     }
 
     const { error: errorUpdate } = await supabaseAdmin.auth.admin.updateUserById(u.id, {
-        password: passwordNueva,
-        user_metadata: { full_name: u.nombre, debe_cambiar_password: false }
+        password: passwordNueva
     });
     if (errorUpdate) {
         return res.status(502).json({ status: 'error', message: 'No se pudo actualizar la contraseña. Intenta de nuevo.' });
     }
+
+    await pool.query('update profiles set debe_cambiar_password = false where id = $1', [u.id]);
 
     const nuevaSesion: UsuarioSesion = { ...u, debeCambiarPassword: false };
     res.cookie(COOKIE_NAME, signSessionToken(nuevaSesion), cookieOptions());

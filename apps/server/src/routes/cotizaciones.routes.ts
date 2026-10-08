@@ -33,6 +33,8 @@ const SELECT_BASE = `
         coalesce(e.date, q.date) as fecha_evento,
         coalesce(e.venue_id, q.venue_id) as venue_id,
         coalesce(e.transportation_id, q.transportation_id) as transportation_id,
+        coalesce(e.venue_nombre_manual, q.venue_nombre_manual) as venue_nombre_manual,
+        coalesce(e.venue_direccion_manual, q.venue_direccion_manual) as venue_direccion_manual,
         q.client_id,
         u.name as cliente_nombre,
         u.email as cliente_correo,
@@ -58,6 +60,8 @@ interface FilaCotizacion {
     fecha_evento: string | null;
     venue_id: number | null;
     transportation_id: number | null;
+    venue_nombre_manual: string | null;
+    venue_direccion_manual: string | null;
     client_id: number | null;
     cliente_nombre: string | null;
     cliente_correo: string | null;
@@ -101,8 +105,10 @@ function mapCotizacion(fila: FilaCotizacion, items: ItemGuardado[] = []) {
         clienteTelefono: fila.cliente_telefono || '',
         clienteDocumento: fila.cliente_documento,
         tipoEvento: fila.event_type,
-        lugar: fila.venue_nombre,
+        lugar: fila.venue_nombre || fila.venue_nombre_manual || null,
         venueId: fila.venue_id,
+        venueNombreManual: fila.venue_nombre_manual,
+        venueDireccionManual: fila.venue_direccion_manual,
         transportationId: fila.transportation_id,
         fechaEvento: fila.fecha_evento,
         total: Number(fila.total),
@@ -181,6 +187,8 @@ cotizacionesRouter.post('/', asyncHandler(async (req, res) => {
         cliente?: { nombre?: string; correo?: string; telefono?: string };
         tipoEvento?: string;
         venueId?: number;
+        venueNombreManual?: string;
+        venueDireccionManual?: string;
         transportationId?: number;
         fechaEvento?: string;
         items?: unknown;
@@ -215,10 +223,14 @@ cotizacionesRouter.post('/', asyncHandler(async (req, res) => {
     // así que el total de los servicios NUNCA se fija a mano — eso es lo que provocaba
     // que total quedara desincronizado (y hasta negativo) frente al constraint de la BD.
     const { rows: quoteRows } = await pool.query<{ id: number; created_at: string }>(
-        `insert into quote (total, client_id, event_type, venue_id, transportation_id, date)
-         values ($1, $2, $3, $4, $5, $6)
+        `insert into quote (total, client_id, event_type, venue_id, transportation_id, date, venue_nombre_manual, venue_direccion_manual)
+         values ($1, $2, $3, $4, $5, $6, $7, $8)
          returning id, created_at`,
-        [totalTransporte, clientId, body.tipoEvento || null, body.venueId || null, body.transportationId || null, body.fechaEvento || null]
+        [
+            totalTransporte, clientId, body.tipoEvento || null, body.venueId || null, body.transportationId || null, body.fechaEvento || null,
+            body.venueId ? null : (body.venueNombreManual?.trim() || null),
+            body.venueId ? null : (body.venueDireccionManual?.trim() || null)
+        ]
     );
     const quoteId = quoteRows[0].id;
 
@@ -308,6 +320,8 @@ cotizacionesRouter.put('/:id/datos', requireRole('administrador'), asyncHandler(
         clienteDocumento?: string;
         tipoEvento?: string;
         venueId?: number;
+        venueNombreManual?: string;
+        venueDireccionManual?: string;
         transportationId?: number;
         fechaEvento?: string;
     };
@@ -333,13 +347,21 @@ cotizacionesRouter.put('/:id/datos', requireRole('administrador'), asyncHandler(
         );
     }
 
+    // venueId (sede del catálogo) y venueNombreManual (sede "Otro") son mutuamente
+    // excluyentes: al fijar uno se limpia el otro para no dejar datos de una sede
+    // anterior contradiciendo a la nueva.
+    const eligiendoVenueCatalogo = !!body.venueId;
+    const eligiendoVenueManual = !body.venueId && !!body.venueNombreManual?.trim();
+
     const destino = fila.event_id ? 'events' : 'quote';
     await pool.query(
         `update ${destino} set
             event_type = coalesce($1, event_type),
-            venue_id = coalesce($2, venue_id),
+            venue_id = case when $6 then $2 when $7 then null else venue_id end,
             transportation_id = coalesce($3, transportation_id),
             date = coalesce($4, date),
+            venue_nombre_manual = case when $7 then $8 when $6 then null else venue_nombre_manual end,
+            venue_direccion_manual = case when $7 then $9 when $6 then null else venue_direccion_manual end,
             updated_at = now()
          where id = $5`,
         [
@@ -347,7 +369,11 @@ cotizacionesRouter.put('/:id/datos', requireRole('administrador'), asyncHandler(
             body.venueId || null,
             body.transportationId || null,
             body.fechaEvento || null,
-            fila.event_id ? fila.event_id : req.params.id
+            fila.event_id ? fila.event_id : req.params.id,
+            eligiendoVenueCatalogo,
+            eligiendoVenueManual,
+            body.venueNombreManual?.trim() || null,
+            body.venueDireccionManual?.trim() || null
         ]
     );
 
@@ -410,9 +436,9 @@ cotizacionesRouter.post('/:id/finalizar', requireRole('administrador'), asyncHan
     }
 
     await pool.query(
-        `insert into events (quote_id, venue_id, transportation_id, event_type, address, date, hour, confirmed, initial_payment, client_id, total_paid)
-         values ($1, $2, $3, $4, null, $5, '00:00:00', false, false, $6, 0)`,
-        [fila.id, fila.venue_id, fila.transportation_id, fila.event_type, fila.fecha_evento, fila.client_id]
+        `insert into events (quote_id, venue_id, transportation_id, event_type, address, date, hour, confirmed, initial_payment, client_id, total_paid, venue_nombre_manual, venue_direccion_manual)
+         values ($1, $2, $3, $4, null, $5, '00:00:00', false, false, $6, 0, $7, $8)`,
+        [fila.id, fila.venue_id, fila.transportation_id, fila.event_type, fila.fecha_evento, fila.client_id, fila.venue_nombre_manual, fila.venue_direccion_manual]
     );
 
     await pool.query(`update quote set estado = 'finalizada', updated_at = now() where id = $1`, [fila.id]);

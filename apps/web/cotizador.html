@@ -93,9 +93,15 @@
                                 </select>
                             </div>
                             <div>
+                                <label for="ciudad">Ciudad del Evento</label>
+                                <select id="ciudad">
+                                    <option value="" selected>-- Selecciona Ciudad --</option>
+                                </select>
+                            </div>
+                            <div>
                                 <label for="lugar">Sede / Recinto</label>
-                                <select id="lugar">
-                                    <option value="" selected>-- Selecciona Sede --</option>
+                                <select id="lugar" disabled>
+                                    <option value="" selected>-- Primero selecciona una ciudad --</option>
                                 </select>
                             </div>
                             <div>
@@ -108,6 +114,16 @@
                                     <option value="" selected>-- Selecciona Destino --</option>
                                 </select>
                                 <small class="field-hint" id="transporte-hint"></small>
+                            </div>
+                        </div>
+                        <div class="grid-2" id="lugarOtroWrap" style="display:none; margin-top:1rem;">
+                            <div>
+                                <label for="lugarOtroNombre">Nombre del lugar</label>
+                                <input type="text" id="lugarOtroNombre" placeholder="Ej. Salón Los Cedros">
+                            </div>
+                            <div>
+                                <label for="lugarOtroDireccion">Dirección del lugar</label>
+                                <input type="text" id="lugarOtroDireccion" placeholder="Ej. Cra 23 # 45-12">
                             </div>
                         </div>
                     </div>
