@@ -30,6 +30,18 @@ interface CotizacionRequestBody {
     total?: number;
 }
 
+// Campos de texto (multipart) que envía el navegador junto con el PDF y el Excel
+interface CotizacionCorreoRequestBody {
+    nombre?: string;
+    correo?: string;
+    telefono?: string;
+    tipoEvento?: string;
+    ciudad?: string;
+    lugar?: string;
+    total?: string;
+    refNum?: string;
+}
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -369,6 +381,130 @@ app.post('/api/enviar-asistencia-correo', async (req: Request<{}, {}, Asistencia
         res.status(500).json({ status: 'error', message: 'No se pudo enviar el correo de asistencia.' });
     }
 });
+
+// Correos internos que reciben cada cotización generada (se definen en apps/server/.env)
+const DESTINATARIOS_COTIZACION = [
+    { rol: 'secretaria', variable: 'EMAIL_SECRETARIA' },
+    { rol: 'jefe', variable: 'EMAIL_JEFE' },
+    { rol: 'administrador', variable: 'EMAIL_ADMINISTRADOR' }
+];
+
+const REF_COTIZACION_REGEX = /^[A-Za-z0-9-]{1,30}$/;
+
+// Devuelve los correos configurados y válidos, sin repetir si una misma persona cubre varios roles
+function obtenerDestinatariosCotizacion(): string[] {
+    const correos = new Map<string, string>();
+    for (const { rol, variable } of DESTINATARIOS_COTIZACION) {
+        const correo = process.env[variable]?.trim();
+        if (!correo || !EMAIL_REGEX.test(correo)) {
+            console.warn(`⚠️ ${variable} vacío o inválido: la cotización no se enviará al rol "${rol}".`);
+            continue;
+        }
+        if (!correos.has(correo.toLowerCase())) {
+            correos.set(correo.toLowerCase(), correo);
+        }
+    }
+    return Array.from(correos.values());
+}
+
+// Texto en una sola línea y de largo acotado: evita que quien llena el formulario inserte
+// saltos de línea (líneas falsas en el asunto o el cuerpo) en el correo que recibe la empresa
+function limpiarTexto(valor: unknown, maxLargo = 200): string {
+    return String(valor ?? '').replace(/[\u0000-\u001f\u007f\s]+/g, ' ').trim().slice(0, maxLargo);
+}
+
+// Nombre de archivo sin tildes, espacios ni caracteres especiales
+function nombreArchivoSeguro(texto: string): string {
+    return texto
+        .normalize('NFD')
+        .replace(/\p{M}/gu, '')
+        .replace(/[^a-zA-Z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .slice(0, 40) || 'Cliente';
+}
+
+// Los archivos llegan desde el navegador: se confirma por su firma que sean un PDF y un .xlsx (ZIP)
+const esPdf = (buffer: Buffer): boolean => buffer.toString('latin1', 0, 5) === '%PDF-';
+const esXlsx = (buffer: Buffer): boolean => buffer.toString('latin1', 0, 4) === 'PK\u0003\u0004';
+
+const direccionDeCorreo = (destino: string | { address: string }): string =>
+    typeof destino === 'string' ? destino : destino.address;
+
+// Envía por correo el PDF y el Excel de la cotización recién generada (los mismos que se
+// descargan en el navegador) a la secretaria, el jefe y el administrador, para que puedan
+// coordinar con logística los equipos, el personal y los espacios del evento
+app.post(
+    '/api/enviar-cotizacion-correo',
+    upload.fields([{ name: 'pdf', maxCount: 1 }, { name: 'excel', maxCount: 1 }]),
+    async (req: Request, res: Response) => {
+        try {
+            const destinatarios = obtenerDestinatariosCotizacion();
+            if (destinatarios.length === 0) {
+                console.error('❌ No hay correos de destino válidos: define EMAIL_SECRETARIA, EMAIL_JEFE o EMAIL_ADMINISTRADOR en apps/server/.env.');
+                res.status(500).json({ status: 'error', message: 'No hay correos de destino configurados en el servidor.' });
+                return;
+            }
+
+            const archivos = req.files as { pdf?: Express.Multer.File[]; excel?: Express.Multer.File[] };
+            const archivoPdf = archivos?.pdf?.[0];
+            const archivoExcel = archivos?.excel?.[0];
+            const datos = req.body as CotizacionCorreoRequestBody;
+            const nombre = limpiarTexto(datos.nombre);
+            const refNum = limpiarTexto(datos.refNum);
+
+            if (!archivoPdf || !archivoExcel || !nombre || !REF_COTIZACION_REGEX.test(refNum)) {
+                console.warn('⚠️ Cotización por correo rechazada: faltan datos o archivos (pdf, excel, nombre o refNum válido).');
+                res.status(400).json({ status: 'error', message: 'Faltan datos o archivos de la cotización.' });
+                return;
+            }
+
+            if (!esPdf(archivoPdf.buffer) || !esXlsx(archivoExcel.buffer)) {
+                console.warn(`⚠️ Cotización ${refNum} por correo rechazada: los adjuntos no son un PDF y un Excel válidos.`);
+                res.status(400).json({ status: 'error', message: 'Los archivos adjuntos no son un PDF y un Excel válidos.' });
+                return;
+            }
+
+            const total = Number(datos.total);
+            const totalFormateado = (Number.isFinite(total) ? total : 0).toLocaleString('es-CO');
+            const tipoEvento = limpiarTexto(datos.tipoEvento) || 'No especificado';
+            const nombreArchivo = `Cotizacion_${refNum}_${nombreArchivoSeguro(nombre)}`;
+
+            console.log(`📧 Enviando cotización ${refNum} por correo a ${destinatarios.length} destinatario(s)...`);
+            const info = await transporter.sendMail({
+                from: `"Planet Producciones" <${process.env.EMAIL_USER}>`,
+                to: destinatarios,
+                subject: `🚨 Nueva Cotización ${refNum}: ${nombre} - ${tipoEvento} - $${totalFormateado} COP`,
+                text: [
+                    'Hola equipo de Planet Producciones,',
+                    '',
+                    'Se generó una nueva cotización VIP desde el cotizador web. Se adjuntan el Excel, para coordinar con logística los equipos, el personal y los espacios del evento, y el PDF con la cotización oficial.',
+                    '',
+                    `- Referencia: ${refNum}`,
+                    `- Cliente: ${nombre}`,
+                    `- Correo: ${limpiarTexto(datos.correo) || 'N/A'}`,
+                    `- WhatsApp: ${limpiarTexto(datos.telefono) || 'N/A'}`,
+                    `- Tipo de evento: ${tipoEvento}`,
+                    `- Ubicación / Sede: ${limpiarTexto(datos.ciudad) || 'N/A'} (${limpiarTexto(datos.lugar) || 'Sede a confirmar'})`,
+                    `- Total estimado: $${totalFormateado} COP`
+                ].join('\n'),
+                attachments: [
+                    { filename: `${nombreArchivo}.xlsx`, content: archivoExcel.buffer },
+                    { filename: `${nombreArchivo}.pdf`, content: archivoPdf.buffer }
+                ]
+            });
+
+            const rechazados = (info.rejected || []).map(direccionDeCorreo);
+            if (rechazados.length > 0) {
+                console.warn(`⚠️ Cotización ${refNum}: el servidor de correo rechazó a ${rechazados.join(', ')}`);
+            }
+            console.log(`✅ Cotización ${refNum} enviada por correo a: ${(info.accepted || []).map(direccionDeCorreo).join(', ')}`);
+            res.json({ status: 'ok', message: 'Cotización enviada por correo exitosamente.' });
+        } catch (error) {
+            console.error('❌ Error enviando cotización por correo:', (error as Error).message);
+            res.status(500).json({ status: 'error', message: 'No se pudo enviar la cotización por correo.' });
+        }
+    }
+);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

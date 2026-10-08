@@ -71,7 +71,8 @@ http://localhost:3000.
 ## Variables de entorno
 
 Copia `apps/server/.env.example` a `apps/server/.env` y completa los valores
-reales (usuario/clave SMTP, correo de destino, puerto).
+reales (usuario/clave SMTP, puerto y los correos de la empresa que reciben las
+cotizaciones: `EMAIL_SECRETARIA`, `EMAIL_JEFE` y `EMAIL_ADMINISTRADOR`).
 
 ## Docker
 
@@ -84,9 +85,13 @@ Levanta el backend en `:3000` y el frontend (servido por Nginx) en `:8080`.
 ## Funcionalidad
 
 El sitio permite armar una cotización de producción técnica/eventos VIP,
-calcular el total en vivo, generar un PDF con marca de agua y un Excel
-ejecutivo del lado del cliente, y opcionalmente enviar la cotización al
-backend, que reenvía por correo el PDF/Excel a la gerencia.
+calcular el total en vivo y generar un PDF con marca de agua y un Excel
+ejecutivo del lado del cliente. Al pulsar **Generar Cotización (PDF & Excel)**
+el navegador descarga ambos archivos y los envía al backend
+(`POST /api/enviar-cotizacion-correo`), que los reenvía por correo a la
+secretaria, el jefe y el administrador para que puedan coordinar con logística
+los equipos, el personal y los espacios del evento. El envío por WhatsApp
+permanece pendiente.
 
 > Esta migración solo reorganiza el proyecto en un monorepo `apps/web` +
 > `apps/server` y convierte el código a TypeScript. No se modificó el

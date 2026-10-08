@@ -396,6 +396,40 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Envía el PDF y Excel de la cotización recién generada por correo a la secretaria, el jefe y el
+    // administrador (los destinatarios se configuran en el servidor)
+    async function enviarCotizacionCorreo(
+        pdfBlob: Blob,
+        nombreArchivoPdf: string,
+        excelBlob: Blob,
+        nombreArchivoExcel: string,
+        datosCliente: DatosCliente,
+        total: number,
+        refNum: string
+    ): Promise<void> {
+        const formData = new FormData();
+        formData.append('pdf', pdfBlob, nombreArchivoPdf);
+        formData.append('excel', excelBlob, nombreArchivoExcel);
+        formData.append('nombre', datosCliente.nombre);
+        formData.append('correo', datosCliente.correo);
+        formData.append('telefono', datosCliente.telefono);
+        formData.append('tipoEvento', datosCliente.tipoEvento);
+        formData.append('ciudad', datosCliente.ciudad);
+        formData.append('lugar', datosCliente.lugar);
+        formData.append('total', String(total));
+        formData.append('refNum', refNum);
+
+        const respuesta = await fetch(`${API_URL}/api/enviar-cotizacion-correo`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await respuesta.json().catch(() => ({}));
+        if (!respuesta.ok || data.status !== 'ok') {
+            throw new Error(data.message || 'No se pudo enviar la cotización por correo.');
+        }
+    }
+
     // Evento Principal al Clic
     btnSubmit.addEventListener('click', async () => {
         const nombre = (document.getElementById('nombre') as HTMLInputElement).value.trim();
@@ -465,34 +499,52 @@ document.addEventListener('DOMContentLoaded', () => {
                 generarExcelEjecutivo(datosCliente, datosCotizacion, refNum, fechaHoy);
 
             Swal.fire({
-                title: 'Enviando cotización por WhatsApp...',
-                text: 'PDF y Excel descargados. Enviando copia a la dueña.',
+                title: 'Enviando cotización...',
+                text: 'PDF y Excel descargados. Enviando copia por correo y WhatsApp.',
                 allowOutsideClick: false,
                 didOpen: () => { Swal.showLoading(); }
             });
 
-            try {
-                await enviarCotizacionWhatsApp(
+            // Los canales son independientes: si uno falla, el otro igual se entrega
+            const [resultadoCorreo, resultadoWhatsApp] = await Promise.allSettled([
+                enviarCotizacionCorreo(
+                    pdfBlob, nombreArchivoPdf,
+                    excelBlob, nombreArchivoExcel,
+                    datosCliente, datosCotizacion.total, refNum
+                ),
+                enviarCotizacionWhatsApp(
                     pdfBlob, nombreArchivoPdf,
                     excelBlob, nombreArchivoExcel,
                     datosCliente, refNum
-                );
+                )
+            ]);
 
-                Swal.fire({
-                    icon: 'success',
-                    title: '¡Cotización Generada y Enviada!',
-                    html: `PDF HD y Excel descargados exitosamente.<br>Se envió la cotización <strong>${refNum}</strong> por WhatsApp a la dueña.`,
-                    confirmButtonColor: '#f97316'
-                });
-            } catch (whatsappError) {
-                console.error(whatsappError);
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Archivos generados, WhatsApp no enviado',
-                    html: `PDF HD y Excel se descargaron correctamente, pero no se pudo enviar la cotización <strong>${refNum}</strong> por WhatsApp a la dueña.`,
-                    confirmButtonColor: '#f97316'
-                });
+            const canales = [
+                { medio: 'correo', destino: 'por correo al equipo de Planet Producciones', resultado: resultadoCorreo },
+                { medio: 'WhatsApp', destino: 'por WhatsApp a la dueña', resultado: resultadoWhatsApp }
+            ];
+            const lineasEnvio: string[] = [];
+            const mediosFallidos: string[] = [];
+
+            for (const { medio, destino, resultado } of canales) {
+                if (resultado.status === 'fulfilled') {
+                    lineasEnvio.push(`Se envió la cotización <strong>${refNum}</strong> ${destino}.`);
+                } else {
+                    console.error(`Error enviando la cotización por ${medio}:`, resultado.reason);
+                    mediosFallidos.push(medio);
+                    lineasEnvio.push(`No se pudo enviar la cotización <strong>${refNum}</strong> ${destino}.`);
+                }
             }
+
+            const todoEnviado = mediosFallidos.length === 0;
+            Swal.fire({
+                icon: todoEnviado ? 'success' : 'warning',
+                title: todoEnviado
+                    ? '¡Cotización Generada y Enviada!'
+                    : `Archivos generados, ${mediosFallidos.join(' y ')} no ${mediosFallidos.length > 1 ? 'enviados' : 'enviado'}`,
+                html: `${todoEnviado ? 'PDF HD y Excel descargados exitosamente.' : 'PDF HD y Excel se descargaron correctamente.'}<br>${lineasEnvio.join('<br>')}`,
+                confirmButtonColor: '#f97316'
+            });
 
         } catch (error) {
             console.error(error);
