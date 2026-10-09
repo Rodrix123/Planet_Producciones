@@ -580,3 +580,249 @@
     opacity: 1;
     transform: translate(-50%, 0);
 }
+
+/* ---------- Filtros ---------- */
+.filtros {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 1rem;
+    margin: -0.75rem 0 1.75rem;
+    padding: 1rem 1.25rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 18px;
+}
+
+.filtros[hidden],
+.filtro[hidden],
+.filtro-limpiar[hidden] {
+    display: none;
+}
+
+.filtro > span {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 0.35rem;
+}
+
+.filtro > span i {
+    color: var(--orange-main);
+    margin-right: 0.3rem;
+}
+
+.filtro select,
+.filtro input[type="date"] {
+    min-width: 160px;
+    height: 40px;
+    padding: 0 0.9rem;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    color: var(--text-light);
+    font-size: 0.88rem;
+    color-scheme: dark;
+}
+
+.filtro select:focus,
+.filtro input[type="date"]:focus {
+    outline: none;
+    border-color: var(--orange-main);
+}
+
+.filtro-limpiar {
+    padding: 0.6rem 1rem;
+}
+
+.filtro-conteo {
+    margin-left: auto;
+    align-self: center;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+.sin-resultados {
+    text-align: center;
+    padding: 2.5rem 1rem;
+}
+
+.filtro-grupo {
+    display: flex;
+    gap: 1rem;
+}
+
+.filtro-grupo[hidden],
+.chips[hidden],
+.multi-menu[hidden] {
+    display: none;
+}
+
+.filtro-multi {
+    position: relative;
+}
+
+.multi-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    min-width: 130px;
+    height: 40px;
+    padding: 0 0.8rem;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    color: var(--text-light);
+    font-size: 0.88rem;
+    cursor: pointer;
+}
+
+.multi-btn strong {
+    font-weight: 400;
+}
+
+.multi-btn i {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+
+.multi-btn:hover,
+.multi-btn[aria-expanded="true"] {
+    border-color: var(--orange-main);
+}
+
+.multi-menu {
+    position: absolute;
+    top: calc(100% + 0.4rem);
+    left: 0;
+    min-width: 100%;
+    padding: 0.4rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+    z-index: 60;
+}
+
+.multi-opcion {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.5rem 0.65rem;
+    border-radius: 9px;
+    font-size: 0.88rem;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.multi-opcion:hover {
+    background: var(--bg-input);
+}
+
+.multi-opcion input {
+    accent-color: var(--orange-main);
+}
+
+.chips {
+    flex-basis: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.3rem 0.4rem 0.3rem 0.8rem;
+    font-size: 0.8rem;
+    color: #d9a679;
+    background: rgba(249, 115, 22, 0.1);
+    border: 1px solid rgba(249, 115, 22, 0.22);
+    border-radius: 999px;
+}
+
+.chip > i {
+    font-size: 0.72rem;
+    opacity: 0.8;
+}
+
+.chip button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: inherit;
+    font-size: 0.7rem;
+    cursor: pointer;
+}
+
+.chip button:hover {
+    background: rgba(249, 115, 22, 0.3);
+    color: #fff;
+}
+
+/* Casillas del menú de tipo: tamaño nativo, pegadas a su texto. */
+.multi-opcion input[type="checkbox"] {
+    flex: none;
+    width: 16px;
+    height: 16px;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+}
+
+.multi-opcion span {
+    flex: 0 1 auto;
+}
+
+.filtro-limpiar {
+    height: 40px;
+}
+
+/* Alineación: cada filtro es una columna (etiqueta + control) y los controles
+   son block para evitar el hueco de línea que deja un elemento inline. */
+.filtro {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+}
+
+.filtro > span {
+    line-height: 1.2;
+}
+
+.filtro select,
+.filtro input[type="date"],
+.multi-btn {
+    display: flex;
+    width: 100%;
+    height: 40px;
+    margin: 0;
+    line-height: normal;
+    box-sizing: border-box;
+}
+
+.filtro select,
+.filtro input[type="date"] {
+    display: block;
+}
+
+.filtro-grupo {
+    align-items: flex-end;
+}
+
+.filtro-limpiar {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    box-sizing: border-box;
+}

@@ -16,7 +16,7 @@ interface Empleado {
 interface Rol {
     id: number;
     nombre: string;
-    descripcion: string | null;
+    descripcion: string | null;ñ
 }
 
 // Los roles se leen de public.role (los devuelve la API).
@@ -35,9 +35,22 @@ const drawerEliminar = $('drawerEliminar');
 const modal = $('modal');
 const modalContenido = $('modalContenido');
 const toast = $('toast');
+const filtros = $('filtros');
+const filtroTipoBtn = $('filtroTipoBtn');
+const filtroTipoTexto = $('filtroTipoTexto');
+const filtroTipoMenu = $('filtroTipoMenu');
+const filtroChips = $('filtroChips');
+const filtroDisp = $<HTMLSelectElement>('filtroDisp');
+const filtroDesde = $<HTMLInputElement>('filtroDesde');
+const filtroHasta = $<HTMLInputElement>('filtroHasta');
+const filtroFechaBox = $('filtroFechaBox');
+const filtroLimpiar = $('filtroLimpiar');
+const filtroConteo = $('filtroConteo');
 
 let empleados: Empleado[] = [];
 let seleccionadoId: string | null = null;
+// Tipos (role_id, o 'sin') seleccionados en el filtro; vacío = todos.
+const tiposSel = new Set<string>();
 
 async function api<T = Record<string, unknown>>(metodo: string, ruta: string, cuerpo?: unknown): Promise<T> {
     let resp: Response;
@@ -101,10 +114,91 @@ function rolDe(e: Empleado): Rol | undefined {
     return roles.find(r => r.id === e.rolId);
 }
 
+function aISO(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function hoyISO(): string {
+    return aISO(new Date());
+}
+
+/** Fecha final por defecto: 8 días después de hoy. */
+function finDefectoISO(): string {
+    const d = new Date();
+    d.setDate(d.getDate() + 8);
+    return aISO(d);
+}
+
+function restablecerFechas(): void {
+    filtroDesde.value = hoyISO();
+    filtroHasta.value = finDefectoISO();
+}
+
+function hayFiltros(): boolean {
+    return buscador.value.trim() !== '' || tiposSel.size > 0 || filtroDisp.value !== '';
+}
+
+function nombreTipo(clave: string): string {
+    const rol = roles.find(r => String(r.id) === clave);
+    return rol ? tituloRol(rol.nombre) : 'Sin rol';
+}
+
+function renderMenuTipo(): void {
+    const opciones = roles.map(r => ({ clave: String(r.id), titulo: tituloRol(r.nombre) }));
+    if (empleados.some(e => !rolDe(e))) opciones.push({ clave: 'sin', titulo: 'Sin rol' });
+    filtroTipoMenu.innerHTML = opciones.map(o => `
+        <label class="multi-opcion">
+            <input type="checkbox" value="${o.clave}" ${tiposSel.has(o.clave) ? 'checked' : ''}>
+            <span>${esc(o.titulo)}</span>
+        </label>`).join('');
+}
+
+function renderChips(): void {
+    const chips: string[] = [];
+    for (const clave of tiposSel) {
+        chips.push(`<span class="chip"><i class="fa-solid fa-user-tag"></i> ${esc(nombreTipo(clave))}
+            <button type="button" data-quitar-tipo="${clave}" aria-label="Quitar ${esc(nombreTipo(clave))}"><i class="fa-solid fa-xmark"></i></button></span>`);
+    }
+    if (filtroDisp.value !== '') {
+        const etiqueta = filtroDisp.value === 'disponibles' ? 'Disponibles' : 'No disponibles';
+        chips.push(`<span class="chip"><i class="fa-solid fa-calendar-check"></i> ${etiqueta} · ${formatearFecha(filtroDesde.value)} – ${formatearFecha(filtroHasta.value)}
+            <button type="button" data-quitar-disp aria-label="Quitar disponibilidad"><i class="fa-solid fa-xmark"></i></button></span>`);
+    }
+    filtroChips.innerHTML = chips.join('');
+    filtroChips.hidden = chips.length === 0;
+    filtroTipoTexto.textContent = tiposSel.size === 0 ? 'Todos'
+        : tiposSel.size === 1 ? nombreTipo([...tiposSel][0]!) : `${tiposSel.size} seleccionados`;
+}
+
 function render(): void {
     const q = buscador.value.trim().toLowerCase();
-    const filtrados = empleados.filter(e =>
-        `${nombreVisible(e)} ${e.email ?? ''}`.toLowerCase().includes(q));
+    const disp = filtroDisp.value;
+
+    // La fecha final nunca puede ser anterior a la inicial.
+    if (!filtroDesde.value) filtroDesde.value = hoyISO();
+    if (!filtroHasta.value || filtroHasta.value < filtroDesde.value) filtroHasta.value = filtroDesde.value;
+    filtroHasta.min = filtroDesde.value;
+    const desde = filtroDesde.value;
+    const hasta = filtroHasta.value;
+
+    filtroFechaBox.hidden = disp === '';
+    filtroLimpiar.hidden = !hayFiltros();
+    renderChips();
+
+    const filtrados = empleados.filter(e => {
+        if (!`${nombreVisible(e)} ${e.email ?? ''}`.toLowerCase().includes(q)) return false;
+        if (tiposSel.size > 0 && !tiposSel.has(String(e.rolId ?? 'sin'))) return false;
+        if (disp !== '') {
+            // No disponible = tiene alguna ausencia dentro del rango [inicio, final].
+            const ocupado = e.diasNoDisponibles.some(d => d >= desde && d <= hasta);
+            if (disp === 'disponibles' && ocupado) return false;
+            if (disp === 'no-disponibles' && !ocupado) return false;
+        }
+        return true;
+    });
+    filtroConteo.textContent = hayFiltros()
+        ? `${filtrados.length} de ${empleados.length} empleados`
+        : `${empleados.length} empleados`;
 
     const secciones = roles.map(r => ({
         rolId: r.id as number | null,
@@ -112,9 +206,12 @@ function render(): void {
         grupo: filtrados.filter(e => e.rolId === r.id)
     }));
     const sinRol = filtrados.filter(e => !rolDe(e));
-    if (sinRol.length) secciones.push({ rolId: null, titulo: 'Sin rol', grupo: sinRol });
+    if (sinRol.length || tiposSel.has('sin')) secciones.push({ rolId: null, titulo: 'Sin rol', grupo: sinRol });
 
-    contenedorRoles.innerHTML = secciones.map(({ rolId, titulo, grupo }) => {
+    const visibles = secciones.filter(sec =>
+        tiposSel.size === 0 || tiposSel.has(String(sec.rolId ?? 'sin')));
+
+    contenedorRoles.innerHTML = visibles.map(({ rolId, titulo, grupo }) => {
         const cards = grupo.map(e => `
             <button class="empleado-card" data-id="${esc(e.id)}">
                 ${avatarHtml(e)}
@@ -134,7 +231,7 @@ function render(): void {
                 </div>
                 ${grupo.length
                     ? `<div class="empleados-grid">${cards}</div>`
-                    : '<p class="rol-vacio">No hay empleados en este rol.</p>'}
+                    : `<p class="rol-vacio">${hayFiltros() ? 'Ningún empleado coincide con los filtros.' : 'No hay empleados en este rol.'}</p>`}
             </section>`;
     }).join('');
 }
@@ -339,6 +436,9 @@ async function cargar(): Promise<void> {
         const json = await api<{ roles: Rol[]; empleados: Empleado[] }>('GET', '/api/empleados');
         roles = json.roles;
         empleados = json.empleados;
+        renderMenuTipo();
+        restablecerFechas();
+        filtros.hidden = false;
         estado.hidden = true;
         render();
     } catch (err) {
@@ -358,6 +458,50 @@ contenedorRoles.addEventListener('click', ev => {
     if (card?.dataset.id) abrirDrawer(card.dataset.id);
 });
 buscador.addEventListener('input', render);
+filtroDisp.addEventListener('change', render);
+filtroDesde.addEventListener('change', render);
+filtroHasta.addEventListener('change', render);
+
+function cerrarMenuTipo(): void {
+    filtroTipoMenu.hidden = true;
+    filtroTipoBtn.setAttribute('aria-expanded', 'false');
+}
+filtroTipoBtn.addEventListener('click', () => {
+    const abrir = filtroTipoMenu.hidden;
+    filtroTipoMenu.hidden = !abrir;
+    filtroTipoBtn.setAttribute('aria-expanded', String(abrir));
+});
+filtroTipoMenu.addEventListener('change', ev => {
+    const cb = ev.target as HTMLInputElement;
+    if (cb.checked) tiposSel.add(cb.value);
+    else tiposSel.delete(cb.value);
+    render();
+});
+filtroChips.addEventListener('click', ev => {
+    const objetivo = ev.target as HTMLElement;
+    const tipo = objetivo.closest<HTMLElement>('[data-quitar-tipo]');
+    if (tipo) {
+        tiposSel.delete(tipo.dataset.quitarTipo!);
+        renderMenuTipo();
+    } else if (objetivo.closest('[data-quitar-disp]')) {
+        filtroDisp.value = '';
+        restablecerFechas();
+    } else {
+        return;
+    }
+    render();
+});
+document.addEventListener('click', ev => {
+    if (!(ev.target as HTMLElement).closest('#filtroTipoBox')) cerrarMenuTipo();
+});
+filtroLimpiar.addEventListener('click', () => {
+    buscador.value = '';
+    tiposSel.clear();
+    filtroDisp.value = '';
+    restablecerFechas();
+    renderMenuTipo();
+    render();
+});
 overlay.addEventListener('click', cerrarDrawer);
 $('drawerCerrar').addEventListener('click', cerrarDrawer);
 drawerEliminar.addEventListener('click', () => {
@@ -369,6 +513,10 @@ modal.addEventListener('click', ev => {
 });
 document.addEventListener('keydown', ev => {
     if (ev.key !== 'Escape') return;
+    if (!filtroTipoMenu.hidden) {
+        cerrarMenuTipo();
+        return;
+    }
     if (modal.classList.contains('open')) cerrarModal();
     else cerrarDrawer();
 });

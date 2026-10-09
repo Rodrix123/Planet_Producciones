@@ -39,6 +39,39 @@
             </div>
         </header>
 
+        <div class="filtros" id="filtros" hidden>
+            <div class="filtro filtro-multi" id="filtroTipoBox">
+                <span><i class="fa-solid fa-user-tag"></i> Tipo</span>
+                <button type="button" id="filtroTipoBtn" class="multi-btn" aria-haspopup="true" aria-expanded="false">
+                    <strong id="filtroTipoTexto">Todos</strong><i class="fa-solid fa-chevron-down"></i>
+                </button>
+                <div id="filtroTipoMenu" class="multi-menu" hidden></div>
+            </div>
+            <label class="filtro">
+                <span><i class="fa-solid fa-calendar-check"></i> Disponibilidad</span>
+                <select id="filtroDisp">
+                    <option value="">Todos</option>
+                    <option value="disponibles">Disponibles</option>
+                    <option value="no-disponibles">No disponibles</option>
+                </select>
+            </label>
+            <div class="filtro-grupo" id="filtroFechaBox" hidden>
+                <label class="filtro">
+                    <span><i class="fa-regular fa-calendar"></i> Fecha inicio</span>
+                    <input type="date" id="filtroDesde">
+                </label>
+                <label class="filtro">
+                    <span><i class="fa-regular fa-calendar-minus"></i> Fecha final</span>
+                    <input type="date" id="filtroHasta">
+                </label>
+            </div>
+            <button type="button" id="filtroLimpiar" class="btn-secundario filtro-limpiar" hidden>
+                <i class="fa-solid fa-filter-circle-xmark"></i> Limpiar filtros
+            </button>
+            <span id="filtroConteo" class="filtro-conteo"></span>
+            <div id="filtroChips" class="chips" hidden></div>
+        </div>
+
         <div id="estado" class="panel-estado">
             <i class="fa-solid fa-spinner fa-spin"></i> Cargando empleados...
         </div>
