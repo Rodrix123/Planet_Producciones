@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eventos | Planet Producciones</title>
+
+    <link rel="icon" type="image/png" href="logo.png?v=2">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="panel-body">
+
+    <aside class="panel-rail">
+        <a href="index.html" class="rail-logo" title="Inicio">
+            <img src="logo.png?v=2" alt="Planet Producciones">
+        </a>
+        <nav class="rail-nav">
+            <a href="cotizador.html" class="rail-item">
+                <i class="fa-solid fa-file-invoice-dollar"></i><span>Cotizaciones</span>
+            </a>
+            <a href="eventos.html" class="rail-item active">
+                <i class="fa-solid fa-calendar-days"></i><span>Eventos</span>
+            </a>
+            <a href="empleados.html" class="rail-item">
+                <i class="fa-solid fa-users"></i><span>Empleados</span>
+            </a>
+        </nav>
+        <a href="index.html" class="rail-item rail-logout">
+            <i class="fa-solid fa-right-from-bracket"></i><span>Salir</span>
+        </a>
+    </aside>
+
+    <main class="panel-main">
+        <header class="panel-topbar">
+            <h1>Eventos</h1>
+        </header>
+
+        <div class="filtros eventos-filtros">
+            <div class="toggles" role="group" aria-label="Filtros de estado">
+                <button type="button" class="toggle-chip" data-filtro="confirmado" aria-pressed="false">
+                    <i class="fa-solid fa-circle-check"></i> Evento confirmado
+                </button>
+                <button type="button" class="toggle-chip" data-filtro="pagoInicial" aria-pressed="false">
+                    <i class="fa-solid fa-money-bill-wave"></i> Pago inicial hecho
+                </button>
+                <button type="button" class="toggle-chip" data-filtro="firmado" aria-pressed="false">
+                    <i class="fa-solid fa-file-signature"></i> Firmado
+                </button>
+            </div>
+            <div class="filtro-grupo">
+                <label class="filtro">
+                    <span><i class="fa-regular fa-calendar"></i> Fecha inicio</span>
+                    <input type="date" id="fDesde">
+                </label>
+                <label class="filtro">
+                    <span><i class="fa-regular fa-calendar-minus"></i> Fecha final</span>
+                    <input type="date" id="fHasta">
+                </label>
+            </div>
+            <button type="button" id="fLimpiar" class="btn-secundario filtro-limpiar" hidden>
+                <i class="fa-solid fa-filter-circle-xmark"></i> Limpiar filtros
+            </button>
+            <span id="fConteo" class="filtro-conteo"></span>
+        </div>
+
+        <div id="estado" class="panel-estado">
+            <i class="fa-solid fa-spinner fa-spin"></i> Cargando eventos...
+        </div>
+
+        <section class="deck" id="deck" hidden>
+            <article class="deck-panel deck-lista" id="panelLista">
+                <header class="deck-head">
+                    <h2 id="listaTitulo">Eventos</h2>
+                    <span class="rol-count" id="listaConteo">0</span>
+                </header>
+                <div class="lista-eventos" id="listaEventos"></div>
+            </article>
+
+            <article class="deck-panel deck-cal" id="panelCal">
+                <header class="deck-head">
+                    <h2 id="calTitulo"></h2>
+                    <div class="cal-nav">
+                        <button type="button" class="btn-secundario cal-hoy" id="calHoy">Hoy</button>
+                        <button type="button" class="cal-flecha" id="calPrev" aria-label="Mes anterior">
+                            <i class="fa-solid fa-chevron-left"></i>
+                        </button>
+                        <button type="button" class="cal-flecha" id="calNext" aria-label="Mes siguiente">
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </header>
+                <div class="cal-semana">
+                    <span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span>
+                </div>
+                <div class="cal-grid" id="calGrid"></div>
+            </article>
+        </section>
+
+        <section class="evento-detalle" id="detalle" hidden>
+            <div class="detalle-contenido" id="detalleContenido"></div>
+        </section>
+    </main>
+
+    <script type="module" src="/src/eventos.ts"></script>
+</body>
+</html>

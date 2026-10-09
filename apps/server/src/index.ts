@@ -12,6 +12,7 @@ import {
     ErrorEmpleado,
     listarEmpleados
 } from '@my-app/db/empleados';
+import { listarEventos } from '@my-app/db/eventos';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -246,6 +247,9 @@ async function conEmpleados(res: Response, operacion: (db: NonNullable<typeof su
         res.status(500).json({ status: 'error', message: 'Error procesando la solicitud de empleados' });
     }
 }
+
+app.get('/api/eventos', (_req: Request, res: Response) =>
+    conEmpleados(res, listarEventos));
 
 app.get('/api/empleados', (_req: Request, res: Response) =>
     conEmpleados(res, listarEmpleados));

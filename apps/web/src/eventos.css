@@ -1,0 +1,582 @@
+/* Estilos de eventos.html. Se apoya en panel.css (riel, filtros, botones) y
+   en las variables de style.css para conservar la identidad visual. */
+
+.eventos-filtros {
+    margin-top: -0.75rem;
+}
+
+.toggles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+}
+
+.toggle-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 40px;
+    padding: 0 1rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: color 0.2s, background 0.2s, border-color 0.2s;
+}
+
+.toggle-chip:hover {
+    color: var(--text-light);
+    border-color: var(--text-muted);
+}
+
+.toggle-chip[aria-pressed="true"] {
+    color: var(--orange-main);
+    background: rgba(249, 115, 22, 0.12);
+    border-color: rgba(249, 115, 22, 0.5);
+}
+
+/* ---------- Dos paneles con la misma altura y ancho ---------- */
+.deck {
+    --deck-h: 700px;
+    --deck-gap: 1.25rem;
+    --deck-base: calc(50% - var(--deck-gap) / 2);
+    --deck-hover: 72%;
+    position: relative;
+    height: var(--deck-h);
+}
+
+.deck[hidden] {
+    display: none;
+}
+
+.deck-panel {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: var(--deck-base);
+    display: flex;
+    flex-direction: column;
+    padding: 1.25rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 24px;
+    z-index: 1;
+    transition: width 0.35s cubic-bezier(0.22, 0.8, 0.3, 1), box-shadow 0.35s ease, border-color 0.35s ease;
+}
+
+.deck-lista {
+    left: 0;
+}
+
+.deck-cal {
+    right: 0;
+}
+
+/* Al pasar el cursor el panel crece sobre el otro, que conserva su tamaño. */
+.deck-panel:hover {
+    width: var(--deck-hover);
+    z-index: 5;
+    border-color: rgba(249, 115, 22, 0.45);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+}
+
+.deck-head {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 40px;
+    margin-bottom: 1rem;
+}
+
+.deck-head h2 {
+    font-size: 1.15rem;
+    font-weight: 600;
+}
+
+/* ---------- Lista de eventos vigentes ---------- */
+.lista-eventos {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+}
+
+/* Deslizador de la lista: delgado, y naranja al pasar el cursor. */
+.lista-eventos {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+    scroll-behavior: smooth;
+}
+
+.lista-eventos:hover {
+    scrollbar-color: rgba(249, 115, 22, 0.55) transparent;
+}
+
+.lista-eventos::-webkit-scrollbar {
+    width: 8px;
+}
+
+.lista-eventos::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.lista-eventos::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 999px;
+}
+
+.lista-eventos:hover::-webkit-scrollbar-thumb {
+    background: rgba(249, 115, 22, 0.55);
+}
+
+.lista-eventos::-webkit-scrollbar-thumb:hover {
+    background: var(--orange-main);
+}
+
+/* Eventos que ya pasaron: atenuados, pero legibles. */
+.lista-item.pasado {
+    opacity: 0.55;
+}
+
+.lista-item.pasado:hover,
+.lista-item.pasado.seleccionado {
+    opacity: 1;
+}
+
+.lista-vacia {
+    margin: auto;
+    padding: 1rem;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.lista-item {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    width: 100%;
+    padding: 0.8rem 0.9rem;
+    text-align: left;
+    color: inherit;
+    background: var(--bg-input);
+    border: 1px solid transparent;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.lista-item:hover,
+.lista-item:focus-visible {
+    outline: none;
+    border-color: rgba(249, 115, 22, 0.5);
+}
+
+.lista-item.seleccionado {
+    border-color: var(--orange-main);
+    background: rgba(249, 115, 22, 0.1);
+}
+
+.lista-fecha {
+    flex-shrink: 0;
+    width: 48px;
+    padding: 0.35rem 0;
+    text-align: center;
+    background: rgba(249, 115, 22, 0.12);
+    border-radius: 12px;
+    line-height: 1.1;
+}
+
+.lista-fecha strong {
+    display: block;
+    font-size: 1.15rem;
+    color: var(--orange-main);
+}
+
+.lista-fecha span {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.lista-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.lista-tipo {
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.lista-sub {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.estados {
+    display: flex;
+    gap: 0.45rem;
+    flex-shrink: 0;
+    font-size: 0.8rem;
+}
+
+.estados i {
+    color: var(--border-color);
+}
+
+.estados i.on {
+    color: var(--emerald-green);
+}
+
+/* ---------- Calendario ---------- */
+.cal-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-left: auto;
+}
+
+.cal-hoy {
+    height: 34px;
+    padding: 0 0.9rem;
+}
+
+.cal-flecha {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    background: var(--bg-input);
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.cal-flecha:hover {
+    color: var(--orange-main);
+    border-color: var(--orange-main);
+}
+
+.cal-semana {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-bottom: 4px;
+    text-align: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+}
+
+.cal-grid {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-auto-rows: minmax(0, 1fr);
+    gap: 4px;
+}
+
+.cal-dia {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    padding: 5px;
+    overflow: hidden;
+    background: var(--bg-input);
+    border: 1px solid transparent;
+    border-radius: 10px;
+}
+
+.cal-dia.otro-mes {
+    background: transparent;
+    border-color: var(--border-color);
+}
+
+.cal-dia.otro-mes .cal-num {
+    opacity: 0.45;
+}
+
+.cal-dia.hoy {
+    border: 2px solid var(--orange-main);
+    background: rgba(249, 115, 22, 0.1);
+}
+
+.cal-num {
+    align-self: flex-start;
+    min-width: 20px;
+    padding: 0 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 20px;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.cal-dia.hoy .cal-num {
+    color: #fff;
+    background: var(--orange-main);
+    border-radius: 999px;
+}
+
+.cal-evt {
+    display: block;
+    width: 100%;
+    padding: 0 6px;
+    font-size: 0.66rem;
+    font-weight: 600;
+    line-height: 16px;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #e0a878;
+    background: rgba(249, 115, 22, 0.14);
+    border: 1px solid rgba(249, 115, 22, 0.25);
+    border-radius: 5px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.cal-evt[data-confirmado="true"] {
+    color: #7fd6b3;
+    background: rgba(52, 211, 153, 0.12);
+    border-color: rgba(52, 211, 153, 0.28);
+}
+
+.cal-evt:hover,
+.cal-evt.seleccionado {
+    color: #fff;
+    border-color: var(--orange-main);
+    background: rgba(249, 115, 22, 0.4);
+}
+
+.cal-mas {
+    align-self: flex-start;
+    padding: 0 2px;
+    font-size: 0.64rem;
+    line-height: 14px;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    text-decoration: underline;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.cal-mas:hover {
+    color: var(--orange-main);
+}
+
+/* Cuadro que se sobrepone al grid, en la casilla del día elegido. */
+.cal-popover {
+    position: absolute;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px;
+    overflow-y: auto;
+    background: var(--bg-card);
+    border: 1px solid var(--orange-main);
+    border-radius: 12px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65);
+    animation: popover-in 0.18s ease-out;
+}
+
+@keyframes popover-in {
+    from {
+        opacity: 0;
+        transform: scale(0.94);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.pop-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 2px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-light);
+}
+
+.pop-head button {
+    width: 22px;
+    height: 22px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.pop-head button:hover {
+    color: var(--orange-main);
+}
+
+.cal-popover .cal-evt {
+    line-height: 20px;
+}
+
+.pop-hora {
+    opacity: 0.75;
+    margin-right: 4px;
+}
+
+/* ---------- Detalle del evento ---------- */
+.evento-detalle {
+    margin-top: 1.5rem;
+    padding: 1.5rem;
+    min-height: 180px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 24px;
+}
+
+.evento-detalle[hidden] {
+    display: none;
+}
+
+.detalle-contenido {
+    opacity: 1;
+    transition: opacity 0.18s ease;
+}
+
+.detalle-contenido.oculto {
+    opacity: 0;
+}
+
+.detalle-vacio {
+    padding: 2.5rem 1rem;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.92rem;
+}
+
+.detalle-vacio i {
+    display: block;
+    margin-bottom: 0.75rem;
+    font-size: 1.6rem;
+    color: var(--border-color);
+}
+
+.detalle-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.detalle-head h2 {
+    font-size: 1.4rem;
+}
+
+.detalle-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+}
+
+.badge.on {
+    color: var(--emerald-green);
+    background: rgba(52, 211, 153, 0.1);
+    border-color: rgba(52, 211, 153, 0.35);
+}
+
+.detalle-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.25rem 2rem;
+}
+
+.detalle-bloque h3 {
+    margin-bottom: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.detalle-bloque p {
+    padding: 0.2rem 0;
+    font-size: 0.9rem;
+    word-break: break-word;
+}
+
+.detalle-bloque p small {
+    display: block;
+    color: var(--text-muted);
+}
+
+.personal-lista {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.personal-lista span {
+    padding: 0.2rem 0.65rem;
+    font-size: 0.8rem;
+    background: var(--bg-input);
+    border-radius: 999px;
+}
+
+/* ---------- Pantallas angostas: paneles apilados, sin hover ---------- */
+@media (max-width: 900px) {
+    .deck {
+        height: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+    }
+
+    .deck-panel,
+    .deck-panel:hover {
+        position: static;
+        width: 100%;
+        box-shadow: none;
+    }
+
+    .deck-lista {
+        max-height: 360px;
+    }
+
+    .cal-grid {
+        grid-auto-rows: minmax(92px, auto);
+    }
+}

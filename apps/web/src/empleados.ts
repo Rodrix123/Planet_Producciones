@@ -16,7 +16,7 @@ interface Empleado {
 interface Rol {
     id: number;
     nombre: string;
-    descripcion: string | null;ñ
+    descripcion: string | null;
 }
 
 // Los roles se leen de public.role (los devuelve la API).

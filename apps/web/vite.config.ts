@@ -15,7 +15,8 @@ export default defineConfig({
                 main: 'index.html',
                 cotizador: 'cotizador.html',
                 login: 'login.html',
-                empleados: 'empleados.html'
+                empleados: 'empleados.html',
+                eventos: 'eventos.html'
             }
         }
     },
