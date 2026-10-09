@@ -1,11 +1,20 @@
 import 'dotenv/config';
-import express, { Request, Response } from 'express';
+import express, { type Request, type Response } from 'express';
 import nodemailer from 'nodemailer';
 import ExcelJS from 'exceljs';
 import PDFDocument from 'pdfkit';
 import cors from 'cors';
+import { createClient } from '@supabase/supabase-js';
+import {
+    actualizarEmpleado,
+    crearEmpleado,
+    eliminarEmpleado,
+    ErrorEmpleado,
+    listarEmpleados
+} from '@my-app/db/empleados';
 import path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
 
 interface CotizacionRequestBody {
     nombre?: string;
@@ -22,6 +31,8 @@ interface CotizacionRequestBody {
     niebla?: string;
     total?: number;
 }
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 app.use(cors());
@@ -204,6 +215,49 @@ app.post('/api/enviar-cotizacion', async (req: Request<{}, {}, CotizacionRequest
         res.status(500).json({ status: 'error', message: 'Error procesando la cotización' });
     }
 });
+
+// ---------------------------------------------------------------------------
+// Empleados (solo lectura) — public.profiles / role / unavailability_users y
+// auth.users de Supabase mediante el cliente
+// service role; las consultas viven en packages/db. No se crea ni modifica nada
+// en la base de datos.
+// ---------------------------------------------------------------------------
+const supabaseAdmin = process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+        auth: { autoRefreshToken: false, persistSession: false }
+    })
+    : null;
+
+// Ejecuta una operación de empleados y traduce los errores a respuestas HTTP.
+async function conEmpleados(res: Response, operacion: (db: NonNullable<typeof supabaseAdmin>) => Promise<unknown>, status = 200) {
+    if (!supabaseAdmin) {
+        res.status(503).json({ status: 'error', message: 'Supabase no está configurado (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY).' });
+        return;
+    }
+    try {
+        const resultado = await operacion(supabaseAdmin);
+        res.status(status).json({ status: 'ok', ...(resultado as object) });
+    } catch (error) {
+        if (error instanceof ErrorEmpleado) {
+            res.status(error.status).json({ status: 'error', message: error.message });
+            return;
+        }
+        console.error('❌ Error en empleados:', (error as Error).message);
+        res.status(500).json({ status: 'error', message: 'Error procesando la solicitud de empleados' });
+    }
+}
+
+app.get('/api/empleados', (_req: Request, res: Response) =>
+    conEmpleados(res, listarEmpleados));
+
+app.post('/api/empleados', (req: Request, res: Response) =>
+    conEmpleados(res, async db => ({ empleado: await crearEmpleado(db, req.body) }), 201));
+
+app.patch('/api/empleados/:id', (req: Request, res: Response) =>
+    conEmpleados(res, async db => ({ empleado: await actualizarEmpleado(db, String(req.params.id), req.body ?? {}) })));
+
+app.delete('/api/empleados/:id', (req: Request, res: Response) =>
+    conEmpleados(res, async db => { await eliminarEmpleado(db, String(req.params.id)); return {}; }));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

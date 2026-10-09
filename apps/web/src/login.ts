@@ -3,11 +3,11 @@ import './landing.css';
 
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('loginForm') as HTMLFormElement;
-    const statusMsg = document.getElementById('loginStatusMsg') as HTMLElement;
 
-    // Todavía no hay backend de autenticación: solo mostramos la interfaz
-    // y un aviso informativo al intentar iniciar sesión.
+    // Login DUMMY: todavía no hay backend de autenticación, así que cualquier
+    // intento de inicio de sesión entra directo al panel de administrador.
+    // Reemplazar por Supabase Auth cuando exista.
     form.addEventListener('submit', () => {
-        statusMsg.classList.add('visible');
+        window.location.href = 'empleados.html';
     });
 });

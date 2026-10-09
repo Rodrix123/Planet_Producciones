@@ -2,6 +2,7 @@
   "name": "@planet-producciones/server",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "Sistema VIP de Cotizaciones Planet Producciones 2026 — API",
   "main": "dist/index.js",
   "scripts": {
@@ -11,6 +12,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@my-app/db": "*",
+    "@supabase/supabase-js": "^2.116.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "exceljs": "^4.4.0",

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Empleados | Planet Producciones</title>
+
+    <link rel="icon" type="image/png" href="logo.png?v=2">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="panel-body">
+
+    <aside class="panel-rail">
+        <a href="index.html" class="rail-logo" title="Inicio">
+            <img src="logo.png?v=2" alt="Planet Producciones">
+        </a>
+        <nav class="rail-nav">
+            <a href="cotizador.html" class="rail-item">
+                <i class="fa-solid fa-file-invoice-dollar"></i><span>Cotizaciones</span>
+            </a>
+            <a href="#" class="rail-item" aria-disabled="true">
+                <i class="fa-solid fa-calendar-days"></i><span>Eventos</span>
+            </a>
+            <a href="empleados.html" class="rail-item active">
+                <i class="fa-solid fa-users"></i><span>Empleados</span>
+            </a>
+        </nav>
+        <a href="index.html" class="rail-item rail-logout">
+            <i class="fa-solid fa-right-from-bracket"></i><span>Salir</span>
+        </a>
+    </aside>
+
+    <main class="panel-main">
+        <header class="panel-topbar">
+            <h1>Empleados</h1>
+            <div class="panel-search">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="search" id="buscador" placeholder="Buscar por nombre o correo">
+            </div>
+        </header>
+
+        <div id="estado" class="panel-estado">
+            <i class="fa-solid fa-spinner fa-spin"></i> Cargando empleados...
+        </div>
+
+        <div id="roles" class="roles-grid"></div>
+    </main>
+
+    <div id="overlay" class="drawer-overlay"></div>
+    <aside id="drawer" class="drawer" aria-hidden="true">
+        <button id="drawerEliminar" class="drawer-delete" aria-label="Eliminar empleado" title="Eliminar empleado" hidden>
+            <i class="fa-solid fa-trash-can"></i>
+        </button>
+        <button id="drawerCerrar" class="drawer-close" aria-label="Cerrar">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+        <div id="drawerContenido"></div>
+    </aside>
+
+    <div id="modal" class="modal" aria-hidden="true">
+        <div class="modal-card" role="dialog" aria-modal="true" id="modalContenido"></div>
+    </div>
+
+    <div id="toast" class="toast" role="status"></div>
+
+    <script type="module" src="/src/empleados.ts"></script>
+</body>
+</html>
