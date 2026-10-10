@@ -1,6 +1,8 @@
 import './style.css';
 import './panel.css';
 import './eventos.css';
+import { api } from './api';
+import { borrarBorrador, guardarBorrador, leerBorrador, type BorradorEvento } from './borrador-evento';
 
 interface Evento {
     id: number;
@@ -21,13 +23,39 @@ interface Evento {
     transporte: string | null;
 }
 
+interface Sede {
+    id: number;
+    nombre: string;
+    ciudad: string | null;
+}
+
+interface Transporte {
+    id: number;
+    ciudad: string;
+    precio: number;
+}
+
+interface OpcionesEvento {
+    sedes: Sede[];
+    transportes: Transporte[];
+}
+
 type ClaveToggle = 'confirmado' | 'pagoInicial' | 'firmado';
 
-const API_URL: string = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 const MAX_VISIBLES = 4;
 const FADE_MS = 180;
+const SEDE_OTRA = 'otro';
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Parámetros que deja la página de cotizaciones al volver: ?nuevo reabre el
+// formulario del evento en creación y ?creado=<id> marca el evento recién creado.
+const parametros = new URLSearchParams(window.location.search);
+if (window.location.search) window.history.replaceState(null, '', window.location.pathname);
 
 const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
+const modal = $('modal');
+const modalContenido = $('modalContenido');
+const toast = $('toast');
 const estadoCarga = $('estado');
 const deck = $('deck');
 const detalle = $('detalle');
@@ -43,9 +71,11 @@ const fConteo = $('fConteo');
 const toggles = document.querySelectorAll<HTMLButtonElement>('.toggle-chip');
 
 let eventos: Evento[] = [];
+let opciones: OpcionesEvento | null = null;
 let seleccionadoId: number | null = null;
 let popoverFecha: string | null = null;
 let fadeTimer: number | undefined;
+let toastTimer: number | undefined;
 const filtrosActivos = new Set<ClaveToggle>();
 
 // Mes que muestra el calendario (siempre día 1).
@@ -53,6 +83,13 @@ const hoy = new Date();
 let mes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
 
 // ---------- Utilidades ----------
+function avisar(mensaje: string): void {
+    toast.textContent = mensaje;
+    toast.classList.add('visible');
+    window.clearTimeout(toastTimer);
+    toastTimer = window.setTimeout(() => toast.classList.remove('visible'), 3500);
+}
+
 function esc(texto: string): string {
     const d = document.createElement('div');
     d.textContent = texto;
@@ -361,23 +398,251 @@ function render(): void {
     marcarSeleccion();
 }
 
+// ---------- Crear evento ----------
+function abrirModal(html: string): void {
+    modalContenido.innerHTML = html;
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+}
+
+function cerrarModal(): void {
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    borrarBorrador(); // cerrar el formulario descarta el evento en creación
+}
+
+/** Cabecera fija con la X para cerrar (arriba a la izquierda) y cuerpo desplazable. */
+function htmlModal(titulo: string, cuerpo: string): string {
+    return `
+        <div class="modal-cabecera">
+            <button type="button" class="modal-cerrar" data-cerrar-modal aria-label="Cerrar" title="Cerrar">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <h2>${titulo}</h2>
+        </div>
+        <div class="modal-cuerpo">${cuerpo}</div>`;
+}
+
+/** Campo de texto del formulario; `atributosLabel` va en el <label> (p. ej. `hidden`). */
+function campoTexto(etiqueta: string, nombre: string, extra = '', clase = '', atributosLabel = ''): string {
+    return `<label class="campo ${clase}" ${atributosLabel}><span>${etiqueta}</span>
+        <input type="text" name="${nombre}" autocomplete="off" ${extra}></label>`;
+}
+
+function htmlFormularioEvento({ sedes, transportes }: OpcionesEvento): string {
+    const opcionesSede = sedes.map(s =>
+        `<option value="${s.id}">${esc(s.nombre)}${s.ciudad ? ` · ${esc(s.ciudad)}` : ''}</option>`).join('');
+    const opcionesTransporte = transportes.map(t =>
+        `<option value="${t.id}">${esc(t.ciudad)} — ${esc(formatearMoneda(t.precio))}</option>`).join('');
+
+    return htmlModal('Nuevo evento', `
+        <form id="formEvento" novalidate>
+            <div class="form-grid">
+                <h3 class="form-seccion">Evento</h3>
+                ${campoTexto('Tipo de evento', 'tipo', 'maxlength="100" placeholder="Ej: Boda, Quinceañera, Corporativo"', 'span-2')}
+                <label class="campo"><span>Fecha</span><input type="date" name="fecha"></label>
+                <label class="campo"><span>Hora</span><input type="time" name="hora"></label>
+                <p class="form-error span-2" id="avisoFecha" role="alert" hidden></p>
+                <label class="checkbox-label span-2"><input type="checkbox" name="confirmado"> Evento confirmado</label>
+
+                <h3 class="form-seccion">Lugar y transporte</h3>
+                <label class="campo span-2"><span>Sede</span>
+                    <select name="sede">
+                        <option value="">Selecciona una sede…</option>
+                        ${opcionesSede}
+                        <option value="${SEDE_OTRA}">Otro lugar (escribir manualmente)</option>
+                    </select></label>
+                ${campoTexto('Nombre del lugar', 'lugarManual', 'maxlength="255"', 'span-2', 'data-manual hidden')}
+                ${campoTexto('Dirección del lugar (opcional)', 'direccionLugarManual', 'maxlength="255"', 'span-2', 'data-manual hidden')}
+                ${campoTexto('Dirección del evento (opcional)', 'direccion', 'maxlength="255"', 'span-2')}
+                <label class="campo span-2"><span>Transporte (opcional)</span>
+                    <select name="transporte">
+                        <option value="">Sin transporte</option>
+                        ${opcionesTransporte}
+                    </select></label>
+
+                <h3 class="form-seccion">Cliente</h3>
+                ${campoTexto('Nombre completo', 'clienteNombre', 'maxlength="100"')}
+                <label class="campo"><span>Correo</span>
+                    <input type="email" name="clienteEmail" autocomplete="off" maxlength="150"></label>
+                <label class="campo"><span>Teléfono (opcional)</span>
+                    <input type="tel" name="clienteTelefono" autocomplete="off" maxlength="30" placeholder="Ej: 3001234567"></label>
+                ${campoTexto('Documento (opcional)', 'clienteDocumento', 'maxlength="50"')}
+                <small class="campo-ayuda span-2">Si ya existe un cliente con ese correo, se usa el registrado.</small>
+
+                <h3 class="form-seccion">Cotización</h3>
+                <p class="campo-ayuda span-2">Los elementos que se usarán en el evento se cotizan en la página de cotizaciones.
+                    El evento se crea cuando guardes allí la cotización.</p>
+            </div>
+            <p id="formEventoError" class="form-error" hidden></p>
+            <div class="modal-acciones">
+                <button type="button" class="btn-secundario" data-cerrar-modal>Cancelar</button>
+                <button type="submit" class="submit-btn btn-modal"><i class="fa-solid fa-file-invoice-dollar"></i> Cotizar elementos del evento</button>
+            </div>
+        </form>`);
+}
+
+/** Vuelve a poner en el formulario los datos de un evento en creación. */
+function rellenarFormulario(form: HTMLFormElement, b: BorradorEvento): void {
+    const poner = (nombre: string, valor: string) => {
+        const el = form.elements.namedItem(nombre) as HTMLInputElement | HTMLSelectElement;
+        el.value = valor;
+        // Una sede o un transporte que ya no existen dejan el desplegable en blanco.
+        if (el instanceof HTMLSelectElement && el.selectedIndex === -1) el.selectedIndex = 0;
+    };
+    poner('tipo', b.tipo);
+    poner('fecha', b.fecha);
+    poner('hora', b.hora);
+    (form.elements.namedItem('confirmado') as HTMLInputElement).checked = b.confirmado;
+    poner('sede', b.venueId !== null ? String(b.venueId) : (b.lugarManual ? SEDE_OTRA : ''));
+    poner('lugarManual', b.lugarManual);
+    poner('direccionLugarManual', b.direccionLugarManual);
+    poner('direccion', b.direccion);
+    poner('transporte', b.transporteId !== null ? String(b.transporteId) : '');
+    poner('clienteNombre', b.cliente.nombre);
+    poner('clienteEmail', b.cliente.email);
+    poner('clienteTelefono', b.cliente.telefono);
+    poner('clienteDocumento', b.cliente.documento);
+}
+
+/** Abre el formulario de nuevo evento, cargando antes las sedes y los transportes. */
+async function abrirCrear(): Promise<void> {
+    abrirModal(htmlModal('Nuevo evento',
+        '<p class="modal-texto"><i class="fa-solid fa-spinner fa-spin"></i> Cargando opciones...</p>'));
+    try {
+        opciones ??= await api<OpcionesEvento>('GET', '/api/eventos/opciones');
+    } catch (err) {
+        if (!modal.classList.contains('open')) return;
+        modalContenido.innerHTML = htmlModal('Nuevo evento', `
+            <p class="form-error">No se pudieron cargar las opciones: ${esc((err as Error).message)}</p>
+            <div class="modal-acciones"><button type="button" class="btn-secundario" data-cerrar-modal>Cerrar</button></div>`);
+        return;
+    }
+    if (!modal.classList.contains('open')) return; // se cerró mientras cargaba
+
+    modalContenido.innerHTML = htmlFormularioEvento(opciones);
+    const form = $<HTMLFormElement>('formEvento');
+    const campo = (nombre: string) => form.elements.namedItem(nombre) as HTMLInputElement;
+    const valor = (nombre: string) => campo(nombre).value.trim();
+
+    const sede = campo('sede');
+    const camposManual = form.querySelectorAll<HTMLElement>('[data-manual]');
+    const mostrarCamposManual = () => {
+        camposManual.forEach(c => { c.hidden = sede.value !== SEDE_OTRA; });
+    };
+    sede.addEventListener('change', mostrarCamposManual);
+
+    // Si venimos de la página de cotizaciones (o se dejó el formulario a medias), se recupera.
+    const borrador = leerBorrador();
+    if (borrador) rellenarFormulario(form, borrador);
+    mostrarCamposManual();
+    campo('tipo').focus();
+
+    // La advertencia de la fecha se quita en cuanto se cambia la fecha.
+    const avisoFecha = $('avisoFecha');
+    const limpiarAvisoFecha = () => {
+        avisoFecha.hidden = true;
+        campo('fecha').closest('.campo')?.classList.remove('invalido');
+    };
+    campo('fecha').addEventListener('input', limpiarAvisoFecha);
+    campo('fecha').addEventListener('change', limpiarAvisoFecha);
+
+    form.addEventListener('submit', async ev => {
+        ev.preventDefault();
+        const error = $('formEventoError');
+        limpiarAvisoFecha();
+
+        const faltan: string[] = [];
+        if (!valor('tipo')) faltan.push('tipo de evento');
+        if (!valor('fecha')) faltan.push('fecha');
+        if (!valor('hora')) faltan.push('hora');
+        if (!sede.value) faltan.push('sede');
+        else if (sede.value === SEDE_OTRA && !valor('lugarManual')) faltan.push('nombre del lugar');
+        if (!valor('clienteNombre')) faltan.push('nombre del cliente');
+        if (!valor('clienteEmail')) faltan.push('correo del cliente');
+        if (faltan.length) {
+            error.textContent = `Completa los campos obligatorios: ${faltan.join(', ')}.`;
+            error.hidden = false;
+            return;
+        }
+        if (!EMAIL_RE.test(valor('clienteEmail'))) {
+            error.textContent = 'El correo del cliente no es válido.';
+            error.hidden = false;
+            return;
+        }
+
+        // Antes de pasar a cotizar se comprueba que la base acepte la fecha del evento.
+        const boton = form.querySelector<HTMLButtonElement>('.btn-modal')!;
+        const textoBoton = boton.innerHTML;
+        boton.disabled = true;
+        boton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Comprobando fecha...';
+        try {
+            const fecha = await api<{ valida: boolean; fechaMaxima: string | null; mensaje: string | null }>(
+                'GET', `/api/eventos/fecha?fecha=${encodeURIComponent(valor('fecha'))}`);
+            if (!fecha.valida) {
+                avisoFecha.textContent = fecha.mensaje ?? 'La fecha del evento no es aceptada. Elige otra.';
+                avisoFecha.hidden = false;
+                // El selector solo deja elegir fechas aceptadas.
+                if (fecha.fechaMaxima) campo('fecha').max = fecha.fechaMaxima;
+                campo('fecha').closest('.campo')?.classList.add('invalido');
+                campo('fecha').focus();
+                return;
+            }
+        } catch (err) {
+            error.textContent = `No se pudo comprobar la fecha: ${(err as Error).message}`;
+            error.hidden = false;
+            return;
+        } finally {
+            boton.disabled = false;
+            boton.innerHTML = textoBoton;
+        }
+
+        // El evento se crea al guardar la cotización: aquí solo se guarda el borrador y se pasa a cotizar.
+        const lugarManual = sede.value === SEDE_OTRA;
+        const guardado = guardarBorrador({
+            tipo: valor('tipo'),
+            fecha: valor('fecha'),
+            hora: valor('hora'),
+            confirmado: campo('confirmado').checked,
+            venueId: lugarManual ? null : Number(sede.value),
+            lugarManual: lugarManual ? valor('lugarManual') : '',
+            direccionLugarManual: lugarManual ? valor('direccionLugarManual') : '',
+            direccion: valor('direccion'),
+            transporteId: valor('transporte') ? Number(valor('transporte')) : null,
+            cliente: {
+                nombre: valor('clienteNombre'),
+                email: valor('clienteEmail'),
+                telefono: valor('clienteTelefono'),
+                documento: valor('clienteDocumento')
+            }
+        });
+        if (!guardado) {
+            error.textContent = 'No se pudieron guardar los datos del evento en el navegador. Revisa que no tenga el almacenamiento bloqueado.';
+            error.hidden = false;
+            return;
+        }
+        error.hidden = true;
+        window.location.href = 'cotizador.html';
+    });
+}
+
 // ---------- Carga ----------
 async function cargar(): Promise<void> {
     try {
-        let resp: Response;
-        try {
-            resp = await fetch(`${API_URL}/api/eventos`);
-        } catch {
-            throw new Error('No se pudo conectar con el servidor.');
-        }
-        const json = await resp.json().catch(() => ({}));
-        if (!resp.ok) throw new Error(json.message || `Error ${resp.status}`);
-        eventos = json.eventos as Evento[];
+        const json = await api<{ eventos: Evento[] }>('GET', '/api/eventos');
+        eventos = json.eventos;
         estadoCarga.hidden = true;
         deck.hidden = false;
         detalle.hidden = false;
         mostrarDetalle(null, true);
         render();
+
+        // Recién creado desde la página de cotizaciones: llevarlo a la vista.
+        const creado = Number(parametros.get('creado'));
+        if (creado && eventos.some(e => e.id === creado)) {
+            seleccionar(creado);
+            avisar('Evento creado');
+        }
     } catch (err) {
         estadoCarga.classList.add('error');
         estadoCarga.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> No se pudieron cargar los eventos: ${esc((err as Error).message)}`;
@@ -424,6 +689,16 @@ $('calHoy').addEventListener('click', () => {
     renderCalendario(filtrar());
 });
 
+// Pin: deja el calendario extendido (y la lista retraída) aunque el cursor se vaya; otro clic lo suelta.
+const calPin = $('calPin');
+calPin.addEventListener('click', () => {
+    const fijado = $('panelCal').classList.toggle('fijado');
+    const texto = fijado ? 'Soltar calendario (se extiende solo al pasar el cursor)' : 'Fijar calendario extendido';
+    calPin.setAttribute('aria-pressed', String(fijado));
+    calPin.setAttribute('aria-label', texto);
+    calPin.title = texto;
+});
+
 listaEventos.addEventListener('click', ev => {
     const item = (ev.target as HTMLElement).closest<HTMLElement>('[data-evento]');
     if (item) seleccionar(Number(item.dataset.evento));
@@ -450,10 +725,21 @@ document.addEventListener('click', ev => {
     if (popoverFecha && !t.closest('.cal-popover') && !t.closest('[data-mas]')) cerrarPopover();
 });
 document.addEventListener('keydown', ev => {
-    if (ev.key === 'Escape') cerrarPopover();
+    if (ev.key !== 'Escape') return;
+    if (modal.classList.contains('open')) cerrarModal();
+    else cerrarPopover();
 });
 
-// El panel del calendario cambia de ancho al hacer hover: reubicar el cuadro abierto.
+// El formulario es largo: solo se cierra con la X, Cancelar o Esc, no al tocar el fondo.
+document.querySelectorAll('[data-nuevo-evento]').forEach(b => b.addEventListener('click', () => void abrirCrear()));
+modal.addEventListener('click', ev => {
+    if ((ev.target as HTMLElement).closest('[data-cerrar-modal]')) cerrarModal();
+});
+
+// El calendario cambia de ancho al hacer hover (se extiende y la lista se retrae) y al redimensionar la
+// ventana: reubicar el cuadro abierto.
 new ResizeObserver(() => posicionarPopover()).observe(calGrid);
 
 void cargar();
+// Al volver desde la página de cotizaciones se reabre el formulario con el evento en creación.
+if (parametros.has('nuevo')) void abrirCrear();

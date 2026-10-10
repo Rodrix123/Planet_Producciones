@@ -22,9 +22,18 @@ eventos (Manizales, Caldas). Monorepo con dos workspaces:
 - No modificar el diseño visual (colores, layout, textos) ni el
   comportamiento funcional existente sin que se pida explícitamente.
 - TypeScript estricto donde sea razonable; no romper la compilación.
-- Los precios y catálogos de servicios viven en `apps/web/index.html`
+- Los precios y catálogos de servicios viven en `apps/web/src/catalogo.html`
   (atributos `data-precio` de los `<select>`/checkbox) — reflejar cualquier
-  cambio también en la lógica de `apps/web/src/main.ts`.
+  cambio también en la lógica de `apps/web/src/catalogo.ts`. Los nombres y
+  precios deben coincidir con `inventory` / `inventory_variants` en la base:
+  un evento nuevo guarda sus servicios buscándolos por categoría (`data-tag`)
+  y nombre.
+- Un evento nuevo se crea desde la página de cotizaciones: el formulario de
+  `eventos.html` solo recoge los datos del evento (queda como borrador en
+  `sessionStorage`) y `cotizador.html` lo guarda junto con la cotización.
+  Antes de pasar a cotizar se comprueba la fecha con `GET /api/eventos/fecha`,
+  que aplica la regla de la base (`config.fecha_maxima_separacion_evento`,
+  días máximos desde hoy); `crearEvento` la vuelve a comprobar.
 
 ## Comandos útiles
 

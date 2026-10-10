@@ -1,30 +1,18 @@
 import './style.css';
+import {
+    calcularCotizacion,
+    HTML_CATALOGO,
+    renderResumen,
+    type DatosCotizacion,
+    type ItemSeleccionado
+} from './catalogo';
+import { api } from './api';
+import { borrarBorrador, leerBorrador } from './borrador-evento';
 
 // Librerías cargadas vía CDN en index.html (sin tipos propios en este proyecto)
 declare const Swal: any;
 declare const html2pdf: any;
 declare const XLSX: any;
-
-interface ItemSeleccionado {
-    tag: string;
-    nombre: string;
-    descripcion: string;
-    precio: number;
-}
-
-interface DatosCotizacion {
-    total: number;
-    itemsSeleccionados: ItemSeleccionado[];
-}
-
-interface DatosCliente {
-    nombre: string;
-    correo: string;
-    telefono: string;
-    tipoEvento: string;
-    ciudad: string;
-    lugar: string;
-}
 
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('quoteForm') as HTMLFormElement;
@@ -32,11 +20,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const listaResumenEl = document.getElementById('listaResumen') as HTMLElement;
     const btnSubmit = document.getElementById('btnSubmit') as HTMLButtonElement;
 
-    const formatterCOP = new Intl.NumberFormat('es-CO', {
-        style: 'currency',
-        currency: 'COP',
-        minimumFractionDigits: 0
-    });
+    // El catálogo (selects, checkboxes y cantidades) vive en src/catalogo.html.
+    (document.getElementById('catalogo') as HTMLElement).innerHTML = HTML_CATALOGO;
 
     // Convierte logo.png local a Base64 para garantizar que html2canvas lo dibuje sin errores
     function obtenerLogoBase64(): Promise<string> {
@@ -61,105 +46,81 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Lee el atributo data-incluye (lista separada por "|") y la devuelve como texto legible
-    function obtenerIncluye(el: Element): string {
-        const raw = el.getAttribute('data-incluye');
-        if (!raw) return '';
-        const partes = raw.split('|').map(p => p.trim()).filter(Boolean);
-        return partes.join(' • ');
+    // Recalcula el total y actualiza el resumen lateral en vivo.
+    function actualizarCotizacion(): DatosCotizacion {
+        const datos = calcularCotizacion(form);
+        renderResumen(precioTotalEl, listaResumenEl, datos);
+        return datos;
     }
 
-    // Cálculo dinámico de cotización: lee genéricamente cualquier <select>, checkbox o
-    // input de cantidad marcado con las clases .precio-select / .precio-check / .precio-qty
-    // y sus atributos data-precio / data-tag / data-nombre / data-incluye. Esto permite
-    // ampliar el catálogo de precios (apps/web/index.html) sin tocar esta lógica.
-    function calcularCotizacion(): DatosCotizacion {
-        let total = 0;
-        const itemsSeleccionados: ItemSeleccionado[] = [];
+    form.addEventListener('input', actualizarCotizacion);
+    form.addEventListener('change', actualizarCotizacion);
 
-        // 1. Selects de catálogo (una sola opción por categoría)
-        const selects = form.querySelectorAll<HTMLSelectElement>('select.precio-select');
-        selects.forEach(select => {
-            const hint = document.getElementById(`${select.id}-hint`);
-            const opt = select.options[select.selectedIndex];
-            const incluye = opt ? obtenerIncluye(opt) : '';
-
-            if (hint) {
-                hint.innerHTML = (select.selectedIndex > 0 && incluye) ? `<strong>Incluye:</strong> ${incluye}` : '';
-            }
-
-            if (select.selectedIndex <= 0 || !opt) return;
-            const precio = parseFloat(opt.getAttribute('data-precio') || '') || 0;
-            if (precio <= 0) return;
-
-            total += precio;
-            itemsSeleccionados.push({
-                tag: select.dataset.tag || 'SERVICIO',
-                nombre: opt.value,
-                descripcion: incluye,
-                precio
-            });
+    function avisarSeleccionVacia(): void {
+        Swal.fire({
+            icon: 'info',
+            title: 'Selección Vacía',
+            text: 'Selecciona al menos un servicio o montaje para cotizar.',
+            confirmButtonColor: '#f97316'
         });
+    }
 
-        // 2. Checkboxes de efectos / add-ons
-        const checks = form.querySelectorAll<HTMLInputElement>('input.precio-check');
-        checks.forEach(chk => {
-            if (!chk.checked) return;
-            const precio = parseFloat(chk.getAttribute('data-precio') || '') || 0;
-            if (precio <= 0) return;
+    // Evento en creación (viene de eventos.html): esta cotización se guarda junto con el
+    // evento, que se crea al guardarla. Si se entra al cotizador directamente, no hay borrador
+    // y la página solo genera el PDF y el Excel.
+    const borrador = leerBorrador();
+    const btnCrearEvento = document.getElementById('btnCrearEvento') as HTMLButtonElement;
+    if (borrador) {
+        (document.getElementById('avisoEvento') as HTMLElement).hidden = false;
+        btnCrearEvento.hidden = false;
+        btnSubmit.classList.add('submit-btn-secundario');
+    }
 
-            total += precio;
-            itemsSeleccionados.push({
-                tag: chk.dataset.tag || 'SERVICIO',
-                nombre: chk.dataset.nombre || chk.id,
-                descripcion: obtenerIncluye(chk),
-                precio
-            });
-        });
-
-        // 3. Ítems por cantidad (mobiliario y extras cobrados "c/u")
-        const qtys = form.querySelectorAll<HTMLInputElement>('input.precio-qty');
-        qtys.forEach(input => {
-            const cantidad = parseInt(input.value, 10) || 0;
-            if (cantidad <= 0) return;
-            const precioUnit = parseFloat(input.getAttribute('data-precio-unit') || '') || 0;
-            const precio = cantidad * precioUnit;
-            if (precio <= 0) return;
-
-            total += precio;
-            itemsSeleccionados.push({
-                tag: input.dataset.tag || 'SERVICIO',
-                nombre: `${cantidad} x ${input.dataset.nombre || input.id} (${formatterCOP.format(precioUnit)} c/u)`,
-                descripcion: obtenerIncluye(input),
-                precio
-            });
-        });
-
-        // Actualizar UI en vivo
-        precioTotalEl.textContent = formatterCOP.format(total);
-        listaResumenEl.innerHTML = '';
-
-        if (itemsSeleccionados.length === 0) {
-            listaResumenEl.innerHTML = '<li><em>Selecciona tus opciones en el formulario para calcular el costo.</em></li>';
-        } else {
-            itemsSeleccionados.forEach(item => {
-                const li = document.createElement('li');
-                li.innerHTML = `<strong>${item.nombre}</strong>: ${formatterCOP.format(item.precio)}`;
-                listaResumenEl.appendChild(li);
-            });
+    btnCrearEvento.addEventListener('click', async () => {
+        if (!borrador) return;
+        const datosCotizacion = actualizarCotizacion();
+        if (datosCotizacion.itemsSeleccionados.length === 0) {
+            avisarSeleccionVacia();
+            return;
         }
 
-        return { total, itemsSeleccionados };
-    }
+        Swal.fire({
+            title: 'Creando evento...',
+            text: 'Guardando el evento y su cotización',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); }
+        });
 
-    form.addEventListener('input', calcularCotizacion);
-    form.addEventListener('change', calcularCotizacion);
+        try {
+            const { evento } = await api<{ evento: { id: number } }>('POST', '/api/eventos', {
+                ...borrador,
+                items: datosCotizacion.itemsSeleccionados.map(i => ({
+                    tag: i.tag,
+                    nombre: i.catalogoNombre,
+                    cantidad: i.cantidad
+                }))
+            });
+            borrarBorrador();
+            window.location.href = `eventos.html?creado=${evento.id}`;
+        } catch (error) {
+            // Los datos del evento siguen en el borrador: se pueden corregir y volver a intentar.
+            const respuesta = await Swal.fire({
+                icon: 'error',
+                title: 'No se pudo crear el evento',
+                text: (error as Error).message,
+                showCancelButton: true,
+                confirmButtonText: 'Volver al evento',
+                cancelButtonText: 'Cerrar',
+                confirmButtonColor: '#f97316'
+            });
+            if (respuesta.isConfirmed) window.location.href = 'eventos.html?nuevo=1';
+        }
+    });
 
     // Plantilla HTML de Alta Resolución para PDF con Marca de Agua
     // Los ítems se agrupan por categoría (tag) para que el desglose quede organizado,
     // y cada fila muestra debajo del nombre lo que incluye el paquete (si aplica).
     function construirHTMLCotizacion(
-        datosCliente: DatosCliente,
         datosCotizacion: DatosCotizacion,
         logoBase64: string,
         refNum: string,
@@ -226,28 +187,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>
 
-                <!-- Datos del Cliente -->
-                <div style="margin-top: 15px; background-color: rgba(248, 250, 252, 0.88); border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 16px; page-break-inside: avoid;">
-                    <div style="font-size: 10px; font-weight: 800; color: #ea580c; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">1. INFORMACIÓN DEL CLIENTE Y DETALLES DEL EVENTO</div>
-                    <table style="width: 100%; font-size: 10.5px; border-collapse: collapse; color: #334155;">
-                        <tr>
-                            <td style="padding: 2px 0;"><strong>Cliente:</strong> ${datosCliente.nombre}</td>
-                            <td style="padding: 2px 0;"><strong>Fecha del Evento:</strong> <span style="color: #ea580c; font-weight: 700;">A convenir 2026</span></td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 2px 0;"><strong>Email:</strong> ${datosCliente.correo}</td>
-                            <td style="padding: 2px 0;"><strong>Tipo de Evento:</strong> ${datosCliente.tipoEvento || 'N/A'}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 2px 0;"><strong>WhatsApp:</strong> ${datosCliente.telefono}</td>
-                            <td style="padding: 2px 0;"><strong>Ubicación / Sede:</strong> ${datosCliente.ciudad || 'Por confirmar'} (${datosCliente.lugar || 'Sede a confirmar'})</td>
-                        </tr>
-                    </table>
-                </div>
-
                 <!-- Tabla de Servicios -->
                 <div style="margin-top: 15px;">
-                    <div style="font-size: 10px; font-weight: 800; color: #1e293b; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px;">2. DESGLOSE DE EQUIPAMIENTO Y SERVICIOS</div>
+                    <div style="font-size: 10px; font-weight: 800; color: #1e293b; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px;">1. DESGLOSE DE EQUIPAMIENTO Y SERVICIOS</div>
                     <table style="width: 100%; border-collapse: collapse;">
                         <thead>
                             <tr style="background-color: #1e293b; color: #ffffff; text-align: left; font-size: 10px;">
@@ -299,7 +241,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Exportación a Excel Profesional Estructurado
     function generarExcelEjecutivo(
-        datosCliente: DatosCliente,
         datosCotizacion: DatosCotizacion,
         refNum: string,
         fechaHoy: string
@@ -308,12 +249,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ["PLANET PRODUCCIONES - PRODUCCIÓN TÉCNICA & EVENTOS VIP"],
             [`COTIZACIÓN OFICIAL: ${refNum}`, "", "", `FECHA: ${fechaHoy}`],
             [""],
-            ["1. DATOS DEL CLIENTE"],
-            ["Cliente:", datosCliente.nombre, "Tipo Evento:", datosCliente.tipoEvento || 'N/A'],
-            ["Correo:", datosCliente.correo, "Ubicación:", datosCliente.ciudad],
-            ["WhatsApp:", datosCliente.telefono, "Sede:", datosCliente.lugar || 'Por definir'],
-            [""],
-            ["2. DESGLOSE PREVENTIVO DE SERVICIOS"],
+            ["1. DESGLOSE PREVENTIVO DE SERVICIOS"],
             ["Item", "Categoría", "Servicio / Descripción", "Valor COP"]
         ];
 
@@ -338,8 +274,9 @@ document.addEventListener('DOMContentLoaded', () => {
             { wch: 18 }  // Precio COP
         ];
 
+        // Los ítems empiezan en la fila 6 (tras el encabezado y la cabecera de la tabla).
         const numRows = aoaData.length;
-        for (let i = 11; i < numRows; i++) {
+        for (let i = 6; i < numRows; i++) {
             const cellAddress = `D${i}`;
             if (worksheet[cellAddress] && typeof worksheet[cellAddress].v === 'number') {
                 worksheet[cellAddress].z = '"$"#,##0';
@@ -348,37 +285,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Cotización VIP');
-        XLSX.writeFile(workbook, `Cotizacion_Planet_${datosCliente.nombre.replace(/\s+/g, '_')}.xlsx`);
+        XLSX.writeFile(workbook, `Cotizacion_Planet_${refNum}.xlsx`);
     }
 
     // Evento Principal al Clic
     btnSubmit.addEventListener('click', async () => {
-        const nombre = (document.getElementById('nombre') as HTMLInputElement).value.trim();
-        const correo = (document.getElementById('correo') as HTMLInputElement).value.trim();
-        const telefono = (document.getElementById('telefono') as HTMLInputElement).value.trim();
-        const tipoEvento = (document.getElementById('tipoEvento') as HTMLSelectElement).value;
-        const ciudad = (document.getElementById('transporte') as HTMLSelectElement).value;
-        const lugar = (document.getElementById('lugar') as HTMLSelectElement).value;
-
-        if (!nombre || !correo || !telefono) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Campos Incompletos',
-                text: 'Por favor ingresa Nombre, Correo y WhatsApp del cliente.',
-                confirmButtonColor: '#f97316'
-            });
-            return;
-        }
-
-        const datosCotizacion = calcularCotizacion();
+        const datosCotizacion = actualizarCotizacion();
 
         if (datosCotizacion.itemsSeleccionados.length === 0) {
-            Swal.fire({
-                icon: 'info',
-                title: 'Selección Vacía',
-                text: 'Selecciona al menos un servicio o montaje para cotizar.',
-                confirmButtonColor: '#f97316'
-            });
+            avisarSeleccionVacia();
             return;
         }
 
@@ -392,7 +307,6 @@ document.addEventListener('DOMContentLoaded', () => {
         let elementoHTML: HTMLDivElement | null = null;
 
         try {
-            const datosCliente: DatosCliente = { nombre, correo, telefono, tipoEvento, ciudad, lugar };
             const refNum = `PL-2026-${Math.floor(1000 + Math.random() * 9000)}`;
             const fechaHoy = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
@@ -400,7 +314,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const logoBase64 = await obtenerLogoBase64();
 
             // Renderizado PDF HD
-            elementoHTML = construirHTMLCotizacion(datosCliente, datosCotizacion, logoBase64, refNum, fechaHoy);
+            elementoHTML = construirHTMLCotizacion(datosCotizacion, logoBase64, refNum, fechaHoy);
             document.body.appendChild(elementoHTML);
 
             // Vuelve el scroll al origen: si la página quedó desplazada (formulario largo)
@@ -415,7 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const opt = {
                 margin:       [0.2, 0.2, 0.2, 0.2],
-                filename:     `Cotizacion_Planet_${nombre.replace(/\s+/g, '_')}.pdf`,
+                filename:     `Cotizacion_Planet_${refNum}.pdf`,
                 image:        { type: 'jpeg', quality: 1.0 },
                 html2canvas:  {
                     scale: 2,
@@ -434,7 +348,7 @@ document.addEventListener('DOMContentLoaded', () => {
             elementoHTML = null;
 
             // Exportación Excel Profesional
-            generarExcelEjecutivo(datosCliente, datosCotizacion, refNum, fechaHoy);
+            generarExcelEjecutivo(datosCotizacion, refNum, fechaHoy);
 
             Swal.fire({
                 icon: 'success',
@@ -457,5 +371,5 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    calcularCotizacion();
+    actualizarCotizacion();
 });

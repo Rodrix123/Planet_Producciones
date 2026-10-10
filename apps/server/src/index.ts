@@ -12,7 +12,13 @@ import {
     ErrorEmpleado,
     listarEmpleados
 } from '@my-app/db/empleados';
-import { listarEventos } from '@my-app/db/eventos';
+import {
+    crearEvento,
+    ErrorEvento,
+    listarEventos,
+    listarOpcionesEvento,
+    validarFechaEvento
+} from '@my-app/db/eventos';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -239,7 +245,7 @@ async function conEmpleados(res: Response, operacion: (db: NonNullable<typeof su
         const resultado = await operacion(supabaseAdmin);
         res.status(status).json({ status: 'ok', ...(resultado as object) });
     } catch (error) {
-        if (error instanceof ErrorEmpleado) {
+        if (error instanceof ErrorEmpleado || error instanceof ErrorEvento) {
             res.status(error.status).json({ status: 'error', message: error.message });
             return;
         }
@@ -250,6 +256,16 @@ async function conEmpleados(res: Response, operacion: (db: NonNullable<typeof su
 
 app.get('/api/eventos', (_req: Request, res: Response) =>
     conEmpleados(res, listarEventos));
+
+app.get('/api/eventos/opciones', (_req: Request, res: Response) =>
+    conEmpleados(res, listarOpcionesEvento));
+
+// Comprueba si la base aceptaría esa fecha (?fecha=YYYY-MM-DD) antes de pasar a cotizar.
+app.get('/api/eventos/fecha', (req: Request, res: Response) =>
+    conEmpleados(res, db => validarFechaEvento(db, req.query.fecha)));
+
+app.post('/api/eventos', (req: Request, res: Response) =>
+    conEmpleados(res, async db => ({ evento: await crearEvento(db, req.body) }), 201));
 
 app.get('/api/empleados', (_req: Request, res: Response) =>
     conEmpleados(res, listarEmpleados));

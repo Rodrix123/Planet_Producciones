@@ -437,7 +437,8 @@
     margin-bottom: 0.35rem;
 }
 
-.campo input {
+.campo input,
+.campo select {
     width: 100%;
     padding: 0.7rem 0.9rem;
     background: var(--bg-input);
@@ -447,7 +448,8 @@
     font-size: 0.92rem;
 }
 
-.campo input:focus {
+.campo input:focus,
+.campo select:focus {
     outline: none;
     border-color: var(--orange-main);
 }
@@ -557,6 +559,24 @@
     display: flex;
     justify-content: flex-end;
     gap: 0.75rem;
+}
+
+/* X para cerrar una ventana emergente (mismo estilo que .drawer-close). */
+.modal-cerrar {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    background: var(--bg-input);
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.modal-cerrar:hover,
+.modal-cerrar:focus-visible {
+    color: var(--orange-main);
+    border-color: var(--orange-main);
 }
 
 .toast {

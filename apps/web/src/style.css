@@ -408,6 +408,43 @@ input:focus, select:focus {
     align-items: flex-start;
 }
 
+/* Cotizador abierto desde "Nuevo evento": aviso del evento en creación y botón de guardado. */
+.aviso-evento {
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+}
+
+.aviso-evento span {
+    flex: 1;
+    min-width: 200px;
+}
+
+.aviso-evento-enlace {
+    color: var(--orange-main);
+    font-weight: 700;
+    text-decoration: underline;
+    white-space: nowrap;
+}
+
+.aviso-evento[hidden],
+.submit-btn[hidden] {
+    display: none;
+}
+
+/* Con el evento en creación, generar el PDF/Excel pasa a ser la acción secundaria. */
+.submit-btn.submit-btn-secundario {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border-color);
+    box-shadow: none;
+}
+
+.submit-btn.submit-btn-secundario:hover {
+    color: var(--text-light);
+    border-color: var(--text-muted);
+}
+
 footer {
     border-top: 1px solid var(--border-color);
     padding: 1.5rem;
