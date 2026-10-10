@@ -1,6 +1,7 @@
 import './style.css';
 import './panel.css';
 import './eventos.css';
+import './deck-fijado';
 
 interface Evento {
     id: number;

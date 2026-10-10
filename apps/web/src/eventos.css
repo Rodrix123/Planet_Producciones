@@ -44,6 +44,7 @@
     --deck-gap: 1.25rem;
     --deck-base: calc(50% - var(--deck-gap) / 2);
     --deck-hover: 72%;
+    --deck-compacto: calc(100% - var(--deck-hover) - var(--deck-gap));
     position: relative;
     height: var(--deck-h);
 }
@@ -81,6 +82,64 @@
     z-index: 5;
     border-color: rgba(249, 115, 22, 0.45);
     box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+}
+
+/* Chincheta del encabezado: deja el panel extendido (ver deck-fijado.ts). Solo uno a la vez. */
+.btn-pin {
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    background: var(--bg-input);
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: color 0.2s, background 0.2s, border-color 0.2s;
+}
+
+.btn-pin i {
+    transform: rotate(45deg);
+    transition: transform 0.2s;
+}
+
+.btn-pin:hover {
+    color: var(--text-light);
+    border-color: var(--text-muted);
+}
+
+.btn-pin:focus-visible {
+    outline: 2px solid var(--text-light);
+    outline-offset: 2px;
+}
+
+.btn-pin[aria-pressed="true"] {
+    color: var(--orange-main);
+    background: rgba(249, 115, 22, 0.12);
+    border-color: rgba(249, 115, 22, 0.5);
+}
+
+.btn-pin[aria-pressed="true"] i {
+    transform: none;
+}
+
+/* En la lista el resto del encabezado va a la izquierda; en el calendario ya lo empuja .cal-nav. */
+.deck-lista .btn-pin {
+    margin-left: auto;
+}
+
+/* Panel fijado: se queda extendido y el otro se recoge al ancho que sobra,
+   pero sigue creciendo sobre él al pasar el cursor. */
+@media (min-width: 901px) {
+    .deck[data-fijado="lista"] .deck-lista,
+    .deck[data-fijado="cal"] .deck-cal {
+        width: var(--deck-hover);
+    }
+
+    .deck[data-fijado="lista"] .deck-cal:not(:hover),
+    .deck[data-fijado="cal"] .deck-lista:not(:hover) {
+        width: var(--deck-compacto);
+    }
 }
 
 .deck-head {
@@ -574,6 +633,10 @@
 
     .deck-lista {
         max-height: 360px;
+    }
+
+    .btn-pin {
+        display: none;
     }
 
     .cal-grid {
