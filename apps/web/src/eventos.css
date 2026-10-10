@@ -249,6 +249,25 @@
 }
 
 /* ---------- Calendario ---------- */
+/* Título grande y, debajo, el mes en un tamaño menor (lo escribe eventos.ts en #calTitulo). */
+.cal-titulo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+.cal-titulo h2 {
+    font-size: 1.8rem;
+    line-height: 1.1;
+}
+
+.cal-mes {
+    font-size: 1.05rem;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
 .cal-nav {
     display: flex;
     align-items: center;
