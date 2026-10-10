@@ -178,7 +178,8 @@ label {
 input[type="text"],
 input[type="email"],
 input[type="tel"],
-select {
+select,
+textarea {
     width: 100%;
     background-color: var(--bg-input);
     border: 1px solid var(--border-color);
@@ -190,7 +191,7 @@ select {
     transition: border-color 0.2s;
 }
 
-input:focus, select:focus {
+input:focus, select:focus, textarea:focus {
     border-color: var(--orange-main);
 }
 
@@ -360,6 +361,34 @@ footer {
 @keyframes fab-pulse {
     0%, 100% { box-shadow: 0 6px 20px rgba(249, 115, 22, 0.45); }
     50% { box-shadow: 0 6px 26px rgba(249, 115, 22, 0.75); }
+}
+
+/* Diálogo "Ingresa tu correo" (SweetAlert2): los campos usan el estilo de los demás campos de la
+   página (reglas globales de arriba), sin los márgenes propios de SweetAlert2 que los sacaban del recuadro */
+.asistencia-form {
+    text-align: left;
+}
+
+.asistencia-form input,
+.asistencia-form textarea {
+    display: block;
+}
+
+.asistencia-form label {
+    margin: 1rem 0 0.4rem;
+    color: #4b5563;
+}
+
+.asistencia-form .asistencia-ayuda {
+    margin: 0 0 0.75rem;
+    text-align: center;
+    color: #6b7280;
+}
+
+.asistencia-form textarea {
+    min-height: 5.5rem;
+    line-height: 1.4;
+    resize: none;
 }
 
 @media (max-width: 480px) {

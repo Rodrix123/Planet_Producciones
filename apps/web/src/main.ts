@@ -559,6 +559,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Botón flotante de contacto rápido: WhatsApp o Correo ---
     const WHATSAPP_NUMERO = '573185101502';
+    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const btnContacto = document.getElementById('btnContacto') as HTMLButtonElement | null;
 
     // Envía la confirmación de la solicitud de asistencia al correo ingresado por el visitante
@@ -589,6 +590,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return mensaje;
     }
 
+    // Evita que texto escrito por el visitante se interprete como HTML dentro de un diálogo
+    function escaparHtml(texto: string): string {
+        return texto.replace(/[&<>"']/g, (caracter) => `&#${caracter.charCodeAt(0)};`);
+    }
+
     btnContacto?.addEventListener('click', () => {
         Swal.fire({
             title: '¿Cómo deseas recibir asistencia?',
@@ -610,20 +616,58 @@ document.addEventListener('DOMContentLoaded', () => {
                 const url = `https://wa.me/${WHATSAPP_NUMERO}?text=${encodeURIComponent(mensaje)}`;
                 window.open(url, '_blank', 'noopener,noreferrer');
             } else if (result.isDenied) {
-                const { value: correoDestino } = await Swal.fire({
+                // Dos campos (correo y mensaje opcional): SweetAlert2 solo trae uno propio, por eso se arman con HTML
+                const { value: datosSolicitud } = await Swal.fire({
                     title: 'Ingresa tu correo',
-                    input: 'email',
-                    inputLabel: 'Te enviaremos la confirmación de tu solicitud a este correo',
-                    inputPlaceholder: 'tucorreo@ejemplo.com',
+                    html: `
+                        <div class="asistencia-form">
+                            <label for="asistenciaCorreo" class="asistencia-ayuda">Te enviaremos la confirmación de tu solicitud a este correo</label>
+                            <input type="email" id="asistenciaCorreo" placeholder="tucorreo@ejemplo.com" autocomplete="email">
+                            <label for="asistenciaMensaje">Mensaje opcional</label>
+                            <textarea id="asistenciaMensaje" rows="3" maxlength="500" placeholder="Si quieres, cuéntanos más sobre lo que necesitas"></textarea>
+                        </div>
+                    `,
+                    focusConfirm: false,
                     showCancelButton: true,
                     confirmButtonText: 'Enviar',
                     cancelButtonText: 'Cancelar',
                     confirmButtonColor: '#f97316',
                     cancelButtonColor: '#374151',
-                    inputValidator: (value: string) => (!value ? 'Debes ingresar un correo.' : undefined)
+                    didOpen: () => {
+                        const campoCorreo = document.getElementById('asistenciaCorreo') as HTMLInputElement;
+                        campoCorreo.focus();
+                        campoCorreo.addEventListener('input', () => Swal.resetValidationMessage());
+                        // Con un campo propio SweetAlert2 ya no envía con Enter (antes lo hacía su input integrado)
+                        campoCorreo.addEventListener('keydown', (evento) => {
+                            if (evento.key === 'Enter') {
+                                evento.preventDefault();
+                                Swal.clickConfirm();
+                            }
+                        });
+                    },
+                    preConfirm: () => {
+                        const correo = (document.getElementById('asistenciaCorreo') as HTMLInputElement).value.trim();
+                        const mensajeOpcional = (document.getElementById('asistenciaMensaje') as HTMLTextAreaElement).value.trim();
+
+                        if (!correo) {
+                            Swal.showValidationMessage('Debes ingresar un correo.');
+                            return false;
+                        }
+                        if (!EMAIL_REGEX.test(correo)) {
+                            Swal.showValidationMessage('Ingresa un correo electrónico válido.');
+                            return false;
+                        }
+                        return { correo, mensajeOpcional };
+                    }
                 });
 
-                if (!correoDestino) return;
+                if (!datosSolicitud) return;
+
+                const correoDestino: string = datosSolicitud.correo;
+                // Si el visitante no escribió nada, se envía el mensaje de siempre; si lo hizo, se agrega al resumen
+                const mensajeSolicitud = datosSolicitud.mensajeOpcional
+                    ? `${mensaje}\n\nTu mensaje: ${datosSolicitud.mensajeOpcional}`
+                    : mensaje;
 
                 Swal.fire({
                     title: 'Enviando solicitud...',
@@ -632,11 +676,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 try {
-                    await enviarAsistenciaCorreo(correoDestino, nombre, mensaje);
+                    await enviarAsistenciaCorreo(correoDestino, nombre, mensajeSolicitud);
                     Swal.fire({
                         icon: 'success',
                         title: '¡Solicitud enviada!',
-                        html: `Te enviamos la confirmación a <strong>${correoDestino}</strong>. Pronto nos pondremos en contacto contigo.`,
+                        html: `Te enviamos la confirmación a <strong>${escaparHtml(correoDestino)}</strong>. Pronto nos pondremos en contacto contigo.`,
                         confirmButtonColor: '#f97316'
                     });
                 } catch (error) {
