@@ -75,8 +75,8 @@
     right: 0;
 }
 
-/* Al pasar el cursor el panel crece sobre el otro, que conserva su tamaño. */
-.deck-panel:hover {
+/* Solo el calendario se extiende: al pasar el cursor crece sobre la lista, que conserva su tamaño. */
+.deck-cal:hover {
     width: var(--deck-hover);
     z-index: 5;
     border-color: rgba(249, 115, 22, 0.45);
