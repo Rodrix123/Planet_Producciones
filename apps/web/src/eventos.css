@@ -44,6 +44,7 @@
     --deck-gap: 1.25rem;
     --deck-base: calc(50% - var(--deck-gap) / 2);
     --deck-hover: 72%;
+    --deck-compacto: calc(100% - var(--deck-hover) - var(--deck-gap));
     position: relative;
     height: var(--deck-h);
 }
@@ -75,12 +76,19 @@
     right: 0;
 }
 
-/* Solo el calendario se extiende: al pasar el cursor crece sobre la lista, que conserva su tamaño. */
+/* Solo el calendario se extiende al pasar el cursor; la lista no crece y, mientras
+   el calendario está extendido, se retrae al ancho que sobra. */
 .deck-cal:hover {
     width: var(--deck-hover);
     z-index: 5;
     border-color: rgba(249, 115, 22, 0.45);
     box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+}
+
+@media (min-width: 901px) {
+    .deck:has(.deck-cal:hover) .deck-lista {
+        width: var(--deck-compacto);
+    }
 }
 
 .deck-head {
