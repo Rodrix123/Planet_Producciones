@@ -49,13 +49,26 @@ export class ErrorEmpleado extends Error {
 const POR_PAGINA = 200;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function aEmpleado(u: User, rolId: number | null, dias: string[], nombrePerfil?: string | null): Empleado {
+/**
+ * Nombre de un usuario de auth.users: lo que guardan sus metadatos (el que
+ * escribe este módulo al crear el empleado es full_name). public.profiles ya
+ * no guarda nombre ni correo.
+ */
+export function nombreDeUsuario(u: User): string | null {
+  const meta = (u.user_metadata ?? {}) as Record<string, unknown>;
+  for (const valor of [meta.full_name, meta.nombre, meta.name, meta.display_name]) {
+    if (typeof valor === "string" && valor.trim() !== "") return valor.trim();
+  }
+  return null;
+}
+
+function aEmpleado(u: User, rolId: number | null, dias: string[]): Empleado {
   const meta = (u.user_metadata ?? {}) as Record<string, unknown>;
   return {
     id: u.id,
     email: u.email ?? null,
     telefono: u.phone ? `+${u.phone}` : (meta.telefono as string | undefined) || null,
-    nombre: (nombrePerfil || meta.full_name || meta.nombre || meta.name || null) as string | null,
+    nombre: nombreDeUsuario(u),
     avatarUrl: (meta.avatar_url ?? null) as string | null,
     rolId,
     diasNoDisponibles: dias,
@@ -88,7 +101,7 @@ async function perfilExiste(supabase: SupabaseClient, id: string): Promise<void>
 
 async function cargarEmpleado(supabase: SupabaseClient, id: string): Promise<Empleado> {
   const [perfil, dias, usuario] = await Promise.all([
-    supabase.from("profiles").select("role_id, nombre").eq("id", id).single(),
+    supabase.from("profiles").select("role_id").eq("id", id).single(),
     supabase.from("unavailability_users").select("date").eq("id_user", id).order("date"),
     supabase.auth.admin.getUserById(id),
   ]);
@@ -99,23 +112,22 @@ async function cargarEmpleado(supabase: SupabaseClient, id: string): Promise<Emp
     usuario.data.user,
     perfil.data.role_id as number | null,
     dias.data.map((d) => d.date as string),
-    perfil.data.nombre as string | null,
   );
 }
 
 /**
- * Requiere un cliente con service role: auth.users (correo, teléfono,
+ * Requiere un cliente con service role: auth.users (nombre, correo, teléfono,
  * metadatos) solo es accesible por la Admin API.
  *
  * - public.role                  -> secciones
  * - public.profiles              -> quiénes son empleados y su role_id
  * - public.unavailability_users  -> días que no pueden asistir
- * - auth.users (Admin API)       -> datos básicos del perfil
+ * - auth.users (Admin API)       -> todos los datos del usuario que se muestran
  */
 export async function listarEmpleados(supabase: SupabaseClient): Promise<ListaEmpleados> {
   const [rolesRes, perfilesRes, indispRes] = await Promise.all([
     supabase.from("role").select("id, name, description").order("id"),
-    supabase.from("profiles").select("id, role_id, nombre"),
+    supabase.from("profiles").select("id, role_id"),
     supabase.from("unavailability_users").select("id_user, date").order("date"),
   ]);
   if (rolesRes.error) throw rolesRes.error;
@@ -124,9 +136,6 @@ export async function listarEmpleados(supabase: SupabaseClient): Promise<ListaEm
 
   const rolPorPerfil = new Map<string, number | null>(
     perfilesRes.data.map((p) => [p.id as string, p.role_id as number | null]),
-  );
-  const nombrePorPerfil = new Map<string, string | null>(
-    perfilesRes.data.map((p) => [p.id as string, p.nombre as string | null]),
   );
 
   const dias = new Map<string, string[]>();
@@ -142,7 +151,7 @@ export async function listarEmpleados(supabase: SupabaseClient): Promise<ListaEm
     if (error) throw error;
     for (const u of data.users) {
       if (!rolPorPerfil.has(u.id)) continue; // usuario de auth sin perfil: no es empleado
-      empleados.push(aEmpleado(u, rolPorPerfil.get(u.id) ?? null, dias.get(u.id) ?? [], nombrePorPerfil.get(u.id)));
+      empleados.push(aEmpleado(u, rolPorPerfil.get(u.id) ?? null, dias.get(u.id) ?? []));
     }
     if (data.users.length < POR_PAGINA) break;
   }
@@ -157,7 +166,11 @@ export async function listarEmpleados(supabase: SupabaseClient): Promise<ListaEm
   };
 }
 
-/** Crea el usuario en auth.users y su fila en public.profiles con el rol indicado. */
+/**
+ * Crea el usuario en auth.users (nombre en sus metadatos, correo y teléfono) y su
+ * fila en public.profiles solo con el rol. El resto de columnas de profiles
+ * (p. ej. debe_cambiar_password, que la base deja en true) toma su valor por defecto.
+ */
 export async function crearEmpleado(supabase: SupabaseClient, datos: NuevoEmpleado): Promise<Empleado> {
   const nombre = datos.nombre?.trim();
   if (!nombre) throw new ErrorEmpleado("El nombre es obligatorio.");
@@ -185,15 +198,15 @@ export async function crearEmpleado(supabase: SupabaseClient, datos: NuevoEmplea
     );
   }
 
-  const perfil = await supabase.from("profiles").insert({ id: data.user.id, role_id: datos.rolId, nombre, correo: email });
+  const perfil = await supabase.from("profiles").insert({ id: data.user.id, role_id: datos.rolId });
   if (perfil.error) {
     await supabase.auth.admin.deleteUser(data.user.id); // no dejar un usuario sin perfil
     throw perfil.error;
   }
-  return aEmpleado(data.user, datos.rolId, [], nombre);
+  return aEmpleado(data.user, datos.rolId, []);
 }
 
-/** Modifica el correo (auth.users y profiles.correo) y/o el teléfono (auth.users). */
+/** Modifica el correo y/o el teléfono del empleado; ambos viven solo en auth.users. */
 export async function actualizarEmpleado(
   supabase: SupabaseClient,
   id: string,
@@ -222,10 +235,6 @@ export async function actualizarEmpleado(
       duplicado ? "Ya existe un usuario con ese correo o teléfono." : error.message,
       duplicado ? 409 : 400,
     );
-  }
-  if (typeof attrs.email === "string") {
-    const perfil = await supabase.from("profiles").update({ correo: attrs.email }).eq("id", id);
-    if (perfil.error) throw perfil.error;
   }
   return cargarEmpleado(supabase, id);
 }

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { nombreDeUsuario } from "./empleados.js";
 
 export interface ClienteEvento {
   nombre: string;
@@ -59,11 +60,31 @@ const COLUMNAS = [
   "event_staff(profile_id)",
 ].join(", ");
 
-async function nombresPorPerfil(supabase: SupabaseClient): Promise<Map<string, string>> {
-  const { data, error } = await supabase.from("profiles").select("id, nombre");
-  if (error) throw error;
-  return new Map<string, string>(data.map((p) => [p.id as string, (p.nombre as string | null) ?? "Sin nombre"]));
+const POR_PAGINA = 200;
+
+/**
+ * Nombres de los usuarios indicados, leídos de auth.users (Admin API): public.profiles
+ * ya no guarda el nombre. Sin nombre en los metadatos se usa la parte local del correo.
+ * Solo recorre las páginas necesarias y no llama a la API si no hay personal asignado.
+ */
+async function nombresPorPerfil(supabase: SupabaseClient, ids: string[]): Promise<Map<string, string>> {
+  const buscados = new Set(ids);
+  const nombres = new Map<string, string>();
+  if (buscados.size === 0) return nombres;
+
+  for (let page = 1; ; page++) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: POR_PAGINA });
+    if (error) throw error;
+    for (const u of data.users) {
+      if (buscados.has(u.id)) nombres.set(u.id, nombreDeUsuario(u) ?? u.email?.split("@")[0] ?? "Sin nombre");
+    }
+    if (nombres.size === buscados.size || data.users.length < POR_PAGINA) break;
+  }
+  return nombres;
 }
+
+const idsDelPersonal = (filas: FilaEvento[]): string[] =>
+  filas.flatMap((f) => (f.event_staff ?? []).map((s) => s.profile_id));
 
 function aEvento(f: FilaEvento, nombrePorPerfil: Map<string, string>): Evento {
   return {
@@ -92,26 +113,24 @@ function aEvento(f: FilaEvento, nombrePorPerfil: Map<string, string>): Evento {
  * Solo lectura.
  *
  * - public.events (+ venue, users, transportation, quote) -> datos del evento
- * - public.event_staff + public.profiles                  -> personal asignado
+ * - public.event_staff + auth.users (Admin API)           -> personal asignado y su nombre
  */
 export async function listarEventos(supabase: SupabaseClient): Promise<{ eventos: Evento[] }> {
-  const [eventosRes, nombrePorPerfil] = await Promise.all([
-    supabase.from("events").select(COLUMNAS).order("date").order("hour"),
-    nombresPorPerfil(supabase),
-  ]);
+  const eventosRes = await supabase.from("events").select(COLUMNAS).order("date").order("hour");
   if (eventosRes.error) throw eventosRes.error;
 
   const filas = eventosRes.data as unknown as FilaEvento[];
+  const nombrePorPerfil = await nombresPorPerfil(supabase, idsDelPersonal(filas));
   return { eventos: filas.map((f) => aEvento(f, nombrePorPerfil)) };
 }
 
 async function cargarEvento(supabase: SupabaseClient, id: number): Promise<Evento> {
-  const [eventoRes, nombrePorPerfil] = await Promise.all([
-    supabase.from("events").select(COLUMNAS).eq("id", id).single(),
-    nombresPorPerfil(supabase),
-  ]);
+  const eventoRes = await supabase.from("events").select(COLUMNAS).eq("id", id).single();
   if (eventoRes.error) throw eventoRes.error;
-  return aEvento(eventoRes.data as unknown as FilaEvento, nombrePorPerfil);
+
+  const fila = eventoRes.data as unknown as FilaEvento;
+  const nombrePorPerfil = await nombresPorPerfil(supabase, idsDelPersonal([fila]));
+  return aEvento(fila, nombrePorPerfil);
 }
 
 // ---------------------------------------------------------------------------

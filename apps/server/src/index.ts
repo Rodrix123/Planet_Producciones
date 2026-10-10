@@ -224,10 +224,9 @@ app.post('/api/enviar-cotizacion', async (req: Request<{}, {}, CotizacionRequest
 });
 
 // ---------------------------------------------------------------------------
-// Empleados (solo lectura) — public.profiles / role / unavailability_users y
-// auth.users de Supabase mediante el cliente
-// service role; las consultas viven en packages/db. No se crea ni modifica nada
-// en la base de datos.
+// Empleados y eventos — public.profiles (rol) / role / unavailability_users y
+// auth.users de Supabase (nombre, correo y teléfono de cada usuario) mediante el
+// cliente service role; las consultas viven en packages/db.
 // ---------------------------------------------------------------------------
 const supabaseAdmin = process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
     ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
