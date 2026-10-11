@@ -23,6 +23,7 @@ JS + Express) migrada a esta estructura de monorepo en TypeScript.
 | Cambiar la generación de PDF/Excel del navegador, o el guardado de la cotización junto con el evento en creación | `apps/web/src/main.ts` |
 | Cambiar el formulario de nuevo evento (solo datos del evento; de ahí se pasa a cotizar) | `apps/web/src/eventos.ts` + `apps/web/src/borrador-evento.ts` |
 | Cambiar cómo se guarda un evento nuevo (evento + cotización + servicios) | `packages/db/src/eventos.ts` |
+| Cambiar el menú de inventario (tipo > elemento > variante > unidad física, solo lectura) | `apps/web/inventario.html` + `apps/web/src/inventario.ts` + `apps/web/src/inventario.css`; consulta en `packages/db/src/inventario.ts` y endpoint `GET /api/inventario` en `apps/server/src/index.ts` |
 | Cambiar estilos del cotizador                   | `apps/web/src/style.css`          |
 | Cambiar la página de login                      | `apps/web/login.html` + `apps/web/src/login.ts` |
 | Cambiar el endpoint de la API / envío de correo | `apps/server/src/index.ts`        |
