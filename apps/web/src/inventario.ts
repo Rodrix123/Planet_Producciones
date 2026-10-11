@@ -164,7 +164,7 @@ function cuerpoVariante(v: Variante): string {
         : '';
     const unidades = v.unidades.length
         ? v.unidades.map(nodoUnidad).join('')
-        : vacio('Sin unidades físicas registradas.');
+        : vacio('Sin códigos de barras registrados.');
     return detalle + unidades;
 }
 
@@ -176,7 +176,7 @@ function nodoVariante(v: Variante, forzadas: Set<string>): string {
         nivel: 3,
         icono: 'fa-tags',
         titulo: nombreVariante(v),
-        meta: `${precio}<span class="inv-conteo">${plural(v.unidades.length, 'unidad', 'unidades')}</span>`,
+        meta: `${precio}<span class="inv-conteo">${plural(v.unidades.length, 'código de barras', 'códigos de barras')}</span>`,
         abierto: abiertos.has(clave) || forzadas.has(clave),
         cuerpo: () => cuerpoVariante(v)
     });
@@ -298,7 +298,7 @@ function render(): void {
     resumen.hidden = false;
     resumen.textContent = `${q === '' ? '' : 'Coincidencias: '}${plural(visibles.length, 'tipo', 'tipos')} · `
         + `${plural(elementos, 'elemento', 'elementos')} · ${plural(variantes, 'variante', 'variantes')} · `
-        + `${plural(unidades, 'unidad física', 'unidades físicas')}`;
+        + `${plural(unidades, 'código de barras', 'códigos de barras')}`;
 
     if (visibles.length === 0) {
         arbol.innerHTML = vacio(q === ''
