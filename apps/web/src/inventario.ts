@@ -176,7 +176,7 @@ function nodoVariante(v: Variante, forzadas: Set<string>): string {
         nivel: 3,
         icono: 'fa-tags',
         titulo: nombreVariante(v),
-        meta: `${precio}<span class="rol-count">${plural(v.unidades.length, 'unidad', 'unidades')}</span>`,
+        meta: `${precio}<span class="inv-conteo">${plural(v.unidades.length, 'unidad', 'unidades')}</span>`,
         abierto: abiertos.has(clave) || forzadas.has(clave),
         cuerpo: () => cuerpoVariante(v)
     });
@@ -195,7 +195,7 @@ function nodoElemento(e: Elemento, forzadas: Set<string>): string {
         nivel: 2,
         icono: 'fa-cube',
         titulo: e.nombre,
-        meta: `<span class="rol-count">${plural(e.variantes.length, 'variante', 'variantes')}</span>`,
+        meta: `<span class="inv-conteo">${plural(e.variantes.length, 'variante', 'variantes')}</span>`,
         abierto: abiertos.has(clave) || forzadas.has(clave),
         cuerpo: () => cuerpoElemento(e, forzadas)
     });
@@ -208,7 +208,7 @@ function nodoTipo(t: Tipo, forzadas: Set<string>): string {
         nivel: 1,
         icono: 'fa-layer-group',
         titulo: t.nombre,
-        meta: `<span class="rol-count">${plural(t.elementos.length, 'elemento', 'elementos')}</span>`,
+        meta: `<span class="inv-conteo">${plural(t.elementos.length, 'elemento', 'elementos')}</span>`,
         abierto: abiertos.has(clave) || forzadas.has(clave),
         cuerpo: () => t.elementos.map(e => nodoElemento(e, forzadas)).join('')
     });
