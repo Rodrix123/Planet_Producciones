@@ -1,6 +1,5 @@
 import './style.css';
-import './landing.css';
-import './shared/panel.css';
+import './shared/panelRail.css';
 import { apiFetch, conManejoDeErrores, exigirSesion } from './shared/api';
 import { initPanelLayout } from './shared/layout';
 
@@ -111,7 +110,7 @@ async function abrirDetalle(p: Pqrs) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    const sesion = await exigirSesion('administrador');
+    const sesion = await exigirSesion('secretaria');
     initPanelLayout(sesion);
 
     await cargarPqrs();

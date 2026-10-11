@@ -24,6 +24,9 @@
             </a>
             <nav class="panel-nav">
                 <span id="panelUserName" class="panel-user-name"></span>
+                <a href="inventario.html" class="back-home-btn">
+                    <i class="fa-solid fa-boxes-stacked"></i> Inventario
+                </a>
                 <a href="cambiar-password.html" class="back-home-btn">
                     <i class="fa-solid fa-key"></i> Cambiar contraseña
                 </a>
@@ -43,6 +46,26 @@
         </div>
 
         <div id="listaEventos" class="item-list"></div>
+
+        <div id="detalleEvento" class="hidden">
+            <button id="btnVolverLista" class="btn btn-secondary btn-sm" style="margin-bottom: 1.5rem;">
+                <i class="fa-solid fa-arrow-left"></i> Volver a la lista
+            </button>
+
+            <div class="detail-section">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
+                    <div id="resumenEvento"></div>
+                    <a id="linkListaCargaPdf" href="#" target="_blank" class="btn btn-primary btn-sm">
+                        <i class="fa-solid fa-file-pdf"></i> Descargar lista de carga (PDF)
+                    </a>
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <h4>Equipos a cargar</h4>
+                <div id="listaEquiposDetalle"></div>
+            </div>
+        </div>
     </main>
 
     <script type="module" src="/src/panel-logistica.ts"></script>

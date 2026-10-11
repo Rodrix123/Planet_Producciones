@@ -71,9 +71,14 @@
             <div class="detail-section">
                 <h4>Contrato</h4>
                 <div id="estadoContrato" style="margin-bottom: 1.25rem; color:#d1d5db; font-size:0.95rem;"></div>
-                <button id="btnGenerarContrato" class="btn btn-primary hidden">
-                    <i class="fa-solid fa-file-signature"></i> Generar y enviar contrato al cliente
-                </button>
+                <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+                    <a id="linkVistaPreviaContrato" href="#" target="_blank" class="btn btn-secondary hidden">
+                        <i class="fa-solid fa-eye"></i> Vista previa del contrato
+                    </a>
+                    <button id="btnGenerarContrato" class="btn btn-primary hidden">
+                        <i class="fa-solid fa-file-signature"></i> Generar y enviar contrato al cliente
+                    </button>
+                </div>
             </div>
         </div>
     </main>

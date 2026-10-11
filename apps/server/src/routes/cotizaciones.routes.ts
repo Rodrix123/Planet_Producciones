@@ -184,7 +184,7 @@ export const cotizacionesRouter = Router();
 // Público: lo usa el cotizador para guardar la cotización real.
 cotizacionesRouter.post('/', asyncHandler(async (req, res) => {
     const body = req.body as {
-        cliente?: { nombre?: string; correo?: string; telefono?: string };
+        cliente?: { nombre?: string; correo?: string; telefono?: string; documento?: string };
         tipoEvento?: string;
         venueId?: number;
         venueNombreManual?: string;
@@ -210,10 +210,11 @@ cotizacionesRouter.post('/', asyncHandler(async (req, res) => {
     }
 
     const { rows: userRows } = await pool.query<{ id: number }>(
-        `insert into users (email, name, phone) values ($1, $2, $3)
-         on conflict (email) do update set name = excluded.name, phone = excluded.phone
+        `insert into users (email, name, phone, documento) values ($1, $2, $3, $4)
+         on conflict (email) do update set name = excluded.name, phone = excluded.phone,
+            documento = coalesce(excluded.documento, users.documento)
          returning id`,
-        [cliente.correo.trim().toLowerCase(), cliente.nombre.trim(), cliente.telefono.trim()]
+        [cliente.correo.trim().toLowerCase(), cliente.nombre.trim(), cliente.telefono.trim(), cliente.documento?.trim() || null]
     );
     const clientId = userRows[0].id;
 

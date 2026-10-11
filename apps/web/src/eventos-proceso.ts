@@ -1,6 +1,5 @@
 import './style.css';
-import './landing.css';
-import './shared/panel.css';
+import './shared/panelRail.css';
 import { apiFetch, apiUrl, conManejoDeErrores, exigirSesion } from './shared/api';
 import { initPanelLayout } from './shared/layout';
 
@@ -283,10 +282,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!cotizacionActual) return;
         const confirmacion = await Swal.fire({
             icon: 'question',
-            title: '¿Marcar como evento definitivo?',
-            text: 'Pasará a "Eventos programados" y al calendario.',
+            title: '¿Oficializar este evento?',
+            text: 'Pasará a "Eventos programados", al calendario y al panel de logística de Andrés.',
             showCancelButton: true,
-            confirmButtonText: 'Sí, marcar',
+            confirmButtonText: 'Sí, oficializar',
             cancelButtonText: 'Cancelar',
             confirmButtonColor: '#f97316'
         });
@@ -295,10 +294,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const res = await apiFetch(`/api/cotizaciones/${cotizacionActual.id}/marcar-definitivo`, { method: 'POST' });
         const datos = await res.json();
         if (!res.ok) {
-            Swal.fire({ icon: 'error', title: 'No se pudo marcar', text: datos.message, confirmButtonColor: '#f97316' });
+            Swal.fire({ icon: 'error', title: 'No se pudo oficializar', text: datos.message, confirmButtonColor: '#f97316' });
             return;
         }
-        await Swal.fire({ icon: 'success', title: 'Evento programado', text: 'Ya está disponible en "Eventos programados".', confirmButtonColor: '#f97316' });
+        await Swal.fire({ icon: 'success', title: 'Evento oficializado', text: 'Ya está disponible en "Eventos programados" y en logística.', confirmButtonColor: '#f97316' });
         volverALista();
     }));
 

@@ -109,13 +109,21 @@ async function abrirDetalle(id: string) {
 
     const estadoEl = document.getElementById('estadoContrato')!;
     const btnGenerar = document.getElementById('btnGenerarContrato') as HTMLButtonElement;
+    const linkVistaPrevia = document.getElementById('linkVistaPreviaContrato') as HTMLAnchorElement;
     btnGenerar.classList.add('hidden');
+    linkVistaPrevia.classList.add('hidden');
+
+    const datosCompletos = !!cotizacion.clienteDocumento && !!cotizacion.fechaEvento;
+    if (datosCompletos) {
+        linkVistaPrevia.href = apiUrl(`/api/contratos/${id}/pdf`);
+        linkVistaPrevia.classList.remove('hidden');
+    }
 
     if (!contrato.enviadoEn) {
-        if (!cotizacion.clienteDocumento || !cotizacion.fechaEvento) {
+        if (!datosCompletos) {
             estadoEl.innerHTML = `<i class="fa-solid fa-circle-exclamation" style="color:#f87171;"></i> Falta ${!cotizacion.clienteDocumento ? 'el documento del cliente' : ''}${!cotizacion.clienteDocumento && !cotizacion.fechaEvento ? ' y ' : ''}${!cotizacion.fechaEvento ? 'la fecha del evento' : ''}. Pídele a la administradora que lo complete antes de generar el contrato.`;
         } else {
-            estadoEl.innerHTML = '<i class="fa-solid fa-circle-info" style="color:var(--orange-main);"></i> El contrato todavía no se ha enviado.';
+            estadoEl.innerHTML = '<i class="fa-solid fa-circle-info" style="color:var(--orange-main);"></i> El contrato todavía no se ha enviado. Revisa la vista previa antes de enviarlo.';
             btnGenerar.classList.remove('hidden');
         }
     } else {

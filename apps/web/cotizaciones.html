@@ -12,28 +12,24 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
 </head>
-<body class="landing-body">
+<body class="panel-body">
 
-    <header class="promo-header">
-        <div class="header-container">
-            <a href="panel-admin.html" class="logo-box" style="text-decoration:none;">
-                <img src="logo.png?v=2" alt="Planet Producciones Logo" class="logo-img">
-                <div class="logo-text">
-                    <h1>Planet Producciones</h1>
-                    <p>Panel Administradora</p>
-                </div>
-            </a>
-            <nav class="panel-nav">
-                <span id="panelUserName" class="panel-user-name"></span>
-                <a href="cambiar-password.html" class="back-home-btn">
-                    <i class="fa-solid fa-key"></i> Cambiar contraseña
-                </a>
-                <button id="btnLogout" type="button" class="back-home-btn panel-logout-btn">
-                    <i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión
-                </button>
-            </nav>
-        </div>
-    </header>
+    <aside class="panel-rail">
+        <a href="index.html" class="rail-logo" title="Inicio">
+            <img src="logo.png?v=2" alt="Planet Producciones">
+        </a>
+        <nav class="rail-nav">
+            <a href="cotizaciones.html" class="rail-item active" data-contador="cotizaciones"><i class="fa-solid fa-file-invoice-dollar"></i><span>Cotizaciones</span></a>
+            <a href="eventos-proceso.html" class="rail-item" data-contador="eventosProceso"><i class="fa-solid fa-truck-ramp-box"></i><span>En proceso</span></a>
+            <a href="eventos-programados.html" class="rail-item"><i class="fa-solid fa-calendar-days"></i><span>Eventos</span></a>
+            <a href="empleados.html" class="rail-item"><i class="fa-solid fa-users"></i><span>Empleados</span></a>
+            <a href="inventario.html" class="rail-item"><i class="fa-solid fa-boxes-stacked"></i><span>Inventario</span></a>
+        </nav>
+        <a href="cambiar-password.html" class="rail-item"><i class="fa-solid fa-key"></i><span>Contraseña</span></a>
+        <button type="button" id="btnLogout" class="rail-item rail-logout">
+            <i class="fa-solid fa-right-from-bracket"></i><span>Salir</span>
+        </button>
+    </aside>
 
     <main class="panel-main panel-main-wide">
         <div class="page-header">

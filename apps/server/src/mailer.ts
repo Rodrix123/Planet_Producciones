@@ -1,8 +1,10 @@
 import nodemailer from 'nodemailer';
 
-// Configuración SMTP para Outlook/Hotmail
+// Proveedor de correo configurable (EMAIL_SERVICE): nodemailer reconoce el nombre
+// directamente ('gmail', 'hotmail', etc.) y arma el SMTP correcto por detrás.
+// Debe coincidir con el proveedor real de EMAIL_USER/EMAIL_PASS.
 export const transporter = nodemailer.createTransport({
-    service: 'hotmail',
+    service: process.env.EMAIL_SERVICE || 'gmail',
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS

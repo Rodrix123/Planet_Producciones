@@ -3,6 +3,9 @@ import { pool } from '../db';
 import { requireAuth, requireRole } from '../auth';
 import { asyncHandler } from '../asyncHandler';
 
+type TipoContrato = 'con_contrato' | 'freelance_fijo' | 'freelance_no_fijo';
+const TIPOS_CONTRATO_VALIDOS: readonly string[] = ['con_contrato', 'freelance_fijo', 'freelance_no_fijo'];
+
 interface EmpleadoRow {
     id: string;
     nombre: string;
@@ -11,7 +14,7 @@ interface EmpleadoRow {
     salario: string | null;
     numero_cuenta: string | null;
     banco: string | null;
-    tipo_contrato: 'con_contrato' | 'sin_contrato';
+    tipo_contrato: TipoContrato;
     activo: boolean;
 }
 
@@ -54,8 +57,8 @@ empleadosRouter.post('/', asyncHandler(async (req, res) => {
     if (!body.nombre?.trim()) {
         return res.status(400).json({ status: 'error', message: 'El nombre es obligatorio' });
     }
-    if (body.tipoContrato !== 'con_contrato' && body.tipoContrato !== 'sin_contrato') {
-        return res.status(400).json({ status: 'error', message: 'Indica si el empleado tiene contrato o no' });
+    if (!body.tipoContrato || !TIPOS_CONTRATO_VALIDOS.includes(body.tipoContrato)) {
+        return res.status(400).json({ status: 'error', message: 'Indica el tipo de contrato del empleado' });
     }
 
     const { rows } = await pool.query<EmpleadoRow>(
@@ -87,7 +90,7 @@ empleadosRouter.put('/:id', asyncHandler(async (req, res) => {
         tipoContrato?: string;
     };
 
-    if (body.tipoContrato && body.tipoContrato !== 'con_contrato' && body.tipoContrato !== 'sin_contrato') {
+    if (body.tipoContrato && !TIPOS_CONTRATO_VALIDOS.includes(body.tipoContrato)) {
         return res.status(400).json({ status: 'error', message: 'Tipo de contrato inválido' });
     }
 

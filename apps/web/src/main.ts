@@ -18,6 +18,7 @@ interface DatosCliente {
     nombre: string;
     correo: string;
     telefono: string;
+    documento: string;
     tipoEvento: string;
     ciudad: string;
     lugar: string;
@@ -60,7 +61,7 @@ async function guardarCotizacionReal(
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                cliente: { nombre: datosCliente.nombre, correo: datosCliente.correo, telefono: datosCliente.telefono },
+                cliente: { nombre: datosCliente.nombre, correo: datosCliente.correo, telefono: datosCliente.telefono, documento: datosCliente.documento || undefined },
                 tipoEvento: datosCliente.tipoEvento,
                 venueId,
                 venueNombreManual: venueNombreManual || undefined,
@@ -324,6 +325,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <td style="padding: 2px 0;"><strong>WhatsApp:</strong> ${datosCliente.telefono}</td>
                             <td style="padding: 2px 0;"><strong>Sede:</strong> ${datosCliente.lugar || 'Por confirmar'}</td>
                         </tr>
+                        ${datosCliente.documento ? `
+                        <tr>
+                            <td style="padding: 2px 0;"><strong>Documento:</strong> ${datosCliente.documento}</td>
+                            <td></td>
+                        </tr>` : ''}
                     </table>
                 </div>
 
@@ -439,6 +445,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const nombre = (document.getElementById('nombre') as HTMLInputElement).value.trim();
         const correo = (document.getElementById('correo') as HTMLInputElement).value.trim();
         const telefono = (document.getElementById('telefono') as HTMLInputElement).value.trim();
+        const documento = (document.getElementById('documento') as HTMLInputElement).value.trim();
         const tipoEvento = (document.getElementById('tipoEvento') as HTMLSelectElement).value;
         const fechaEvento = (document.getElementById('fechaEvento') as HTMLInputElement).value;
 
@@ -494,7 +501,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         let elementoHTML: HTMLDivElement | null = null;
 
         try {
-            const datosCliente: DatosCliente = { nombre, correo, telefono, tipoEvento, ciudad: ciudadSelect.value, lugar: lugarNombre, fechaEvento };
+            const datosCliente: DatosCliente = { nombre, correo, telefono, documento, tipoEvento, ciudad: ciudadSelect.value, lugar: lugarNombre, fechaEvento };
             const fechaHoy = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
             // Guarda la cotización real en la base de datos (panel de Maritza) y usa su

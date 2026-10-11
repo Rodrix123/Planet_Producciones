@@ -25,7 +25,9 @@ export default defineConfig({
                 eventosProceso: 'eventos-proceso.html',
                 eventosProgramados: 'eventos-programados.html',
                 cotizacionesDefinitivas: 'cotizaciones-definitivas.html',
-                pqrsAdmin: 'pqrs-admin.html'
+                pqrsAdmin: 'pqrs-admin.html',
+                inventario: 'inventario.html',
+                galeria: 'galeria.html'
             }
         }
     },

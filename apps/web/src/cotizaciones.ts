@@ -1,6 +1,5 @@
 import './style.css';
-import './landing.css';
-import './shared/panel.css';
+import './shared/panelRail.css';
 import { apiFetch, apiUrl, conManejoDeErrores, exigirSesion } from './shared/api';
 import { initPanelLayout } from './shared/layout';
 import {

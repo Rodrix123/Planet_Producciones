@@ -434,6 +434,35 @@ input:focus, select:focus {
     border-radius: 12px;
 }
 
+/* Señal de "algo nuevo por mirar" en el menú lateral y en los enlaces de panel
+   (data-contador en shared/layout.ts la rellena con un número al cargar la página). */
+.nav-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    margin-left: 0.4rem;
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: #fff;
+    background-color: var(--orange-main);
+    border-radius: 999px;
+    line-height: 1;
+}
+
+.rail-item {
+    position: relative;
+}
+
+.rail-item .nav-badge {
+    position: absolute;
+    top: 0.35rem;
+    right: 0.35rem;
+    margin-left: 0;
+}
+
 .price-tag {
     font-size: 2.2rem;
     font-weight: 800;

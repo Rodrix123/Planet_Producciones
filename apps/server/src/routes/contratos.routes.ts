@@ -6,7 +6,7 @@ import { pool } from '../db';
 import { requireAuth, requireRole } from '../auth';
 import { asyncHandler } from '../asyncHandler';
 import { transporter } from '../mailer';
-import { generarContratoPdfBuffer } from '../pdf/contratoPdf';
+import { generarContratoPdfBuffer, type ItemContratoPdf } from '../pdf/contratoPdf';
 
 const UPLOAD_DIR = path.join(__dirname, '..', '..', 'uploads', 'contratos-firmados');
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
@@ -56,6 +56,18 @@ async function obtenerFila(id: string): Promise<FilaContrato | null> {
     return rows[0] || null;
 }
 
+async function obtenerItemsContrato(quoteId: number): Promise<ItemContratoPdf[]> {
+    const { rows } = await pool.query<{ quantity: number; simple_description: string }>(
+        `select qi.quantity, iv.simple_description
+         from quote_items qi
+         join inventory_variants iv on iv.id = qi.variant_id
+         where qi.quote_id = $1
+         order by iv.simple_description asc`,
+        [quoteId]
+    );
+    return rows.map((r) => ({ cantidad: r.quantity, nombre: r.simple_description }));
+}
+
 function numeroReferencia(id: number, creadaEn: string): string {
     const anio = new Date(creadaEn).getFullYear();
     return `PL-${anio}-${String(id).padStart(4, '0')}`;
@@ -90,7 +102,8 @@ contratosRouter.get('/:cotizacionId/pdf', requireRole('administrador', 'secretar
         ciudad: null,
         lugar: fila.venue_nombre,
         fechaEvento: fila.fecha_evento,
-        total: Number(fila.total)
+        total: Number(fila.total),
+        items: await obtenerItemsContrato(fila.id)
     });
 
     res.setHeader('Content-Type', 'application/pdf');
@@ -123,13 +136,26 @@ contratosRouter.post('/:cotizacionId/generar-y-enviar', requireRole('administrad
         ciudad: null,
         lugar: fila.venue_nombre,
         fechaEvento: fila.fecha_evento,
-        total: Number(fila.total)
+        total: Number(fila.total),
+        items: await obtenerItemsContrato(fila.id)
     });
+
+    // Maritza recibe copia del contrato enviado. EMAIL_ADMINISTRADOR permite apuntar
+    // esa copia a un correo de prueba mientras se verifica el envío; si no está puesto,
+    // se usa su correo real (profiles.correo) para producción.
+    let correoAdmin = process.env.EMAIL_ADMINISTRADOR;
+    if (!correoAdmin) {
+        const { rows: adminRows } = await pool.query<{ correo: string }>(
+            `select p.correo from profiles p join role r on r.id = p.role_id where r.name = 'administrador' limit 1`
+        );
+        correoAdmin = adminRows[0]?.correo;
+    }
 
     try {
         await transporter.sendMail({
             from: `"Planet Producciones" <${process.env.EMAIL_USER}>`,
             to: fila.cliente_correo,
+            ...(correoAdmin ? { cc: correoAdmin } : {}),
             subject: `Contrato de servicios Planet Producciones - ${numeroReferencia(fila.id, fila.created_at)}`,
             text: `Hola ${fila.cliente_nombre},\n\nAdjuntamos el contrato de prestación de servicios para tu evento. Por favor fírmalo y responde este correo adjuntando el documento firmado.\n\nGracias por elegir a Planet Producciones.`,
             attachments: [{ filename: `Contrato_${numeroReferencia(fila.id, fila.created_at)}.pdf`, content: buffer }]

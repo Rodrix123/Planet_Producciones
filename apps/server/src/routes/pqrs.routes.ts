@@ -23,10 +23,19 @@ pqrsRouter.post('/', asyncHandler(async (req, res) => {
         [nombre, correo, body.telefono?.trim() || null, mensaje]
     );
 
+    if (process.env.EMAIL_SECRETARIA) {
+        transporter.sendMail({
+            from: `"Planet Producciones" <${process.env.EMAIL_USER}>`,
+            to: process.env.EMAIL_SECRETARIA,
+            subject: `Nuevo PQRS recibido: ${nombre}`,
+            text: `Se recibió un nuevo PQRS para responder en el panel.\n\nNombre: ${nombre}\nCorreo: ${correo}\n${body.telefono ? `Teléfono: ${body.telefono.trim()}\n` : ''}\nMensaje:\n${mensaje}\n\nIngresa a tu panel para responderlo.`
+        }).catch((err: Error) => console.error('Error enviando aviso de nuevo PQRS:', err.message));
+    }
+
     res.status(201).json({ status: 'ok', id: rows[0].id });
 }));
 
-pqrsRouter.use(requireAuth, requireRole('administrador'));
+pqrsRouter.use(requireAuth, requireRole('secretaria'));
 
 pqrsRouter.get('/', asyncHandler(async (_req, res) => {
     const { rows } = await pool.query(
