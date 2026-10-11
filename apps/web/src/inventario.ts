@@ -79,6 +79,11 @@ function plural(n: number, uno: string, varios: string): string {
     return `${n} ${n === 1 ? uno : varios}`;
 }
 
+// Los contadores de cada nivel cuentan solo unidades físicas, no los niveles de abajo.
+const unidadesDeElemento = (e: Elemento): number => e.variantes.reduce((n, v) => n + v.unidades.length, 0);
+const unidadesDeTipo = (t: Tipo): number => t.elementos.reduce((n, e) => n + unidadesDeElemento(e), 0);
+const textoUnidades = (n: number): string => plural(n, 'unidad', 'unidades');
+
 function formatearFecha(iso: string): string {
     const d = new Date(iso);
     if (isNaN(d.getTime())) return esc(iso);
@@ -176,7 +181,7 @@ function nodoVariante(v: Variante, forzadas: Set<string>): string {
         nivel: 3,
         icono: 'fa-tags',
         titulo: nombreVariante(v),
-        meta: `${precio}<span class="inv-conteo">${plural(v.unidades.length, 'unidad', 'unidades')}</span>`,
+        meta: `${precio}<span class="inv-conteo">${textoUnidades(v.unidades.length)}</span>`,
         abierto: abiertos.has(clave) || forzadas.has(clave),
         cuerpo: () => cuerpoVariante(v)
     });
@@ -195,7 +200,7 @@ function nodoElemento(e: Elemento, forzadas: Set<string>): string {
         nivel: 2,
         icono: 'fa-cube',
         titulo: e.nombre,
-        meta: `<span class="inv-conteo">${plural(e.variantes.length, 'variante', 'variantes')}</span>`,
+        meta: `<span class="inv-conteo">${textoUnidades(unidadesDeElemento(e))}</span>`,
         abierto: abiertos.has(clave) || forzadas.has(clave),
         cuerpo: () => cuerpoElemento(e, forzadas)
     });
@@ -208,7 +213,7 @@ function nodoTipo(t: Tipo, forzadas: Set<string>): string {
         nivel: 1,
         icono: 'fa-layer-group',
         titulo: t.nombre,
-        meta: `<span class="inv-conteo">${plural(t.elementos.length, 'elemento', 'elementos')}</span>`,
+        meta: `<span class="inv-conteo">${textoUnidades(unidadesDeTipo(t))}</span>`,
         abierto: abiertos.has(clave) || forzadas.has(clave),
         cuerpo: () => t.elementos.map(e => nodoElemento(e, forzadas)).join('')
     });
@@ -292,8 +297,7 @@ function render(): void {
 
     const elementos = visibles.reduce((n, t) => n + t.elementos.length, 0);
     const variantes = visibles.reduce((n, t) => n + t.elementos.reduce((m, e) => m + e.variantes.length, 0), 0);
-    const unidades = visibles.reduce((n, t) => n + t.elementos.reduce((m, e) =>
-        m + e.variantes.reduce((k, v) => k + v.unidades.length, 0), 0), 0);
+    const unidades = visibles.reduce((n, t) => n + unidadesDeTipo(t), 0);
 
     resumen.hidden = false;
     resumen.textContent = `${q === '' ? '' : 'Coincidencias: '}${plural(visibles.length, 'tipo', 'tipos')} · `
