@@ -136,7 +136,7 @@ function insigniaEstado(e: EstadoUnidad): string {
 
 function cuerpoUnidad(u: Unidad): string {
     return `<dl class="inv-datos">
-        ${dato('Código de barras', u.codigoBarras ? `<code class="inv-codigo">${esc(u.codigoBarras)}</code>` : 'Sin código')}
+        ${dato('ID', String(u.id))}
         ${dato('Estado', insigniaEstado(u.estado))}
         ${u.descripcionEstado ? dato('Detalle del estado', esc(u.descripcionEstado)) : ''}
         ${dato('Registrada', formatearFecha(u.creadoEn))}
@@ -145,14 +145,14 @@ function cuerpoUnidad(u: Unidad): string {
 }
 
 function nodoUnidad(u: Unidad): string {
-    const codigo = u.codigoBarras ? `<code class="inv-codigo">${esc(u.codigoBarras)}</code>` : '';
     const clave = claveUnidad(u);
     return nodoHtml({
         clave,
         nivel: 4,
         icono: 'fa-barcode',
-        titulo: `Unidad #${u.id}`,
-        meta: `${codigo}${insigniaEstado(u.estado)}`,
+        // La unidad se identifica por su código de barras; sin código, por su ID.
+        titulo: u.codigoBarras ?? `Sin código de barras (ID ${u.id})`,
+        meta: insigniaEstado(u.estado),
         abierto: abiertos.has(clave),
         cuerpo: () => cuerpoUnidad(u)
     });
