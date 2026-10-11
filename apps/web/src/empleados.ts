@@ -1,13 +1,17 @@
 import './style.css';
 import './panel.css';
+import { api } from './api';
 
 interface Empleado {
     id: string;
     email: string | null;
     telefono: string | null;
     nombre: string | null;
+    cedula: string | null;
     avatarUrl: string | null;
     rolId: number | null;
+    cuentaBancaria: string | null;
+    llave: string | null;
     diasNoDisponibles: string[];
     creadoEn: string;
     ultimoAcceso: string | null;
@@ -22,9 +26,7 @@ interface Rol {
 // Los roles se leen de public.role (los devuelve la API).
 let roles: Rol[] = [];
 
-const API_URL: string = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
-
-const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
+const $ =<T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
 const contenedorRoles = $('roles');
 const estado = $('estado');
 const buscador = $<HTMLInputElement>('buscador');
@@ -49,24 +51,11 @@ const filtroConteo = $('filtroConteo');
 
 let empleados: Empleado[] = [];
 let seleccionadoId: string | null = null;
+// Calendario de disponibilidad del panel lateral: de qué empleado es y qué mes (día 1) muestra.
+let calEmpleadoId: string | null = null;
+let calMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 // Tipos (role_id, o 'sin') seleccionados en el filtro; vacío = todos.
 const tiposSel = new Set<string>();
-
-async function api<T = Record<string, unknown>>(metodo: string, ruta: string, cuerpo?: unknown): Promise<T> {
-    let resp: Response;
-    try {
-        resp = await fetch(`${API_URL}${ruta}`, {
-            method: metodo,
-            headers: cuerpo ? { 'Content-Type': 'application/json' } : undefined,
-            body: cuerpo ? JSON.stringify(cuerpo) : undefined
-        });
-    } catch {
-        throw new Error('No se pudo conectar con el servidor.');
-    }
-    const json = await resp.json().catch(() => ({}));
-    if (!resp.ok) throw new Error(json.message || `Error ${resp.status}`);
-    return json as T;
-}
 
 let toastTimer: number | undefined;
 function avisar(mensaje: string): void {
@@ -245,6 +234,11 @@ function abrirDrawer(id: string): void {
     const e = empleados.find(x => x.id === id);
     if (!e) return;
     seleccionadoId = id;
+    if (calEmpleadoId !== id) {
+        // Otro empleado: el calendario vuelve al mes actual (al editar el mismo se conserva el mes).
+        calEmpleadoId = id;
+        calMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    }
     const rol = rolDe(e);
     const rolTitulo = rol ? tituloRol(rol.nombre) : 'Sin rol';
     const dias = [...e.diasNoDisponibles].sort();
@@ -265,6 +259,7 @@ function abrirDrawer(id: string): void {
                 <span>Teléfono</span>
                 <input type="tel" name="telefono" value="${esc(e.telefono ?? '')}" placeholder="Ej: 3001234567" autocomplete="off">
             </label>
+            ${fila('Cédula', esc(e.cedula ?? '—'))}
             ${fila('Registrado', formatearFecha(e.creadoEn))}
             ${fila('Último acceso', formatearFecha(e.ultimoAcceso, true))}
             <p id="formEditarError" class="form-error" hidden></p>
@@ -272,8 +267,30 @@ function abrirDrawer(id: string): void {
                 <i class="fa-solid fa-floppy-disk"></i> Guardar cambios
             </button>
         </form>
+        <form id="formBanco" class="drawer-seccion" novalidate>
+            <h3>Cuenta bancaria y llave</h3>
+            <label class="campo">
+                <span>Cuenta bancaria</span>
+                <input type="text" name="cuentaBancaria" value="${esc(e.cuentaBancaria ?? '')}" placeholder="Sin registrar" maxlength="100" autocomplete="off">
+            </label>
+            <label class="campo">
+                <span>Llave</span>
+                <input type="text" name="llave" value="${esc(e.llave ?? '')}" placeholder="Sin registrar" maxlength="100" autocomplete="off">
+            </label>
+            <p id="formBancoError" class="form-error" hidden></p>
+            <button type="submit" class="submit-btn btn-guardar" disabled>
+                <i class="fa-solid fa-floppy-disk"></i> Guardar cuenta y llave
+            </button>
+        </form>
         <div class="drawer-seccion">
-            <h3>Días que no podrá asistir</h3>
+            <div class="seccion-cabecera">
+                <h3>Días que no podrá asistir</h3>
+                <button type="button" class="btn-incapacidad" id="btnIncapacidad">
+                    <i class="fa-solid fa-plus"></i> Agregar incapacidad
+                </button>
+            </div>
+            <div class="mini-cal" id="miniCal">${htmlMiniCal(e)}</div>
+            <p class="mini-cal-leyenda"><span class="leyenda-punto"></span> No disponible</p>
             ${dias.length
                 ? `<div class="dias-lista">${dias.map(d => `<span class="dia-chip">${formatearFecha(d)}</span>`).join('')}</div>`
                 : '<p class="dias-vacio"><i class="fa-solid fa-circle-check"></i> Sin restricciones registradas</p>'}
@@ -288,8 +305,29 @@ function abrirDrawer(id: string): void {
     });
     form.addEventListener('submit', ev => {
         ev.preventDefault();
-        void guardarCambios(e, emailIn, telIn, guardar);
+        const cambios: Record<string, string> = {};
+        if (emailIn.value.trim() !== (e.email ?? '')) cambios.email = emailIn.value.trim();
+        if (telIn.value.trim() !== (e.telefono ?? '')) cambios.telefono = telIn.value.trim();
+        void guardarCambios(e, cambios, 'formEditarError', guardar, 'Empleado actualizado');
     });
+
+    // Cuenta bancaria y llave: se guardan por separado; dejar un campo vacío borra el dato.
+    const formBanco = $<HTMLFormElement>('formBanco');
+    const guardarBanco = formBanco.querySelector<HTMLButtonElement>('.btn-guardar')!;
+    const cuentaIn = formBanco.elements.namedItem('cuentaBancaria') as HTMLInputElement;
+    const llaveIn = formBanco.elements.namedItem('llave') as HTMLInputElement;
+    formBanco.addEventListener('input', () => {
+        guardarBanco.disabled = cuentaIn.value.trim() === (e.cuentaBancaria ?? '') && llaveIn.value.trim() === (e.llave ?? '');
+    });
+    formBanco.addEventListener('submit', ev => {
+        ev.preventDefault();
+        const cambios: Record<string, string> = {};
+        if (cuentaIn.value.trim() !== (e.cuentaBancaria ?? '')) cambios.cuentaBancaria = cuentaIn.value.trim();
+        if (llaveIn.value.trim() !== (e.llave ?? '')) cambios.llave = llaveIn.value.trim();
+        void guardarCambios(e, cambios, 'formBancoError', guardarBanco, 'Cuenta bancaria y llave actualizadas');
+    });
+
+    $('btnIncapacidad').addEventListener('click', () => abrirIncapacidad(e));
 
     drawerEliminar.hidden = false;
     drawer.classList.add('open');
@@ -297,12 +335,16 @@ function abrirDrawer(id: string): void {
     drawer.setAttribute('aria-hidden', 'false');
 }
 
-async function guardarCambios(e: Empleado, emailIn: HTMLInputElement, telIn: HTMLInputElement, boton: HTMLButtonElement): Promise<void> {
-    const error = $('formEditarError');
+/** Guarda los cambios de un empleado; `errorId` es el aviso de error del formulario que los envía. */
+async function guardarCambios(
+    e: Empleado,
+    cambios: Record<string, string>,
+    errorId: string,
+    boton: HTMLButtonElement,
+    mensaje: string
+): Promise<void> {
+    const error = $(errorId);
     error.hidden = true;
-    const cambios: { email?: string; telefono?: string } = {};
-    if (emailIn.value.trim() !== (e.email ?? '')) cambios.email = emailIn.value.trim();
-    if (telIn.value.trim() !== (e.telefono ?? '')) cambios.telefono = telIn.value.trim();
 
     boton.disabled = true;
     try {
@@ -310,12 +352,110 @@ async function guardarCambios(e: Empleado, emailIn: HTMLInputElement, telIn: HTM
         empleados = empleados.map(x => x.id === e.id ? empleado : x);
         render();
         abrirDrawer(e.id);
-        avisar('Empleado actualizado');
+        avisar(mensaje);
     } catch (err) {
         error.textContent = (err as Error).message;
         error.hidden = false;
         boton.disabled = false;
     }
+}
+
+/** Calendario del mes `calMes` con los días no disponibles del empleado marcados. */
+function htmlMiniCal(e: Empleado): string {
+    const marcados = new Set(e.diasNoDisponibles);
+    const hoy = hoyISO();
+    const titulo = calMes.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' });
+    const desfase = (calMes.getDay() + 6) % 7; // la semana empieza en lunes
+    const diasMes = new Date(calMes.getFullYear(), calMes.getMonth() + 1, 0).getDate();
+    const semanas = Math.ceil((desfase + diasMes) / 7);
+    const inicio = new Date(calMes.getFullYear(), calMes.getMonth(), 1 - desfase);
+
+    const celdas: string[] = [];
+    for (let i = 0; i < semanas * 7; i++) {
+        const d = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate() + i);
+        const iso = aISO(d);
+        const clases = ['mini-dia'];
+        if (d.getMonth() !== calMes.getMonth()) clases.push('otro-mes');
+        if (iso === hoy) clases.push('hoy');
+        const noDisponible = marcados.has(iso);
+        if (noDisponible) clases.push('no-disponible');
+        const etiqueta = noDisponible
+            ? ` title="No disponible" aria-label="${esc(d.toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }))}: no disponible"`
+            : '';
+        celdas.push(`<span class="${clases.join(' ')}"${etiqueta}>${d.getDate()}</span>`);
+    }
+
+    return `
+        <div class="mini-cal-cabecera">
+            <button type="button" class="mini-cal-flecha" data-cal="-1" aria-label="Mes anterior"><i class="fa-solid fa-chevron-left"></i></button>
+            <strong class="mini-cal-titulo">${esc(tituloRol(titulo))}</strong>
+            <button type="button" class="mini-cal-flecha" data-cal="1" aria-label="Mes siguiente"><i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+        <div class="mini-cal-semana"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div>
+        <div class="mini-cal-grid">${celdas.join('')}</div>`;
+}
+
+/** Ventana para registrar una incapacidad: un día o varios seguidos (con "Hasta"). */
+function abrirIncapacidad(e: Empleado): void {
+    abrirModal(`
+        <h2>Nueva incapacidad · ${esc(nombreVisible(e))}</h2>
+        <form id="formIncapacidad" novalidate>
+            <p class="modal-texto">El empleado quedará como no disponible en esas fechas.</p>
+            <label class="campo"><span>Fecha</span>
+                <input type="date" name="desde" required></label>
+            <label class="campo"><span>Hasta (opcional, para varios días seguidos)</span>
+                <input type="date" name="hasta"></label>
+            <p id="formIncapacidadError" class="form-error" hidden></p>
+            <div class="modal-acciones">
+                <button type="button" class="btn-secundario" data-cerrar-modal>Cancelar</button>
+                <button type="submit" class="submit-btn btn-modal"><i class="fa-solid fa-plus"></i> Agregar incapacidad</button>
+            </div>
+        </form>`);
+
+    const form = $<HTMLFormElement>('formIncapacidad');
+    const desde = form.elements.namedItem('desde') as HTMLInputElement;
+    const hasta = form.elements.namedItem('hasta') as HTMLInputElement;
+    // La fecha final nunca puede ser anterior a la inicial.
+    desde.addEventListener('change', () => {
+        hasta.min = desde.value;
+        if (hasta.value && hasta.value < desde.value) hasta.value = desde.value;
+    });
+
+    form.addEventListener('submit', async ev => {
+        ev.preventDefault();
+        const error = $('formIncapacidadError');
+        const boton = form.querySelector<HTMLButtonElement>('.btn-modal')!;
+        error.hidden = true;
+        if (!desde.value) {
+            error.textContent = 'Elige la fecha de la incapacidad.';
+            error.hidden = false;
+            return;
+        }
+        if (hasta.value && hasta.value < desde.value) {
+            error.textContent = 'La fecha final no puede ser anterior a la inicial.';
+            error.hidden = false;
+            return;
+        }
+        boton.disabled = true;
+        try {
+            const { empleado } = await api<{ empleado: Empleado }>('POST', `/api/empleados/${e.id}/no-disponible`, {
+                desde: desde.value,
+                ...(hasta.value ? { hasta: hasta.value } : {})
+            });
+            empleados = empleados.map(x => x.id === e.id ? empleado : x);
+            // Llevar el calendario al mes de la incapacidad para que se vea.
+            const d = new Date(`${desde.value}T00:00:00`);
+            calMes = new Date(d.getFullYear(), d.getMonth(), 1);
+            render();
+            cerrarModal();
+            abrirDrawer(e.id);
+            avisar('Incapacidad agregada');
+        } catch (err) {
+            error.textContent = (err as Error).message;
+            error.hidden = false;
+            boton.disabled = false;
+        }
+    });
 }
 
 function cerrarDrawer(): void {
@@ -324,6 +464,7 @@ function cerrarDrawer(): void {
     drawer.setAttribute('aria-hidden', 'true');
     drawerEliminar.hidden = true;
     seleccionadoId = null;
+    calEmpleadoId = null;
 }
 
 // ---------- Ventana emergente (crear / eliminar) ----------
@@ -347,12 +488,17 @@ function abrirCrear(rolId: number): void {
         <form id="formCrear" novalidate>
             <label class="campo"><span>Nombre completo</span>
                 <input type="text" name="nombre" autocomplete="off" required></label>
+            <label class="campo"><span>Cédula (CC), solo números y sin puntos</span>
+                <input type="text" name="cedula" inputmode="numeric" maxlength="10" placeholder="Ej: 1053123456" autocomplete="off" required></label>
             <label class="campo"><span>Correo</span>
                 <input type="email" name="email" autocomplete="off" required></label>
             <label class="campo"><span>Teléfono (opcional)</span>
                 <input type="tel" name="telefono" placeholder="Ej: 3001234567" autocomplete="off"></label>
-            <label class="campo"><span>Contraseña inicial</span>
-                <input type="password" name="password" autocomplete="new-password" minlength="6" required></label>
+            <label class="campo"><span>Cuenta bancaria (opcional)</span>
+                <input type="text" name="cuentaBancaria" maxlength="100" autocomplete="off"></label>
+            <label class="campo"><span>Llave (opcional)</span>
+                <input type="text" name="llave" maxlength="100" autocomplete="off"></label>
+            <p class="modal-texto">El empleado se crea con la contraseña inicial por defecto.</p>
             <p id="formCrearError" class="form-error" hidden></p>
             <div class="modal-acciones">
                 <button type="button" class="btn-secundario" data-cerrar-modal>Cancelar</button>
@@ -361,19 +507,32 @@ function abrirCrear(rolId: number): void {
         </form>`);
 
     const form = $<HTMLFormElement>('formCrear');
+    // La cédula solo admite números: lo que no lo sea (puntos, espacios, letras) se descarta al escribir.
+    const cedulaIn = form.elements.namedItem('cedula') as HTMLInputElement;
+    cedulaIn.addEventListener('input', () => {
+        cedulaIn.value = cedulaIn.value.replace(/\D/g, '');
+    });
     form.addEventListener('submit', async ev => {
         ev.preventDefault();
         const f = new FormData(form);
         const error = $('formCrearError');
         const boton = form.querySelector<HTMLButtonElement>('.btn-modal')!;
         error.hidden = true;
+        if (!/^\d{6,10}$/.test(cedulaIn.value)) {
+            error.textContent = 'La cédula debe tener entre 6 y 10 números, sin puntos ni espacios.';
+            error.hidden = false;
+            cedulaIn.focus();
+            return;
+        }
         boton.disabled = true;
         try {
             const { empleado } = await api<{ empleado: Empleado }>('POST', '/api/empleados', {
                 nombre: String(f.get('nombre') ?? ''),
+                cedula: cedulaIn.value,
                 email: String(f.get('email') ?? ''),
                 telefono: String(f.get('telefono') ?? ''),
-                password: String(f.get('password') ?? ''),
+                cuentaBancaria: String(f.get('cuentaBancaria') ?? ''),
+                llave: String(f.get('llave') ?? ''),
                 rolId
             });
             empleados = [...empleados, empleado];
@@ -503,6 +662,14 @@ filtroLimpiar.addEventListener('click', () => {
     render();
 });
 overlay.addEventListener('click', cerrarDrawer);
+// Flechas del calendario de disponibilidad: cambian de mes sin volver a pintar el resto del panel.
+drawerContenido.addEventListener('click', ev => {
+    const flecha = (ev.target as HTMLElement).closest<HTMLElement>('[data-cal]');
+    const e = empleados.find(x => x.id === seleccionadoId);
+    if (!flecha || !e) return;
+    calMes = new Date(calMes.getFullYear(), calMes.getMonth() + Number(flecha.dataset.cal), 1);
+    $('miniCal').innerHTML = htmlMiniCal(e);
+});
 $('drawerCerrar').addEventListener('click', cerrarDrawer);
 drawerEliminar.addEventListener('click', () => {
     if (seleccionadoId) abrirEliminar(seleccionadoId);

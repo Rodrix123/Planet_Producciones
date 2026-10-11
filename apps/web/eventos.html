@@ -40,15 +40,30 @@
 
         <div class="filtros eventos-filtros">
             <div class="toggles" role="group" aria-label="Filtros de estado">
-                <button type="button" class="toggle-chip" data-filtro="confirmado" aria-pressed="false">
-                    <i class="fa-solid fa-circle-check"></i> Evento confirmado
-                </button>
-                <button type="button" class="toggle-chip" data-filtro="pagoInicial" aria-pressed="false">
-                    <i class="fa-solid fa-money-bill-wave"></i> Pago inicial hecho
-                </button>
-                <button type="button" class="toggle-chip" data-filtro="firmado" aria-pressed="false">
-                    <i class="fa-solid fa-file-signature"></i> Firmado
-                </button>
+                <div class="filtro-estado" role="group" aria-label="Evento confirmado">
+                    <span class="filtro-estado-nombre"><i class="fa-solid fa-circle-check"></i> Evento confirmado</span>
+                    <div class="segmentos">
+                        <button type="button" class="segmento" data-filtro="confirmado" data-valor="todos" aria-pressed="true" title="Confirmados y sin confirmar">Todos</button>
+                        <button type="button" class="segmento" data-filtro="confirmado" data-valor="si" aria-pressed="false" title="Solo los eventos confirmados">Sí</button>
+                        <button type="button" class="segmento" data-filtro="confirmado" data-valor="no" aria-pressed="false" title="Solo los eventos sin confirmar">No</button>
+                    </div>
+                </div>
+                <div class="filtro-estado" role="group" aria-label="Pago inicial hecho">
+                    <span class="filtro-estado-nombre"><i class="fa-solid fa-money-bill-wave"></i> Pago inicial hecho</span>
+                    <div class="segmentos">
+                        <button type="button" class="segmento" data-filtro="pagoInicial" data-valor="todos" aria-pressed="true" title="Con y sin pago inicial">Todos</button>
+                        <button type="button" class="segmento" data-filtro="pagoInicial" data-valor="si" aria-pressed="false" title="Solo los eventos con el pago inicial hecho">Sí</button>
+                        <button type="button" class="segmento" data-filtro="pagoInicial" data-valor="no" aria-pressed="false" title="Solo los eventos sin pago inicial">No</button>
+                    </div>
+                </div>
+                <div class="filtro-estado" role="group" aria-label="Firmado">
+                    <span class="filtro-estado-nombre"><i class="fa-solid fa-file-signature"></i> Firmado</span>
+                    <div class="segmentos">
+                        <button type="button" class="segmento" data-filtro="firmado" data-valor="todos" aria-pressed="true" title="Firmados y sin firmar">Todos</button>
+                        <button type="button" class="segmento" data-filtro="firmado" data-valor="si" aria-pressed="false" title="Solo los eventos firmados">Sí</button>
+                        <button type="button" class="segmento" data-filtro="firmado" data-valor="no" aria-pressed="false" title="Solo los eventos sin firmar">No</button>
+                    </div>
+                </div>
             </div>
             <div class="filtro-grupo">
                 <label class="filtro">
@@ -63,7 +78,6 @@
             <button type="button" id="fLimpiar" class="btn-secundario filtro-limpiar" hidden>
                 <i class="fa-solid fa-filter-circle-xmark"></i> Limpiar filtros
             </button>
-            <span id="fConteo" class="filtro-conteo"></span>
         </div>
 
         <div id="estado" class="panel-estado">

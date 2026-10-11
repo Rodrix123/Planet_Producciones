@@ -35,10 +35,6 @@
     font-size: 0.78rem;
 }
 
-.eventos-filtros .filtro-conteo {
-    font-size: 0.78rem;
-}
-
 /* ---------- Crear evento: botón destacado (arriba a la derecha) y "+" del título ---------- */
 .btn-nuevo-evento {
     display: inline-flex;
@@ -200,31 +196,72 @@
     gap: 0.4rem;
 }
 
-.toggle-chip {
+/* Filtro de estado con tres valores: Todos / Sí / No. Con Sí o No elegido, el borde se pone naranja. */
+.filtro-estado {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.5rem;
     height: 32px;
-    padding: 0 0.8rem;
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: var(--text-muted);
+    padding: 0 0.25rem 0 0.8rem;
     background: var(--bg-input);
     border: 1px solid var(--border-color);
     border-radius: 999px;
-    cursor: pointer;
-    transition: color 0.2s, background 0.2s, border-color 0.2s;
+    transition: border-color 0.2s;
 }
 
-.toggle-chip:hover {
-    color: var(--text-light);
-    border-color: var(--text-muted);
-}
-
-.toggle-chip[aria-pressed="true"] {
-    color: var(--orange-main);
-    background: rgba(249, 115, 22, 0.12);
+.filtro-estado:has(.segmento:not([data-valor="todos"])[aria-pressed="true"]) {
     border-color: rgba(249, 115, 22, 0.5);
+}
+
+.filtro-estado-nombre {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.segmentos {
+    display: inline-flex;
+    gap: 2px;
+    padding: 2px;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 999px;
+}
+
+.segmento {
+    height: 22px;
+    padding: 0 0.6rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: color 0.2s, background 0.2s;
+}
+
+.segmento:hover {
+    color: var(--text-light);
+}
+
+.segmento:focus-visible {
+    outline: 2px solid var(--orange-main);
+    outline-offset: 1px;
+}
+
+.segmento[aria-pressed="true"] {
+    color: #fff;
+    background: var(--orange-main);
+}
+
+/* "Todos" elegido = sin filtro: se ve neutro, no naranja. */
+.segmento[data-valor="todos"][aria-pressed="true"] {
+    color: var(--text-light);
+    background: var(--border-color);
 }
 
 /* ---------- Dos paneles con la misma altura y ancho ---------- */

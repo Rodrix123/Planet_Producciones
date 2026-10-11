@@ -7,6 +7,7 @@ import cors from 'cors';
 import { createClient } from '@supabase/supabase-js';
 import {
     actualizarEmpleado,
+    agregarIncapacidad,
     crearEmpleado,
     eliminarEmpleado,
     ErrorEmpleado,
@@ -274,6 +275,10 @@ app.post('/api/empleados', (req: Request, res: Response) =>
 
 app.patch('/api/empleados/:id', (req: Request, res: Response) =>
     conEmpleados(res, async db => ({ empleado: await actualizarEmpleado(db, String(req.params.id), req.body ?? {}) })));
+
+// Registra una incapacidad ({ desde, hasta? }): días en los que el empleado no estará disponible.
+app.post('/api/empleados/:id/no-disponible', (req: Request, res: Response) =>
+    conEmpleados(res, async db => ({ empleado: await agregarIncapacidad(db, String(req.params.id), req.body ?? {}) }), 201));
 
 app.delete('/api/empleados/:id', (req: Request, res: Response) =>
     conEmpleados(res, async db => { await eliminarEmpleado(db, String(req.params.id)); return {}; }));

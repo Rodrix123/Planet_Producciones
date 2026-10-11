@@ -41,6 +41,8 @@ interface OpcionesEvento {
 }
 
 type ClaveToggle = 'confirmado' | 'pagoInicial' | 'firmado';
+/** Cada filtro de estado busca los que sí cumplen, los que no, o todos (sin filtrar). */
+type ValorFiltro = 'todos' | 'si' | 'no';
 
 const MAX_VISIBLES = 4;
 const FADE_MS = 180;
@@ -67,8 +69,7 @@ const calGrid = $('calGrid');
 const fDesde = $<HTMLInputElement>('fDesde');
 const fHasta = $<HTMLInputElement>('fHasta');
 const fLimpiar = $('fLimpiar');
-const fConteo = $('fConteo');
-const toggles = document.querySelectorAll<HTMLButtonElement>('.toggle-chip');
+const segmentos = document.querySelectorAll<HTMLButtonElement>('.segmento');
 
 let eventos: Evento[] = [];
 let opciones: OpcionesEvento | null = null;
@@ -76,7 +77,8 @@ let seleccionadoId: number | null = null;
 let popoverFecha: string | null = null;
 let fadeTimer: number | undefined;
 let toastTimer: number | undefined;
-const filtrosActivos = new Set<ClaveToggle>();
+const filtrosEstado: Record<ClaveToggle, ValorFiltro> = { confirmado: 'todos', pagoInicial: 'todos', firmado: 'todos' };
+const CLAVES_ESTADO = Object.keys(filtrosEstado) as ClaveToggle[];
 
 // Mes que muestra el calendario (siempre día 1).
 const hoy = new Date();
@@ -144,14 +146,18 @@ function lugarTexto(e: Evento): string {
 
 // ---------- Filtros ----------
 function hayFiltros(): boolean {
-    return filtrosActivos.size > 0 || fDesde.value !== '' || fHasta.value !== '';
+    return CLAVES_ESTADO.some(c => filtrosEstado[c] !== 'todos') || fDesde.value !== '' || fHasta.value !== '';
 }
 
 function filtrar(): Evento[] {
     const desde = fDesde.value;
     const hasta = fHasta.value;
     return eventos.filter(e => {
-        for (const clave of filtrosActivos) if (!e[clave]) return false;
+        // 'si' deja solo los que cumplen; 'no', solo los que no; 'todos' no filtra.
+        for (const clave of CLAVES_ESTADO) {
+            const valor = filtrosEstado[clave];
+            if (valor !== 'todos' && e[clave] !== (valor === 'si')) return false;
+        }
         if (desde && e.fecha < desde) return false;
         if (hasta && e.fecha > hasta) return false;
         return true;
@@ -170,7 +176,9 @@ function iconosEstado(e: Evento): string {
 function renderLista(visibles: Evento[]): void {
     // Todos los eventos que pasan los filtros, del más antiguo al más reciente.
     const items = [...visibles].sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora));
-    listaConteo.textContent = String(items.length);
+    // Único contador de eventos: los que coinciden con los filtros ("N de M" cuando hay filtros activos).
+    listaConteo.textContent = hayFiltros() ? `${items.length} de ${eventos.length}` : String(items.length);
+    listaConteo.title = `${listaConteo.textContent} eventos`;
 
     if (items.length === 0) {
         listaEventos.innerHTML = `<p class="lista-vacia">${hayFiltros()
@@ -388,10 +396,8 @@ function render(): void {
     }
 
     fLimpiar.hidden = !hayFiltros();
-    fConteo.textContent = hayFiltros()
-        ? `${visibles.length} de ${eventos.length} eventos`
-        : `${eventos.length} eventos`;
-    toggles.forEach(t => t.setAttribute('aria-pressed', String(filtrosActivos.has(t.dataset.filtro as ClaveToggle))));
+    segmentos.forEach(s => s.setAttribute(
+        'aria-pressed', String(filtrosEstado[s.dataset.filtro as ClaveToggle] === s.dataset.valor)));
 
     renderLista(visibles);
     renderCalendario(visibles);
@@ -650,10 +656,8 @@ async function cargar(): Promise<void> {
 }
 
 // ---------- Eventos de la interfaz ----------
-toggles.forEach(t => t.addEventListener('click', () => {
-    const clave = t.dataset.filtro as ClaveToggle;
-    if (filtrosActivos.has(clave)) filtrosActivos.delete(clave);
-    else filtrosActivos.add(clave);
+segmentos.forEach(s => s.addEventListener('click', () => {
+    filtrosEstado[s.dataset.filtro as ClaveToggle] = s.dataset.valor as ValorFiltro;
     render();
 }));
 
@@ -671,7 +675,7 @@ fDesde.addEventListener('change', alCambiarRango);
 fHasta.addEventListener('change', alCambiarRango);
 
 fLimpiar.addEventListener('click', () => {
-    filtrosActivos.clear();
+    CLAVES_ESTADO.forEach(c => { filtrosEstado[c] = 'todos'; });
     fDesde.value = '';
     fHasta.value = '';
     fHasta.min = '';
