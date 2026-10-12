@@ -216,16 +216,6 @@
     background: var(--orange-main);
 }
 
-/* Eventos que ya pasaron: atenuados, pero legibles. */
-.lista-item.pasado {
-    opacity: 0.55;
-}
-
-.lista-item.pasado:hover,
-.lista-item.pasado.seleccionado {
-    opacity: 1;
-}
-
 .lista-vacia {
     margin: auto;
     padding: 1rem;

@@ -38,7 +38,9 @@ interface FilaCotizacion {
   hour: string;
   event_type: string | null;
   address: string | null;
+  /** Lugar escrito a mano cuando la sede no está registrada (venue_id nulo). */
   venue_nombre_manual: string | null;
+  venue_direccion_manual: string | null;
   venue: { name: string; city: string | null } | null;
   client: { name: string; email: string | null; phone: string | null } | null;
   transportation: { city: string } | null;
@@ -52,8 +54,6 @@ interface FilaEvento {
   total_paid: number | string;
   contrato_enviado_en: string | null;
   contrato_firmado_subido_en: string | null;
-  venue_nombre_manual: string | null;
-  venue_direccion_manual: string | null;
   quote: FilaCotizacion | null;
   event_staff: { profile_id: string }[] | null;
 }
@@ -62,9 +62,9 @@ type FilaEventoConFecha = FilaEvento & { quote: FilaCotizacion & { date: string 
 
 const COLUMNAS = [
   "id, confirmed, initial_payment, total_paid",
-  "contrato_enviado_en, contrato_firmado_subido_en, venue_nombre_manual, venue_direccion_manual",
+  "contrato_enviado_en, contrato_firmado_subido_en",
   [
-    "quote(total, date, hour, event_type, address, venue_nombre_manual",
+    "quote(total, date, hour, event_type, address, venue_nombre_manual, venue_direccion_manual",
     "venue(name, city)",
     "client:users!client_id(name, email, phone)",
     "transportation(city))",
@@ -102,8 +102,7 @@ const tieneFecha = (f: FilaEvento): f is FilaEventoConFecha => Boolean(f.quote?.
 
 /**
  * Cuándo, dónde, quién y qué se cotizó sale de la cotización del evento; el
- * evento aporta confirmación, pagos y contrato. Las columnas manuales del lugar
- * que aún tiene events sirven de respaldo para los eventos anteriores al cambio.
+ * evento aporta confirmación, pagos y contrato.
  */
 function aEvento(f: FilaEventoConFecha, nombrePorPerfil: Map<string, string>): Evento {
   const q = f.quote;
@@ -112,9 +111,9 @@ function aEvento(f: FilaEventoConFecha, nombrePorPerfil: Map<string, string>): E
     fecha: q.date,
     hora: q.hour,
     tipo: q.event_type,
-    lugar: q.venue?.name ?? q.venue_nombre_manual ?? f.venue_nombre_manual,
+    lugar: q.venue?.name ?? q.venue_nombre_manual,
     ciudad: q.venue?.city ?? null,
-    direccion: q.address ?? f.venue_direccion_manual,
+    direccion: q.address ?? q.venue_direccion_manual,
     cliente: q.client
       ? { nombre: q.client.name, email: q.client.email, telefono: q.client.phone }
       : null,
@@ -130,7 +129,15 @@ function aEvento(f: FilaEventoConFecha, nombrePorPerfil: Map<string, string>): E
 }
 
 /**
- * Solo lectura.
+ * Fecha de hoy en Colombia (YYYY-MM-DD). Se usa la hora local y no la UTC para que
+ * un evento de hoy siga vigente toda la tarde y la noche, cuando en UTC ya es mañana.
+ */
+const hoyEnColombia = (): string => new Date().toLocaleDateString("en-CA", { timeZone: "America/Bogota" });
+
+/**
+ * Solo lectura. Devuelve únicamente los eventos vigentes: los de hoy en adelante.
+ * Un evento de hoy cuenta como vigente todo el día, aunque su hora ya haya pasado,
+ * porque los eventos no guardan duración y puede seguir en curso.
  *
  * - public.events + public.quote (+ venue, users, transportation) -> datos del evento
  * - public.event_staff + auth.users (Admin API)                   -> personal asignado y su nombre
@@ -144,11 +151,13 @@ export async function listarEventos(supabase: SupabaseClient): Promise<{ eventos
   if (eventosRes.error) throw eventosRes.error;
 
   const todas = eventosRes.data as unknown as FilaEvento[];
-  const filas = todas.filter(tieneFecha);
-  if (filas.length < todas.length) {
+  const conFecha = todas.filter(tieneFecha);
+  if (conFecha.length < todas.length) {
     const omitidos = todas.filter((f) => !tieneFecha(f)).map((f) => f.id);
     console.warn(`Eventos omitidos: su cotización no tiene fecha (events.id ${omitidos.join(", ")}).`);
   }
+  const hoy = hoyEnColombia();
+  const filas = conFecha.filter((f) => f.quote.date >= hoy);
   filas.sort((a, b) => `${a.quote.date} ${a.quote.hour}`.localeCompare(`${b.quote.date} ${b.quote.hour}`));
 
   const nombrePorPerfil = await nombresPorPerfil(supabase, idsDelPersonal(filas));
@@ -563,6 +572,7 @@ export async function crearEvento(supabase: SupabaseClient, datos: NuevoEvento):
         address: direccion || null,
         venue_id: venueId,
         venue_nombre_manual: venueId === null ? lugarManual : null,
+        venue_direccion_manual: venueId === null ? direccionLugarManual || null : null,
       })
       .select("id")
       .single();
@@ -571,11 +581,7 @@ export async function crearEvento(supabase: SupabaseClient, datos: NuevoEvento):
 
     const evento = await supabase
       .from("events")
-      .insert({
-        quote_id: quoteId,
-        confirmed: datos.confirmado === true,
-        venue_direccion_manual: venueId === null ? direccionLugarManual || null : null,
-      })
+      .insert({ quote_id: quoteId, confirmed: datos.confirmado === true })
       .select("id")
       .single();
     if (evento.error) throw evento.error;

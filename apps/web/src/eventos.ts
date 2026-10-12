@@ -163,16 +163,11 @@ function renderLista(visibles: Evento[]): void {
         return;
     }
 
-    let proximoMarcado = false;
     listaEventos.innerHTML = items.map(e => {
         const d = deISO(e.fecha);
         const mesCorto = d.toLocaleDateString('es-CO', { month: 'short' }).replace('.', '');
-        const pasado = e.fecha < HOY_ISO;
-        // El primer evento de hoy en adelante es el punto de partida del deslizador.
-        const esProximo = !pasado && !proximoMarcado;
-        if (esProximo) proximoMarcado = true;
         return `
-        <button type="button" class="lista-item${pasado ? ' pasado' : ''}"${esProximo ? ' data-proximo' : ''} data-evento="${e.id}">
+        <button type="button" class="lista-item" data-evento="${e.id}">
             <div class="lista-fecha"><strong>${d.getDate()}</strong><span>${esc(mesCorto)}</span></div>
             <div class="lista-info">
                 <div class="lista-tipo">${esc(nombreTipo(e))}</div>
@@ -182,11 +177,8 @@ function renderLista(visibles: Evento[]): void {
         </button>`;
     }).join('');
 
-    // Abrir la lista ya posicionada en los eventos vigentes (los pasados quedan arriba).
-    const proximo = listaEventos.querySelector<HTMLElement>('[data-proximo]');
-    listaEventos.scrollTop = proximo
-        ? proximo.getBoundingClientRect().top - listaEventos.getBoundingClientRect().top + listaEventos.scrollTop
-        : listaEventos.scrollHeight;
+    // El API solo trae eventos vigentes: el primero de la lista es el próximo.
+    listaEventos.scrollTop = 0;
 }
 
 // ---------- Calendario ----------
