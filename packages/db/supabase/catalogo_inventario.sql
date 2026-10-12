@@ -6,6 +6,9 @@
 -- Tampoco se incluyen las variantes que solo cambian por cantidad de piezas (Par led 8/12/16/20,
 -- CDJ de 2 y 3 unidades y Line Array de 4/6/8 cajas): la cantidad se pone al cotizar. Se eliminaron
 -- en la migración 20261012120000, que además renombra inventory_variants.price a price_variants.
+-- Los elementos que antes traían la cantidad en el nombre se llaman por su unidad.
+-- En la base, la cantidad de esos elementos (2 lanzas llamas, 2 criojets, 2 plantas eléctricas y 20 spots)
+-- se guarda en "PriceVariants".quantity junto al precio (migración 20261012140000).
 
 BEGIN;
 
@@ -20,7 +23,7 @@ SELECT v.name, v.type FROM (VALUES
   ('Iluminación Profesional', 'Iluminación'),
   ('Par led Ambientación del sitio (reflectores)', 'Luces de Ambientación'),
   ('Par led Inalambricos Ambientación del sitio (reflectores)', 'Luces de Ambientación'),
-  ('20 Spot Inalambrico para iluminar mesas principales, mesas de postres y demas', 'Luces de Ambientación'),
+  ('Spot Inalambrico para iluminar mesas principales, mesas de postres y demas', 'Luces de Ambientación'),
   ('Pantalla Led Pitch 3 en diseño', 'Pantallas'),
   ('Pista de Vidrio Negro Led 3D infinito', 'Pisos para pista de baile y pasarelas'),
   ('Sparkulas', 'Efectos de alto impacto e iluminacion extra'),
@@ -32,10 +35,10 @@ SELECT v.name, v.type FROM (VALUES
   ('Maquina de burbujas con humo', 'Efectos de alto impacto e iluminacion extra'),
   ('Chispon de 70 cm c/u (Salida de Ceremonia)', 'Efectos de alto impacto e iluminacion extra'),
   ('Vela Craker', 'Efectos de alto impacto e iluminacion extra'),
-  ('2 Lanzas Llamas', 'Efectos de alto impacto e iluminacion extra'),
+  ('Lanza Llamas', 'Efectos de alto impacto e iluminacion extra'),
   ('Kabuqui de Serpentinas (1 Tiro)', 'Efectos de alto impacto e iluminacion extra'),
   ('Pistola de CO2 para la Hora Loca', 'Efectos de alto impacto e iluminacion extra'),
-  ('2 Criojets de CO2', 'Efectos de alto impacto e iluminacion extra'),
+  ('Criojet de CO2', 'Efectos de alto impacto e iluminacion extra'),
   ('Máquina de Niebla baja (HIELO SECO) (Baile Novios)', 'Efectos de alto impacto e iluminacion extra'),
   ('Bola de Espejos c/u (sin instalación)', 'Efectos de alto impacto e iluminacion extra'),
   ('1 Motor para Bola de Espejos', 'Efectos de alto impacto e iluminacion extra'),
@@ -47,7 +50,7 @@ SELECT v.name, v.type FROM (VALUES
   ('Puff adicional c/u', 'Mobiliario Coctel de Bienvenida'),
   ('Carpa Blanca', 'Carpas Convencionales'),
   ('Generadores Eléctricos - Todo el evento', 'Otros'),
-  ('2 Plantas Eléctricas - Backup', 'Otros'),
+  ('Planta Eléctrica - Backup', 'Otros'),
   ('Tarima', 'Otros')
 ) AS v(name, type)
 WHERE NOT EXISTS (SELECT 1 FROM public.inventory i WHERE i.name = v.name AND i.type = v.type);
@@ -129,7 +132,7 @@ Stand para Micrófonos', 800000),
 1 Computador
 1 Ingeniero de Iluminación
 1 Máquina de Humo', 3500000),
-  ('20 Spot Inalambrico para iluminar mesas principales, mesas de postres y demas', 'Luces de Ambientación', '20 Spot Inalambrico para iluminar mesas principales, mesas de postres y demas', NULL::text, 1300000),
+  ('Spot Inalambrico para iluminar mesas principales, mesas de postres y demas', 'Luces de Ambientación', 'Spot Inalambrico para iluminar mesas principales, mesas de postres y demas', NULL::text, 1300000),
   ('Pantalla Led Pitch 3 en diseño', 'Pantallas', '3 Metros', '1 Video Procesador
 1 Computador
 1 ingeniero de Video', 900000),
@@ -174,10 +177,10 @@ Stand para Micrófonos', 800000),
   ('Maquina de burbujas con humo', 'Efectos de alto impacto e iluminacion extra', 'Maquina de burbujas con humo', NULL::text, 500000),
   ('Chispon de 70 cm c/u (Salida de Ceremonia)', 'Efectos de alto impacto e iluminacion extra', 'Chispon de 70 cm c/u (Salida de Ceremonia)', NULL::text, 14000),
   ('Vela Craker', 'Efectos de alto impacto e iluminacion extra', 'Vela Craker', NULL::text, 40000),
-  ('2 Lanzas Llamas', 'Efectos de alto impacto e iluminacion extra', '2 Lanzas Llamas', NULL::text, 700000),
+  ('Lanza Llamas', 'Efectos de alto impacto e iluminacion extra', 'Lanza Llamas', NULL::text, 700000),
   ('Kabuqui de Serpentinas (1 Tiro)', 'Efectos de alto impacto e iluminacion extra', 'Kabuqui de Serpentinas (1 Tiro)', NULL::text, 700000),
   ('Pistola de CO2 para la Hora Loca', 'Efectos de alto impacto e iluminacion extra', 'Pistola de CO2 para la Hora Loca', NULL::text, 650000),
-  ('2 Criojets de CO2', 'Efectos de alto impacto e iluminacion extra', '2 Criojets de CO2', NULL::text, 1000000),
+  ('Criojet de CO2', 'Efectos de alto impacto e iluminacion extra', 'Criojet de CO2', NULL::text, 1000000),
   ('Máquina de Niebla baja (HIELO SECO) (Baile Novios)', 'Efectos de alto impacto e iluminacion extra', 'Máquina de Niebla baja (HIELO SECO) (Baile Novios)', NULL::text, 800000),
   ('Bola de Espejos c/u (sin instalación)', 'Efectos de alto impacto e iluminacion extra', '10 cm (Pequeña)', NULL::text, 20000),
   ('Bola de Espejos c/u (sin instalación)', 'Efectos de alto impacto e iluminacion extra', '20 cm (Mediana)', NULL::text, 30000),
@@ -199,7 +202,7 @@ Stand para Micrófonos', 800000),
   ('Carpa Blanca', 'Carpas Convencionales', '4 x 4', NULL::text, 400000),
   ('Carpa Blanca', 'Carpas Convencionales', '6 x 4', NULL::text, 450000),
   ('Generadores Eléctricos - Todo el evento', 'Otros', 'Generadores Eléctricos - Todo el evento', NULL::text, 2200000),
-  ('2 Plantas Eléctricas - Backup', 'Otros', '2 Plantas Eléctricas - Backup', NULL::text, 800000),
+  ('Planta Eléctrica - Backup', 'Otros', 'Planta Eléctrica - Backup', NULL::text, 800000),
   ('Tarima', 'Otros', '2 x 2 mtrs', 'Para DJ', 320000),
   ('Tarima', 'Otros', '3 x 2 mtrs', 'Para instalación de equipos y DJ', 480000),
   ('Tarima', 'Otros', '4 x 2 mtrs', 'Para instalación de equipos, DJ y grupo musical', 640000),
