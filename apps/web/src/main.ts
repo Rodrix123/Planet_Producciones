@@ -369,33 +369,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return { blob, nombreArchivo };
     }
 
-    // Envía el PDF y Excel de la cotización recién generada al WhatsApp registrado de la dueña
-    async function enviarCotizacionWhatsApp(
-        pdfBlob: Blob,
-        nombreArchivoPdf: string,
-        excelBlob: Blob,
-        nombreArchivoExcel: string,
-        datosCliente: DatosCliente,
-        refNum: string
-    ): Promise<void> {
-        const formData = new FormData();
-        formData.append('pdf', pdfBlob, nombreArchivoPdf);
-        formData.append('excel', excelBlob, nombreArchivoExcel);
-        formData.append('nombre', datosCliente.nombre);
-        formData.append('tipoEvento', datosCliente.tipoEvento);
-        formData.append('refNum', refNum);
-
-        const respuesta = await fetch(`${API_URL}/api/enviar-whatsapp`, {
-            method: 'POST',
-            body: formData
-        });
-
-        const data = await respuesta.json().catch(() => ({}));
-        if (!respuesta.ok || data.status !== 'ok') {
-            throw new Error(data.message || 'No se pudo enviar la cotización por WhatsApp.');
-        }
-    }
-
     // Envía el PDF y Excel de la cotización recién generada por correo a la secretaria, el jefe y el
     // administrador (los destinatarios se configuran en el servidor)
     async function enviarCotizacionCorreo(
@@ -500,49 +473,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
             Swal.fire({
                 title: 'Enviando cotización...',
-                text: 'PDF y Excel descargados. Enviando copia por correo y WhatsApp.',
+                text: 'PDF y Excel descargados. Enviando copia por correo.',
                 allowOutsideClick: false,
                 didOpen: () => { Swal.showLoading(); }
             });
 
-            // Los canales son independientes: si uno falla, el otro igual se entrega
-            const [resultadoCorreo, resultadoWhatsApp] = await Promise.allSettled([
-                enviarCotizacionCorreo(
+            // Si el correo falla, los archivos ya se descargaron: se avisa sin tratarlo como error general
+            let correoEnviado = true;
+            try {
+                await enviarCotizacionCorreo(
                     pdfBlob, nombreArchivoPdf,
                     excelBlob, nombreArchivoExcel,
                     datosCliente, datosCotizacion.total, refNum
-                ),
-                enviarCotizacionWhatsApp(
-                    pdfBlob, nombreArchivoPdf,
-                    excelBlob, nombreArchivoExcel,
-                    datosCliente, refNum
-                )
-            ]);
-
-            const canales = [
-                { medio: 'correo', destino: 'por correo al equipo de Planet Producciones', resultado: resultadoCorreo },
-                { medio: 'WhatsApp', destino: 'por WhatsApp a la dueña', resultado: resultadoWhatsApp }
-            ];
-            const lineasEnvio: string[] = [];
-            const mediosFallidos: string[] = [];
-
-            for (const { medio, destino, resultado } of canales) {
-                if (resultado.status === 'fulfilled') {
-                    lineasEnvio.push(`Se envió la cotización <strong>${refNum}</strong> ${destino}.`);
-                } else {
-                    console.error(`Error enviando la cotización por ${medio}:`, resultado.reason);
-                    mediosFallidos.push(medio);
-                    lineasEnvio.push(`No se pudo enviar la cotización <strong>${refNum}</strong> ${destino}.`);
-                }
+                );
+            } catch (errorCorreo) {
+                console.error('Error enviando la cotización por correo:', errorCorreo);
+                correoEnviado = false;
             }
 
-            const todoEnviado = mediosFallidos.length === 0;
             Swal.fire({
-                icon: todoEnviado ? 'success' : 'warning',
-                title: todoEnviado
+                icon: correoEnviado ? 'success' : 'warning',
+                title: correoEnviado
                     ? '¡Cotización Generada y Enviada!'
-                    : `Archivos generados, ${mediosFallidos.join(' y ')} no ${mediosFallidos.length > 1 ? 'enviados' : 'enviado'}`,
-                html: `${todoEnviado ? 'PDF HD y Excel descargados exitosamente.' : 'PDF HD y Excel se descargaron correctamente.'}<br>${lineasEnvio.join('<br>')}`,
+                    : 'Archivos generados, correo no enviado',
+                html: correoEnviado
+                    ? `PDF HD y Excel descargados exitosamente.<br>Se envió la cotización <strong>${refNum}</strong> por correo al equipo de Planet Producciones.`
+                    : `PDF HD y Excel se descargaron correctamente.<br>No se pudo enviar la cotización <strong>${refNum}</strong> por correo al equipo de Planet Producciones.`,
                 confirmButtonColor: '#f97316'
             });
 

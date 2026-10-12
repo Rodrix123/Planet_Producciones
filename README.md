@@ -90,8 +90,8 @@ ejecutivo del lado del cliente. Al pulsar **Generar Cotización (PDF & Excel)**
 el navegador descarga ambos archivos y los envía al backend
 (`POST /api/enviar-cotizacion-correo`), que los reenvía por correo a la
 secretaria, el jefe y el administrador para que puedan coordinar con logística
-los equipos, el personal y los espacios del evento. El envío por WhatsApp
-permanece pendiente.
+los equipos, el personal y los espacios del evento. La cotización solo se
+envía por correo; no se envía por WhatsApp.
 
 > Esta migración solo reorganiza el proyecto en un monorepo `apps/web` +
 > `apps/server` y convierte el código a TypeScript. No se modificó el
