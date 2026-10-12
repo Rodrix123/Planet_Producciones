@@ -18,7 +18,6 @@ interface Variante {
     id: number;
     nombre: string | null;
     descripcionDetallada: string | null;
-    precio: number;
     unidades: Unidad[];
 }
 
@@ -90,8 +89,6 @@ function formatearFecha(iso: string): string {
     return d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-const formatoPrecio = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
-
 function nombreVariante(v: Variante): string {
     return v.nombre?.trim() || `Variante #${v.id}`;
 }
@@ -102,7 +99,7 @@ interface Nodo {
     nivel: 1 | 2 | 3 | 4;
     icono: string;
     titulo: string;
-    /** HTML de la derecha del encabezado (conteos, precio, estado). */
+    /** HTML de la derecha del encabezado (conteo o estado). */
     meta: string;
     abierto: boolean;
     /** Contenido del nivel; solo se arma cuando está abierto. */
@@ -175,13 +172,12 @@ function cuerpoVariante(v: Variante): string {
 
 function nodoVariante(v: Variante, forzadas: Set<string>): string {
     const clave = claveVariante(v);
-    const precio = v.precio > 0 ? `<span class="inv-precio">${formatoPrecio.format(v.precio)}</span>` : '';
     return nodoHtml({
         clave,
         nivel: 3,
         icono: 'fa-tags',
         titulo: nombreVariante(v),
-        meta: `${precio}<span class="inv-conteo">${textoUnidades(v.unidades.length)}</span>`,
+        meta: `<span class="inv-conteo">${textoUnidades(v.unidades.length)}</span>`,
         abierto: abiertos.has(clave) || forzadas.has(clave),
         cuerpo: () => cuerpoVariante(v)
     });
