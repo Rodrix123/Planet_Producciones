@@ -13,7 +13,7 @@ eventos (Manizales, Caldas). Monorepo con dos workspaces:
   navegador (html2pdf.js, SheetJS).
 - `apps/server` — API Express (TypeScript). Recibe la cotización, genera
   PDF (pdfkit) y Excel (exceljs), y los envía por correo (nodemailer) a la
-  gerencia.
+  gerencia .
 
 ## Convenciones
 
