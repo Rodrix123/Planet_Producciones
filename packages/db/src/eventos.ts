@@ -70,6 +70,9 @@ const POR_PAGINA = 200;
  */
 const ALFABETICO = new Intl.Collator("es", { sensitivity: "base", numeric: true });
 
+/** Nombre con el que la lista de la web titula cada evento: su tipo, o "Evento" si no tiene. */
+const nombreTipoEvento = (e: Evento): string => e.tipo?.trim() || "Evento";
+
 /**
  * Nombres de los usuarios indicados, leídos de auth.users (Admin API): public.profiles
  * ya no guarda el nombre. Sin nombre en los metadatos se usa la parte local del correo.
@@ -124,6 +127,9 @@ function aEvento(f: FilaEvento, nombrePorPerfil: Map<string, string>): Evento {
  *
  * - public.events (+ venue, users, transportation, quote) -> datos del evento
  * - public.event_staff + auth.users (Admin API)           -> personal asignado y su nombre
+ *
+ * Los eventos salen en orden alfabético por tipo; a igual tipo conservan el orden
+ * por fecha y hora de la consulta (Array.sort es estable).
  */
 export async function listarEventos(supabase: SupabaseClient): Promise<{ eventos: Evento[] }> {
   const eventosRes = await supabase.from("events").select(COLUMNAS).order("date").order("hour");
@@ -131,7 +137,10 @@ export async function listarEventos(supabase: SupabaseClient): Promise<{ eventos
 
   const filas = eventosRes.data as unknown as FilaEvento[];
   const nombrePorPerfil = await nombresPorPerfil(supabase, idsDelPersonal(filas));
-  return { eventos: filas.map((f) => aEvento(f, nombrePorPerfil)) };
+  const eventos = filas
+    .map((f) => aEvento(f, nombrePorPerfil))
+    .sort((a, b) => ALFABETICO.compare(nombreTipoEvento(a), nombreTipoEvento(b)));
+  return { eventos };
 }
 
 async function cargarEvento(supabase: SupabaseClient, id: number): Promise<Evento> {

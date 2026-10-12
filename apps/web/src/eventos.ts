@@ -168,8 +168,9 @@ function iconosEstado(e: Evento): string {
 }
 
 function renderLista(visibles: Evento[]): void {
-    // Todos los eventos que pasan los filtros, del más antiguo al más reciente.
-    const items = [...visibles].sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora));
+    // Todos los eventos que pasan los filtros, en el orden alfabético por tipo que entrega la API
+    // (a igual tipo, por fecha y hora). El calendario sí va por fecha.
+    const items = visibles;
     listaConteo.textContent = String(items.length);
 
     if (items.length === 0) {
@@ -179,16 +180,12 @@ function renderLista(visibles: Evento[]): void {
         return;
     }
 
-    let proximoMarcado = false;
     listaEventos.innerHTML = items.map(e => {
         const d = deISO(e.fecha);
         const mesCorto = d.toLocaleDateString('es-CO', { month: 'short' }).replace('.', '');
         const pasado = e.fecha < HOY_ISO;
-        // El primer evento de hoy en adelante es el punto de partida del deslizador.
-        const esProximo = !pasado && !proximoMarcado;
-        if (esProximo) proximoMarcado = true;
         return `
-        <button type="button" class="lista-item${pasado ? ' pasado' : ''}"${esProximo ? ' data-proximo' : ''} data-evento="${e.id}">
+        <button type="button" class="lista-item${pasado ? ' pasado' : ''}" data-evento="${e.id}">
             <div class="lista-fecha"><strong>${d.getDate()}</strong><span>${esc(mesCorto)}</span></div>
             <div class="lista-info">
                 <div class="lista-tipo">${esc(nombreTipo(e))}</div>
@@ -198,11 +195,8 @@ function renderLista(visibles: Evento[]): void {
         </button>`;
     }).join('');
 
-    // Abrir la lista ya posicionada en los eventos vigentes (los pasados quedan arriba).
-    const proximo = listaEventos.querySelector<HTMLElement>('[data-proximo]');
-    listaEventos.scrollTop = proximo
-        ? proximo.getBoundingClientRect().top - listaEventos.getBoundingClientRect().top + listaEventos.scrollTop
-        : listaEventos.scrollHeight;
+    // En una lista A–Z no hay "próximo evento" al que posicionarse: se abre desde arriba.
+    listaEventos.scrollTop = 0;
 }
 
 // ---------- Calendario ----------
