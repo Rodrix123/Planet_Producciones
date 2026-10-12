@@ -260,9 +260,10 @@ app.get('/api/eventos', (_req: Request, res: Response) =>
 app.get('/api/eventos/opciones', (_req: Request, res: Response) =>
     conEmpleados(res, listarOpcionesEvento));
 
-// Comprueba si la base aceptaría esa fecha (?fecha=YYYY-MM-DD) antes de pasar a cotizar.
+// Comprueba si se puede crear un evento en esa fecha (?fecha=YYYY-MM-DD) y hora (?hora=HH:MM, opcional)
+// antes de pasar a cotizar: la base debe aceptar la fecha y no puede haber otro evento a la misma hora.
 app.get('/api/eventos/fecha', (req: Request, res: Response) =>
-    conEmpleados(res, db => validarFechaEvento(db, req.query.fecha)));
+    conEmpleados(res, db => validarFechaEvento(db, req.query.fecha, req.query.hora)));
 
 app.post('/api/eventos', (req: Request, res: Response) =>
     conEmpleados(res, async db => ({ evento: await crearEvento(db, req.body) }), 201));

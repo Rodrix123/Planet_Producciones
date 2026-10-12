@@ -31,9 +31,20 @@ eventos (Manizales, Caldas). Monorepo con dos workspaces:
 - Un evento nuevo se crea desde la página de cotizaciones: el formulario de
   `eventos.html` solo recoge los datos del evento (queda como borrador en
   `sessionStorage`) y `cotizador.html` lo guarda junto con la cotización.
-  Antes de pasar a cotizar se comprueba la fecha con `GET /api/eventos/fecha`,
-  que aplica la regla de la base (`config.fecha_maxima_separacion_evento`,
-  días máximos desde hoy); `crearEvento` la vuelve a comprobar.
+  Antes de pasar a cotizar se comprueba la fecha y la hora con
+  `GET /api/eventos/fecha?fecha=…&hora=…`, que aplica la regla de la base
+  (`config.fecha_maxima_separacion_evento`, días máximos desde hoy) y que el
+  evento no se solape con otro (misma fecha y hora); `crearEvento` lo vuelve a
+  comprobar.
+- La cotización no depende del inventario: se puede hacer siempre, haya o no
+  stock en bodega de lo cotizado. La única restricción es del evento: no puede
+  solaparse con otro.
+- Modelo de eventos y cotizaciones: `quote` guarda los datos del evento (fecha,
+  hora, tipo, lugar, dirección, cliente, transporte) y sus servicios
+  (`quote_items`, con `nota` opcional); `events` solo guarda lo propio del evento
+  (confirmación, pagos, contrato) y apunta a su cotización con `events.quote_id`.
+  `listarEventos` (`packages/db/src/eventos.ts`) une ambas tablas y ordena por
+  fecha y hora de la cotización.
 
 ## Comandos útiles
 
