@@ -63,6 +63,14 @@ const COLUMNAS = [
 const POR_PAGINA = 200;
 
 /**
+ * Orden alfabético en español para todas las listas del menú de eventos: no
+ * distingue mayúsculas ni tildes ("Ñ" va después de "N") y compara los números
+ * por su valor (2 antes que 10). Se ordena aquí y no solo en la consulta porque
+ * el orden del motor de la base depende de su collation.
+ */
+const ALFABETICO = new Intl.Collator("es", { sensitivity: "base", numeric: true });
+
+/**
  * Nombres de los usuarios indicados, leídos de auth.users (Admin API): public.profiles
  * ya no guarda el nombre. Sin nombre en los metadatos se usa la parte local del correo.
  * Solo recorre las páginas necesarias y no llama a la API si no hay personal asignado.
@@ -104,7 +112,9 @@ function aEvento(f: FilaEvento, nombrePorPerfil: Map<string, string>): Evento {
     pagoInicial: f.initial_payment,
     firmado: f.contrato_firmado_subido_en !== null,
     contratoEnviadoEn: f.contrato_enviado_en,
-    personal: (f.event_staff ?? []).map((s) => nombrePorPerfil.get(s.profile_id) ?? "Sin nombre"),
+    personal: (f.event_staff ?? [])
+      .map((s) => nombrePorPerfil.get(s.profile_id) ?? "Sin nombre")
+      .sort(ALFABETICO.compare),
     transporte: f.transportation?.city ?? null,
   };
 }
@@ -275,25 +285,33 @@ async function existeFila(supabase: SupabaseClient, tabla: "venue" | "transporta
   if (!data) throw new ErrorEvento(`${nombre} no existe.`);
 }
 
-/** Sedes y transportes que se pueden elegir al crear un evento. */
+/**
+ * Sedes y transportes que se pueden elegir al crear un evento, en orden
+ * alfabético: las sedes por el nombre que se muestra (y la ciudad si se repite)
+ * y los transportes por ciudad.
+ */
 export async function listarOpcionesEvento(supabase: SupabaseClient): Promise<OpcionesEvento> {
   const [sedesRes, transportesRes] = await Promise.all([
-    supabase.from("venue").select("id, name, city").order("city").order("name"),
+    supabase.from("venue").select("id, name, city").order("name").order("city"),
     supabase.from("transportation").select("id, city, price").order("city"),
   ]);
   if (sedesRes.error) throw sedesRes.error;
   if (transportesRes.error) throw transportesRes.error;
   return {
-    sedes: sedesRes.data.map((s) => ({
-      id: s.id as number,
-      nombre: s.name as string,
-      ciudad: (s.city as string | null) ?? null,
-    })),
-    transportes: transportesRes.data.map((t) => ({
-      id: t.id as number,
-      ciudad: t.city as string,
-      precio: Number(t.price),
-    })),
+    sedes: sedesRes.data
+      .map((s) => ({
+        id: s.id as number,
+        nombre: s.name as string,
+        ciudad: (s.city as string | null) ?? null,
+      }))
+      .sort((a, b) => ALFABETICO.compare(a.nombre, b.nombre) || ALFABETICO.compare(a.ciudad ?? "", b.ciudad ?? "")),
+    transportes: transportesRes.data
+      .map((t) => ({
+        id: t.id as number,
+        ciudad: t.city as string,
+        precio: Number(t.price),
+      }))
+      .sort((a, b) => ALFABETICO.compare(a.ciudad, b.ciudad)),
   };
 }
 
