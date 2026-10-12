@@ -44,6 +44,19 @@ npm run build          # build de producción de ambos
 npm run typecheck      # chequeo de tipos de ambos workspaces
 ```
 
+### Desarrollo local: puertos y conexión web ↔ API
+
+- La web corre en `http://localhost:5173` con `strictPort`: si ese puerto lo tiene el
+  Vite de otra rama, Vite falla en vez de saltar a otro puerto. Detén el otro Vite
+  antes de levantar este.
+- La API corre en el `PORT` de `apps/server/.env` (3000 por defecto).
+- La web llama a `/api` en su mismo origen (`VITE_API_URL` vacío en `apps/web/.env`) y
+  Vite lo reenvía al `PORT` de esa misma rama (`apps/web/vite.config.ts`). Por eso no hay
+  CORS ni URLs fijas que se crucen entre ramas. Si dos ramas corren a la vez, cada una
+  necesita su propio `PORT` en `apps/server/.env`, y la web de cada una usa el suyo.
+- El mismo proxy sirve `vite preview`. El servidor Express también sirve `apps/web/dist`;
+  tras cambiar código de la web hay que recompilar con `npm run build:web`.
+
 ## Antes de abrir un PR
 
 1. `npm run typecheck`
