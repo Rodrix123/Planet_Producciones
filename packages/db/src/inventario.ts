@@ -51,7 +51,7 @@ interface FilaVariante {
   inventory_id: number;
   simple_description: string | null;
   detailed_description: string | null;
-  price: number | string;
+  price_variants: number | string;
 }
 
 interface FilaUnidad {
@@ -114,7 +114,7 @@ export async function listarInventario(supabase: SupabaseClient): Promise<ListaI
     leerTodo<FilaVariante>((desde, hasta) =>
       supabase
         .from("inventory_variants")
-        .select("id, inventory_id, simple_description, detailed_description, price")
+        .select("id, inventory_id, simple_description, detailed_description, price_variants")
         .order("id")
         .range(desde, hasta),
     ),
@@ -139,7 +139,7 @@ export async function listarInventario(supabase: SupabaseClient): Promise<ListaI
         id: v.id,
         nombre: v.simple_description,
         descripcionDetallada: v.detailed_description,
-        precio: Number(v.price),
+        precio: Number(v.price_variants),
         unidades: (unidadesPorVariante.get(v.id) ?? []).map(aUnidad),
       })),
     };

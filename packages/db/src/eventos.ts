@@ -334,7 +334,7 @@ interface ItemResuelto {
 interface FilaVariante {
   id: number;
   simple_description: string;
-  price: number | string;
+  price_variants: number | string;
   inventory: { type: string } | null;
 }
 
@@ -351,12 +351,12 @@ async function resolverItems(supabase: SupabaseClient, items: unknown): Promise<
 
   const { data, error } = await supabase
     .from("inventory_variants")
-    .select("id, simple_description, price, inventory(type)");
+    .select("id, simple_description, price_variants, inventory(type)");
   if (error) throw error;
 
   const variantes = new Map<string, { id: number; precio: number }>();
   for (const v of data as unknown as FilaVariante[]) {
-    variantes.set(`${v.inventory?.type}||${v.simple_description}`, { id: v.id, precio: Number(v.price) });
+    variantes.set(`${v.inventory?.type}||${v.simple_description}`, { id: v.id, precio: Number(v.price_variants) });
   }
 
   // Si un mismo servicio llega dos veces, se suman las cantidades.

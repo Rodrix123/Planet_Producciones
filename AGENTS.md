@@ -27,7 +27,9 @@ eventos (Manizales, Caldas). Monorepo con dos workspaces:
   cambio también en la lógica de `apps/web/src/catalogo.ts`. Los nombres y
   precios deben coincidir con `inventory` / `inventory_variants` en la base:
   un evento nuevo guarda sus servicios buscándolos por categoría (`data-tag`)
-  y nombre.
+  y nombre. El precio de cada variante está en `inventory_variants.price_variants`
+  (antes `price`); las variantes que solo cambiaban por cantidad de piezas ya no
+  existen: la cantidad se pone al cotizar (`quote_items.quantity`).
 - Un evento nuevo se crea desde la página de cotizaciones: el formulario de
   `eventos.html` solo recoge los datos del evento (queda como borrador en
   `sessionStorage`) y `cotizador.html` lo guarda junto con la cotización.

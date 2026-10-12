@@ -3,6 +3,9 @@
 -- inventory = equipo general; inventory_variants = sus versiones (modelo, tamaño, cantidad) con precio;
 -- components = ítems sin precio; inventory_components = qué components conforman cada equipo.
 -- No se incluyen los valores de Transporte (pertenecen a la tabla transportation).
+-- Tampoco se incluyen las variantes que solo cambian por cantidad de piezas (Par led 8/12/16/20,
+-- CDJ de 2 y 3 unidades y Line Array de 4/6/8 cajas): la cantidad se pone al cotizar. Se eliminaron
+-- en la migración 20261012120000, que además renombra inventory_variants.price a price_variants.
 
 BEGIN;
 
@@ -49,7 +52,7 @@ SELECT v.name, v.type FROM (VALUES
 ) AS v(name, type)
 WHERE NOT EXISTS (SELECT 1 FROM public.inventory i WHERE i.name = v.name AND i.type = v.type);
 
-INSERT INTO public.inventory_variants (inventory_id, simple_description, detailed_description, price)
+INSERT INTO public.inventory_variants (inventory_id, simple_description, detailed_description, price_variants)
 SELECT i.id, v.label, v.detailed, v.price FROM (VALUES
   ('Set de Sonido para Ceremonia', 'Sonido', 'Básico', '2 Sistemas lineales de rango completo
 1 Consola con efectos
@@ -82,33 +85,6 @@ Stand para Micrófonos', 800000),
 1 Computador
 1 Mesa Profesional para DJ
 1 Micrófono Inalámbrico Shure Beta 58', 2200000),
-  ('Sonido Principal', 'Sonido', 'Line Array 4 Cajas RCF HDL20-A', '4 Cajas  RCF HDL20-A
-2 Subwoofer Dobles JBL SRX828 SP
-2 QSC K12 para retorno
-1 Consola Digital
-1 Procesardor Digital Fane
-1 Computador
-1 Mesa Profesional para DJ
-1 Micrófono Inalámbrico Shure Beta 58', 2700000),
-  ('Sonido Principal', 'Sonido', 'Line Array 6 Cajas RCF HDL20-A', '6 Cajas  RCF HDL20-A
-3 Subwoofer Dobles JBL SRX828 SP
-2 QSC K12 para retorno
-1 Consola Digital
-1 Procesardor Digital Fane
-1 Computador
-1 Mesa Profesional para DJ
-1 Micrófono Inalámbrico Shure Beta 58', 3200000),
-  ('Sonido Principal', 'Sonido', 'Line Array 8 Cajas RCF HDL20-A', '8 Cajas  RCF HDL20-A
-4 Subwoofer Dobles JBL SRX828 SP
-2 QSC K12 para retorno
-1 Consola Digital
-1 Computador
-1 Procesardor Digital Fane
-1 Mesa Profesional para DJ
-1 Micrófono Inalámbrico Shure Beta 58', 3700000),
-  ('Unidades Pioneer CDJ y Mixer', 'Controladores y Unidades para DJ´S', '2 Unidades Pioneer CDJ 2000 Nexus 2 - Mixer Pioneer DJM 900 Nexus 2', NULL::text, 800000),
-  ('Unidades Pioneer CDJ y Mixer', 'Controladores y Unidades para DJ´S', '2 Unidades Pioneer CDJ 3000 - Mixer DJM A9', NULL::text, 1200000),
-  ('Unidades Pioneer CDJ y Mixer', 'Controladores y Unidades para DJ´S', '3 Unidades Pioneer CDJ 3000 - Mixer DJM A9', NULL::text, 1700000),
   ('Controlador Pioneer', 'Controladores y Unidades para DJ´S', 'RX 2', NULL::text, 500000),
   ('Controlador Pioneer', 'Controladores y Unidades para DJ´S', 'RX 3', NULL::text, 700000),
   ('Estructura Truss Forrada de Negro', 'Estructura Truss', 'Para iluminación', NULL::text, 550000),
@@ -153,12 +129,6 @@ Stand para Micrófonos', 800000),
 1 Computador
 1 Ingeniero de Iluminación
 1 Máquina de Humo', 3500000),
-  ('Par led Ambientación del sitio (reflectores)', 'Luces de Ambientación', '8 Par led', NULL::text, 520000),
-  ('Par led Ambientación del sitio (reflectores)', 'Luces de Ambientación', '12 Par led', NULL::text, 780000),
-  ('Par led Ambientación del sitio (reflectores)', 'Luces de Ambientación', '16 Par led', NULL::text, 1040000),
-  ('Par led Ambientación del sitio (reflectores)', 'Luces de Ambientación', '20 Par led', NULL::text, 1300000),
-  ('Par led Inalambricos Ambientación del sitio (reflectores)', 'Luces de Ambientación', '8 Par led', NULL::text, 600000),
-  ('Par led Inalambricos Ambientación del sitio (reflectores)', 'Luces de Ambientación', '12 Par led', NULL::text, 900000),
   ('20 Spot Inalambrico para iluminar mesas principales, mesas de postres y demas', 'Luces de Ambientación', '20 Spot Inalambrico para iluminar mesas principales, mesas de postres y demas', NULL::text, 1300000),
   ('Pantalla Led Pitch 3 en diseño', 'Pantallas', '3 Metros', '1 Video Procesador
 1 Computador
