@@ -62,6 +62,16 @@ interface FilaUnidad {
   updated_at: string;
 }
 
+/**
+ * Orden alfabético en español para tipos, elementos y variantes (el mismo de las listas de
+ * eventos): no distingue mayúsculas ni tildes y compara los números por su valor, así que
+ * "3 Metros" va antes que "10 Metros".
+ */
+const ALFABETICO = new Intl.Collator("es", { sensitivity: "base", numeric: true });
+
+/** Nombre con el que la web titula una variante: su descripción simple, o "Variante #id" si no tiene. */
+const nombreVariante = (v: VarianteInventario): string => v.nombre?.trim() || `Variante #${v.id}`;
+
 /** Igual que `max_rows` de la API (packages/db/supabase/config.toml): más filas por página se truncan. */
 const POR_PAGINA = 1000;
 
@@ -138,20 +148,19 @@ export async function listarInventario(supabase: SupabaseClient): Promise<ListaI
         nombre: v.simple_description,
         descripcionDetallada: v.detailed_description,
         unidades: (unidadesPorVariante.get(v.id) ?? []).map(aUnidad),
-      })),
+      })).sort((a, b) => ALFABETICO.compare(nombreVariante(a), nombreVariante(b))),
     };
     const grupo = tipos.get(e.type);
     if (grupo) grupo.push(elemento);
     else tipos.set(e.type, [elemento]);
   }
 
-  const porNombre = (a: string, b: string) => a.localeCompare(b, "es");
   return {
     tipos: [...tipos.entries()]
       .map(([nombre, elementos]) => ({
         nombre,
-        elementos: elementos.sort((a, b) => porNombre(a.nombre, b.nombre)),
+        elementos: elementos.sort((a, b) => ALFABETICO.compare(a.nombre, b.nombre)),
       }))
-      .sort((a, b) => porNombre(a.nombre, b.nombre)),
+      .sort((a, b) => ALFABETICO.compare(a.nombre, b.nombre)),
   };
 }
