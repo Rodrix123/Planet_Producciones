@@ -13,6 +13,7 @@ import { pqrsRouter } from './routes/pqrs.routes';
 import { inventarioRouter } from './routes/inventario.routes';
 import { cuentasAccesoRouter } from './routes/cuentasAcceso.routes';
 import { panelRouter } from './routes/panel.routes';
+import { convocatoriasRouter, integracionesRouter } from './routes/convocatorias.routes';
 
 // Red de seguridad: en Node 18+ un rechazo de promesa no manejado (fuera de una ruta
 // Express, p.ej. en un .then()/.catch() que se nos escapó) termina el proceso completo
@@ -43,6 +44,8 @@ app.use('/api/pqrs', pqrsRouter);
 app.use('/api/inventario', inventarioRouter);
 app.use('/api/cuentas-acceso', cuentasAccesoRouter);
 app.use('/api/panel', panelRouter);
+app.use('/api/convocatorias', convocatoriasRouter);
+app.use('/api/integraciones', integracionesRouter);
 
 // Manejador de errores central: toda ruta async usa asyncHandler() (ver src/asyncHandler.ts),
 // que reenvía acá cualquier error en vez de dejarlo crashear el proceso.

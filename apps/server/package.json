@@ -12,7 +12,8 @@
     "seed:usuarios": "tsx src/scripts/seed-usuarios.ts",
     "reset:password": "tsx src/scripts/reset-password.ts",
     "seed:catalogo": "tsx src/scripts/seed-catalogo.ts",
-    "test": "node --import tsx --test test/modelo-convocatorias.test.ts"
+    "test": "node --import tsx --test test/modelo-convocatorias.test.ts test/telefono.test.ts test/convocatorias.api.test.ts",
+    "demo:disponibilidad": "tsx test/demo-disponibilidad.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

@@ -51,7 +51,7 @@
 
         <div id="listaEventos" class="item-list"></div>
 
-        <!-- Vista de detalle (solo lectura) -->
+        <!-- Vista de detalle (datos solo de lectura; la sección de disponibilidad del personal permite solicitarla) -->
         <div id="detalleEvento" class="hidden">
             <button id="btnVolverLista" class="btn btn-secondary btn-sm" style="margin-bottom: 1.5rem;">
                 <i class="fa-solid fa-arrow-left"></i> Volver a la lista
@@ -60,6 +60,25 @@
             <div class="detail-section">
                 <h4>Datos del evento</h4>
                 <div id="resumenCliente"></div>
+            </div>
+
+            <div class="detail-section" id="seccionDisponibilidad">
+                <div class="disp-encabezado">
+                    <div>
+                        <h4>Disponibilidad del personal</h4>
+                        <div id="totalesDisponibilidad" class="disp-totales"></div>
+                    </div>
+                    <div class="disp-acciones">
+                        <button type="button" id="btnActualizarDisponibilidad" class="btn btn-secondary btn-sm">
+                            <i class="fa-solid fa-rotate"></i> Actualizar
+                        </button>
+                        <button type="button" id="btnSolicitarDisponibilidad" class="btn btn-primary btn-sm hidden">
+                            <i class="fa-brands fa-whatsapp"></i> Solicitar Disponibilidad de Personal
+                        </button>
+                    </div>
+                </div>
+                <p id="notaDisponibilidad" class="disp-nota hidden"></p>
+                <div id="listaConvocatorias"></div>
             </div>
 
             <div class="detail-section">
@@ -79,6 +98,12 @@
             </div>
         </div>
     </main>
+
+    <div id="modal" class="modal" aria-hidden="true">
+        <div class="modal-card" role="dialog" aria-modal="true" id="modalContenido"></div>
+    </div>
+
+    <div id="toast" class="toast" role="status"></div>
 
     <script type="module" src="/src/eventos-programados.ts"></script>
 </body>

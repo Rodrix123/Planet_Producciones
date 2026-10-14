@@ -1,0 +1,393 @@
+/* Sección "Disponibilidad del personal" del detalle de un evento programado.
+   Usa las variables y componentes del panel (style.css / panelRail.css: .detail-section,
+   .detail-row, .btn, .modal, .campo, .avatar...). Solo agrega lo que no existía: indicadores,
+   chips de estado y la lista de selección de trabajadores. */
+
+/* ---------- Encabezado de la sección ---------- */
+.disp-encabezado {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.1rem;
+}
+
+.disp-encabezado h4 {
+    margin-bottom: 0.35rem;
+}
+
+.disp-totales {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.disp-acciones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+}
+
+.disp-nota {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    padding: 0.7rem 0.9rem;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background: rgba(156, 163, 175, 0.08);
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.disp-vacio,
+.disp-cargando {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    padding: 0.5rem 0;
+}
+
+.disp-error {
+    color: #f87171;
+    font-size: 0.9rem;
+    padding: 0.5rem 0;
+}
+
+.disp-error button {
+    margin-left: 0.5rem;
+}
+
+/* Los diálogos de SweetAlert2 con tema oscuro (customClass swal-tema-oscuro) no definían el color del texto */
+.swal-tema-oscuro .swal2-html-container {
+    color: var(--text-light);
+}
+
+/* ---------- Chips de estado ---------- */
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.25rem 0.65rem;
+    border-radius: 20px;
+    border: 1px solid transparent;
+    white-space: nowrap;
+}
+
+.chip-ok {
+    color: var(--emerald-green);
+    background: rgba(52, 211, 153, 0.12);
+    border-color: rgba(52, 211, 153, 0.35);
+}
+
+.chip-error {
+    color: #f87171;
+    background: rgba(248, 113, 113, 0.1);
+    border-color: rgba(248, 113, 113, 0.3);
+}
+
+.chip-pendiente,
+.chip-aviso {
+    color: #fbbf24;
+    background: rgba(251, 191, 36, 0.1);
+    border-color: rgba(251, 191, 36, 0.3);
+}
+
+.chip-proceso {
+    color: var(--orange-main);
+    background: rgba(249, 115, 22, 0.12);
+    border-color: rgba(249, 115, 22, 0.3);
+}
+
+.chip-neutro {
+    color: var(--text-muted);
+    background: rgba(156, 163, 175, 0.1);
+    border-color: var(--border-color);
+}
+
+/* ---------- Convocatorias ---------- */
+.convocatoria {
+    margin-bottom: 1rem;
+    padding: 1.25rem 1.4rem;
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    background: rgba(0, 0, 0, 0.18);
+}
+
+.convocatoria:last-child {
+    margin-bottom: 0;
+}
+
+.convocatoria-cabecera {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.convocatoria-cabecera h5 {
+    font-size: 1rem;
+    color: #fff;
+}
+
+.indicadores {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 1rem 0;
+}
+
+.indicador {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.75rem 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--bg-input);
+}
+
+.indicador strong {
+    font-size: 1.5rem;
+    line-height: 1.1;
+}
+
+.indicador span {
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.indicador-confirmado strong {
+    color: var(--emerald-green);
+}
+
+.indicador-rechazado strong {
+    color: #f87171;
+}
+
+.indicador-pendiente strong {
+    color: #fbbf24;
+}
+
+.convocatoria-aviso {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+    margin-bottom: 0.9rem;
+    padding: 0.7rem 0.9rem;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    font-size: 0.85rem;
+}
+
+.aviso-info {
+    color: var(--text-muted);
+    background: rgba(156, 163, 175, 0.08);
+}
+
+.aviso-aviso {
+    color: #fbbf24;
+    background: rgba(251, 191, 36, 0.08);
+    border-color: rgba(251, 191, 36, 0.3);
+}
+
+.aviso-ok {
+    color: var(--emerald-green);
+    background: rgba(52, 211, 153, 0.08);
+    border-color: rgba(52, 211, 153, 0.3);
+}
+
+.aviso-error {
+    color: #f87171;
+    background: rgba(248, 113, 113, 0.08);
+    border-color: rgba(248, 113, 113, 0.3);
+}
+
+.destinatario .chips {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.4rem;
+}
+
+.destinatario-error {
+    color: #f87171;
+}
+
+.convocatoria-acciones {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1rem;
+}
+
+/* ---------- Ventana de selección de trabajadores ---------- */
+.disp-horario {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.9rem;
+}
+
+.campo input[type='time'] {
+    color-scheme: dark;
+}
+
+.disp-lista-encabezado {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin: 0.4rem 0 0.6rem;
+}
+
+.disp-lista-encabezado h3 {
+    font-size: 0.95rem;
+}
+
+.disp-lista-acciones {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.disp-contador {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.disp-trabajadores {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 320px;
+    overflow-y: auto;
+    margin-bottom: 1rem;
+    padding-right: 0.25rem;
+    color-scheme: dark;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+}
+
+.trabajador-opcion {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-bottom: 0;
+    font-size: inherit;
+    color: inherit;
+    padding: 0.7rem 0.9rem;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    background: var(--bg-input);
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.trabajador-opcion:hover {
+    border-color: var(--orange-main);
+}
+
+.trabajador-opcion:has(input:checked) {
+    border-color: var(--orange-main);
+    background: rgba(249, 115, 22, 0.08);
+}
+
+.trabajador-opcion.no-elegible {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.trabajador-opcion.no-elegible:hover {
+    border-color: transparent;
+}
+
+.trabajador-opcion input {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    accent-color: var(--orange-main);
+}
+
+.avatar-sm {
+    width: 36px;
+    height: 36px;
+    font-size: 0.8rem;
+}
+
+.trabajador-datos {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.trabajador-nombre {
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.trabajador-sub,
+.destinatario-telefono {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.trabajador-notas {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.4rem;
+}
+
+@media (max-width: 560px) {
+    .disp-horario {
+        grid-template-columns: 1fr;
+    }
+
+    .convocatoria {
+        padding: 1rem;
+    }
+
+    .convocatoria-cabecera {
+        flex-wrap: wrap;
+    }
+
+    .indicadores {
+        gap: 0.5rem;
+    }
+
+    .indicador {
+        padding: 0.6rem 0.25rem;
+    }
+
+    .indicador span {
+        font-size: 0.7rem;
+        letter-spacing: 0;
+        text-transform: none;
+    }
+
+    .destinatario {
+        flex-wrap: wrap;
+    }
+
+    .destinatario .chips {
+        justify-content: flex-start;
+    }
+
+    .trabajador-opcion {
+        flex-wrap: wrap;
+    }
+
+    .trabajador-notas {
+        flex-basis: 100%;
+        justify-content: flex-start;
+    }
+}

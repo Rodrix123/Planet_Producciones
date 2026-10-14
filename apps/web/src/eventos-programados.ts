@@ -2,6 +2,8 @@ import './style.css';
 import './shared/panelRail.css';
 import { apiFetch, apiUrl, conManejoDeErrores, exigirSesion } from './shared/api';
 import { initPanelLayout } from './shared/layout';
+import { initPanelShellGlobal } from './shared/panelShell';
+import { iniciarSeccionDisponibilidad } from './disponibilidad-personal';
 
 interface ItemSeleccionado {
     variantId: number;
@@ -37,6 +39,7 @@ let filtroFecha: string | null = null;
 
 const listaEl = document.getElementById('listaEventos') as HTMLElement;
 const detalleEl = document.getElementById('detalleEvento') as HTMLElement;
+const disponibilidad = iniciarSeccionDisponibilidad();
 
 async function cargarEventos() {
     const res = await apiFetch('/api/cotizaciones?estado=programada');
@@ -156,12 +159,16 @@ async function abrirDetalle(c: Cotizacion) {
     (document.getElementById('linkVerPdfCotizacion') as HTMLAnchorElement).href = apiUrl(`/api/cotizaciones/${c.id}/pdf`);
     (document.getElementById('linkVerContratoFirmado') as HTMLAnchorElement).href = apiUrl(`/api/contratos/${c.id}/firmado`);
 
+    // Se carga aparte (con su propio estado de carga y de error) para no demorar el resto del detalle
+    void disponibilidad.mostrar(Number(c.id));
+
     listaEl.classList.add('hidden');
     document.querySelector('.calendar-grid')?.parentElement?.classList.add('hidden');
     detalleEl.classList.remove('hidden');
 }
 
 function volverALista() {
+    disponibilidad.limpiar();
     detalleEl.classList.add('hidden');
     listaEl.classList.remove('hidden');
     document.querySelector('.calendar-grid')?.parentElement?.classList.remove('hidden');
@@ -170,6 +177,7 @@ function volverALista() {
 document.addEventListener('DOMContentLoaded', async () => {
     const sesion = await exigirSesion('administrador');
     initPanelLayout(sesion);
+    initPanelShellGlobal();
 
     document.getElementById('btnMesAnterior')?.addEventListener('click', () => {
         mesActual -= 1;
