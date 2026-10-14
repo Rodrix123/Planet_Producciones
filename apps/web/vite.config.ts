@@ -22,6 +22,7 @@ export default defineConfig({
                 panelLogistica: 'panel-logistica.html',
                 cotizaciones: 'cotizaciones.html',
                 empleados: 'empleados.html',
+                eventos: 'eventos.html',
                 eventosProceso: 'eventos-proceso.html',
                 eventosProgramados: 'eventos-programados.html',
                 cotizacionesDefinitivas: 'cotizaciones-definitivas.html',

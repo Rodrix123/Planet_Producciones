@@ -5,6 +5,7 @@
     "moduleResolution": "Bundler",
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "noEmit": true,
+    "noUncheckedIndexedAccess": false,
     "types": []
   },
   "include": ["src", "codegen.ts", "vite.config.ts"]

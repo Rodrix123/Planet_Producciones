@@ -15,7 +15,8 @@
     "test": "node --import tsx --test test/modelo-convocatorias.test.ts"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.45.4",
+    "@my-app/db": "*",
+    "@supabase/supabase-js": "^2.116.0",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

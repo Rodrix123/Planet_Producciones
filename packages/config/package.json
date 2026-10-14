@@ -1,6 +1,5 @@
 {
-  "name": "@planet-producciones/config",
-  "version": "1.0.0",
-  "private": true,
-  "main": "tsconfig.base.json"
+  "name": "@my-app/config",
+  "version": "0.0.0",
+  "private": true
 }

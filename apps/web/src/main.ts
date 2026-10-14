@@ -1,5 +1,6 @@
 import './style.css';
-import { apiUrl } from './shared/api';
+import { apiFetch, apiUrl } from './shared/api';
+import { borrarBorrador, leerBorrador } from './borrador-evento';
 import {
     calcularDesdeCatalogo,
     obtenerCatalogo,
@@ -440,6 +441,69 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Evento Principal al Clic
+    // Evento en creación (viene de eventos.html): esta cotización se guarda junto con el
+    // evento, que se crea al guardarla. Si se entra al cotizador directamente, no hay borrador
+    // y la página funciona como siempre (guardar cotización, PDF y Excel).
+    const borrador = leerBorrador();
+    const btnCrearEvento = document.getElementById('btnCrearEvento') as HTMLButtonElement;
+    if (borrador) {
+        (document.getElementById('avisoEvento') as HTMLElement).hidden = false;
+        btnCrearEvento.hidden = false;
+        btnSubmit.classList.add('submit-btn-secundario');
+    }
+
+    btnCrearEvento.addEventListener('click', async () => {
+        if (!borrador) return;
+        const resultado = calcularCotizacion();
+        if (resultado.itemsSeleccionados.length === 0) {
+            Swal.fire({
+                icon: 'info',
+                title: 'Selección Vacía',
+                text: 'Selecciona al menos un servicio o montaje para cotizar.',
+                confirmButtonColor: '#f97316'
+            });
+            return;
+        }
+
+        Swal.fire({
+            title: 'Creando evento...',
+            text: 'Guardando el evento y su cotización',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); }
+        });
+
+        try {
+            const res = await apiFetch('/api/eventos', {
+                method: 'POST',
+                body: JSON.stringify({
+                    ...borrador,
+                    items: resultado.itemsSeleccionados.map(i => ({
+                        variantId: i.variantId,
+                        tag: i.tag,
+                        nombre: i.nombre,
+                        cantidad: i.cantidad
+                    }))
+                })
+            });
+            const json = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(json.message || `Error ${res.status}`);
+            borrarBorrador();
+            window.location.href = `eventos.html?creado=${json.evento.id}`;
+        } catch (error) {
+            // Los datos del evento siguen en el borrador: se pueden corregir y volver a intentar.
+            const respuesta = await Swal.fire({
+                icon: 'error',
+                title: 'No se pudo crear el evento',
+                text: (error as Error).message,
+                showCancelButton: true,
+                confirmButtonText: 'Volver al evento',
+                cancelButtonText: 'Cerrar',
+                confirmButtonColor: '#f97316'
+            });
+            if (respuesta.isConfirmed) window.location.href = 'eventos.html?nuevo=1';
+        }
+    });
+
     btnSubmit.addEventListener('click', async () => {
         const nombre = (document.getElementById('nombre') as HTMLInputElement).value.trim();
         const correo = (document.getElementById('correo') as HTMLInputElement).value.trim();

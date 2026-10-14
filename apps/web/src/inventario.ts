@@ -1,7 +1,8 @@
 import './style.css';
-import './shared/panelRail.css';
+import './panel.css';
 import './inventario.css';
-import { apiFetch, exigirSesion, rutaPanelPorRol, type SesionActual } from './shared/api';
+import { api } from './api';
+import { exigirSesion, rutaPanelPorRol, type SesionActual } from './shared/api';
 import { initPanelLayout } from './shared/layout';
 
 type EstadoUnidad = 'bueno' | 'danado' | 'en_reparacion' | 'dado_de_baja' | 'perdido';
@@ -19,7 +20,6 @@ interface Variante {
     id: number;
     nombre: string | null;
     descripcionDetallada: string | null;
-    precio: number;
     unidades: Unidad[];
 }
 
@@ -42,32 +42,22 @@ const ESTADOS: Record<EstadoUnidad, string> = {
     perdido: 'Perdido'
 };
 
-const RAIL_ADMIN = `
-    <a href="cotizaciones.html" class="rail-item" data-contador="cotizaciones"><i class="fa-solid fa-file-invoice-dollar"></i><span>Cotizaciones</span></a>
-    <a href="eventos-proceso.html" class="rail-item" data-contador="eventosProceso"><i class="fa-solid fa-truck-ramp-box"></i><span>En proceso</span></a>
-    <a href="eventos-programados.html" class="rail-item"><i class="fa-solid fa-calendar-days"></i><span>Eventos</span></a>
-    <a href="empleados.html" class="rail-item"><i class="fa-solid fa-users"></i><span>Empleados</span></a>
-    <a href="inventario.html" class="rail-item active"><i class="fa-solid fa-boxes-stacked"></i><span>Inventario</span></a>
-`;
-
-const RAIL_LOGISTICA = `
-    <a href="panel-logistica.html" class="rail-item"><i class="fa-solid fa-truck"></i><span>Logística</span></a>
-    <a href="inventario.html" class="rail-item active"><i class="fa-solid fa-boxes-stacked"></i><span>Inventario</span></a>
-`;
-
 const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
 const arbol = $('arbol');
-const estadoEl = $('estado');
+const estado = $('estado');
 const resumen = $('resumen');
 const buscador = $<HTMLInputElement>('buscador');
 
 let tipos: Tipo[] = [];
 let cargado = false;
+// Posición de cada tipo en la lista completa: así su clave no cambia al filtrar.
 const tiposIndice = new Map<string, number>();
+// Búsqueda del árbol completo por clave, para armar el contenido de un nivel al desplegarlo.
 const tiposPorClave = new Map<string, Tipo>();
 const elementosPorClave = new Map<string, Elemento>();
 const variantesPorClave = new Map<string, Variante>();
 const unidadesPorClave = new Map<string, Unidad>();
+// Niveles que la persona dejó abiertos (se conservan al buscar y al limpiar la búsqueda).
 const abiertos = new Set<string>();
 
 const claveTipo = (i: number): string => `t:${i}`;
@@ -81,6 +71,7 @@ function esc(texto: string): string {
     return d.innerHTML.replace(/"/g, '&quot;');
 }
 
+/** Minúsculas y sin tildes, para que "dañado" y "danado" coincidan al buscar. */
 function normalizar(texto: string): string {
     return texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 }
@@ -89,6 +80,7 @@ function plural(n: number, uno: string, varios: string): string {
     return `${n} ${n === 1 ? uno : varios}`;
 }
 
+// Los contadores de cada nivel cuentan solo unidades físicas, no los niveles de abajo.
 const unidadesDeElemento = (e: Elemento): number => e.variantes.reduce((n, v) => n + v.unidades.length, 0);
 const unidadesDeTipo = (t: Tipo): number => t.elementos.reduce((n, e) => n + unidadesDeElemento(e), 0);
 const textoUnidades = (n: number): string => plural(n, 'unidad', 'unidades');
@@ -99,19 +91,20 @@ function formatearFecha(iso: string): string {
     return d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-const formatoPrecio = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
-
 function nombreVariante(v: Variante): string {
     return v.nombre?.trim() || `Variante #${v.id}`;
 }
 
+// ---------- Armado de los niveles ----------
 interface Nodo {
     clave: string;
     nivel: 1 | 2 | 3 | 4;
     icono: string;
     titulo: string;
+    /** HTML de la derecha del encabezado (conteo o estado). */
     meta: string;
     abierto: boolean;
+    /** Contenido del nivel; solo se arma cuando está abierto. */
     cuerpo: () => string;
 }
 
@@ -161,6 +154,7 @@ function nodoUnidad(u: Unidad): string {
         clave,
         nivel: 4,
         icono: 'fa-barcode',
+        // La unidad se identifica por su código de barras; sin código, por su ID.
         titulo: u.codigoBarras ?? `Sin código de barras (ID ${u.id})`,
         meta: insigniaEstado(u.estado),
         abierto: abiertos.has(clave),
@@ -180,13 +174,12 @@ function cuerpoVariante(v: Variante): string {
 
 function nodoVariante(v: Variante, forzadas: Set<string>): string {
     const clave = claveVariante(v);
-    const precio = v.precio > 0 ? `<span class="inv-precio">${formatoPrecio.format(v.precio)}</span>` : '';
     return nodoHtml({
         clave,
         nivel: 3,
         icono: 'fa-tags',
         titulo: nombreVariante(v),
-        meta: `${precio}<span class="inv-conteo">${textoUnidades(v.unidades.length)}</span>`,
+        meta: `<span class="inv-conteo">${textoUnidades(v.unidades.length)}</span>`,
         abierto: abiertos.has(clave) || forzadas.has(clave),
         cuerpo: () => cuerpoVariante(v)
     });
@@ -243,10 +236,16 @@ function indexar(): void {
     });
 }
 
+// ---------- Búsqueda ----------
 function textoUnidad(u: Unidad): string {
     return normalizar(`${u.codigoBarras ?? ''} ${ESTADOS[u.estado]} ${u.id}`);
 }
 
+/**
+ * Deja solo las ramas que coinciden con la búsqueda. Un nivel que coincide por su
+ * nombre se muestra completo; los que solo contienen coincidencias más abajo se
+ * agregan a `forzadas` para que se abran hasta llegar a ellas.
+ */
 function filtrar(q: string, forzadas: Set<string>): Tipo[] {
     if (q === '') return tipos;
     const coincide = (texto: string | null): boolean => texto !== null && normalizar(texto).includes(q);
@@ -288,6 +287,7 @@ function filtrar(q: string, forzadas: Set<string>): Tipo[] {
     return resultado;
 }
 
+// ---------- Pantalla ----------
 function render(): void {
     const q = normalizar(buscador.value.trim());
     const forzadas = new Set<string>();
@@ -311,6 +311,7 @@ function render(): void {
     arbol.innerHTML = visibles.map(t => nodoTipo(t, forzadas)).join('');
 }
 
+/** Contenido de un nivel que se despliega por primera vez, sacado del árbol completo. */
 function cuerpoDe(clave: string): string {
     const tipo = tiposPorClave.get(clave);
     if (tipo) return tipo.elementos.map(e => nodoElemento(e, new Set())).join('');
@@ -335,17 +336,15 @@ function alternar(cab: HTMLElement): void {
 
 async function cargar(): Promise<void> {
     try {
-        const res = await apiFetch('/api/inventario');
-        if (!res.ok) throw new Error(`Error ${res.status}`);
-        const json = (await res.json()) as { tipos: Tipo[] };
+        const json = await api<{ tipos: Tipo[] }>('GET', '/api/inventario');
         tipos = json.tipos;
         indexar();
         cargado = true;
-        estadoEl.hidden = true;
+        estado.hidden = true;
         render();
     } catch (err) {
-        estadoEl.classList.add('error');
-        estadoEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> No se pudo cargar el inventario: ${esc((err as Error).message)}`;
+        estado.classList.add('error');
+        estado.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> No se pudo cargar el inventario: ${esc((err as Error).message)}`;
     }
 }
 
@@ -358,6 +357,11 @@ buscador.addEventListener('input', () => {
     if (cargado) render();
 });
 
+const RAIL_LOGISTICA = `
+    <a href="panel-logistica.html" class="rail-item"><i class="fa-solid fa-truck"></i><span>Logística</span></a>
+    <a href="inventario.html" class="rail-item active"><i class="fa-solid fa-boxes-stacked"></i><span>Inventario</span></a>
+`;
+
 document.addEventListener('DOMContentLoaded', async () => {
     const sesion = (await exigirSesion()) as SesionActual;
     if (sesion.rol !== 'administrador' && sesion.rol !== 'jefe_logistica') {
@@ -365,7 +369,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
     initPanelLayout(sesion);
-    $('railNav').innerHTML = sesion.rol === 'administrador' ? RAIL_ADMIN : RAIL_LOGISTICA;
+    // El riel de la página es el de la administradora; el jefe de logística tiene el suyo.
+    if (sesion.rol === 'jefe_logistica') $('railNav').innerHTML = RAIL_LOGISTICA;
 
     await cargar();
 });

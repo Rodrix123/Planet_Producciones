@@ -126,6 +126,13 @@
                         </div>
                     </div>
 
+                    <!-- Solo aparece si se llegó desde "Nuevo evento" (ver src/borrador-evento.ts) -->
+                    <div class="info-box aviso-evento" id="avisoEvento" hidden>
+                        <i class="fa-solid fa-calendar-plus"></i>
+                        <span>Esta cotización se asociará al evento que estás creando.</span>
+                        <a href="eventos.html?nuevo=1" class="aviso-evento-enlace">Volver al evento</a>
+                    </div>
+
                     <div id="seccionCatalogoServicios">
                     <div id="catalogoDinamico">
                         <p style="color: var(--text-muted); font-size: 0.85rem;">Cargando catálogo de servicios…</p>
@@ -136,6 +143,11 @@
                     <button type="button" id="btnSubmit" class="submit-btn">
                         <i class="fa-solid fa-file-pdf"></i>
                         <span>Generar Cotización (PDF & Excel)</span>
+                    </button>
+
+                    <button type="button" id="btnCrearEvento" class="submit-btn" hidden>
+                        <i class="fa-solid fa-calendar-check"></i>
+                        <span>Guardar cotización y crear evento</span>
                     </button>
                 </form>
             </div>

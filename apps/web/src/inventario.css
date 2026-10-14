@@ -1,5 +1,5 @@
-/* Estilos de inventario.html. Se apoya en shared/panelRail.css (riel, buscador,
-   conteos) y en las variables de style.css para conservar la identidad visual. */
+/* Estilos de inventario.html. Se apoya en panel.css (riel, buscador, conteos) y
+   en las variables de style.css para conservar la identidad visual. */
 
 .inv-resumen {
     margin: -1.25rem 0 1.25rem;
@@ -37,7 +37,6 @@
     text-align: left;
     cursor: pointer;
     transition: background 0.2s;
-    font-family: inherit;
 }
 
 .inv-cab:hover {
@@ -87,12 +86,14 @@
     display: none;
 }
 
+/* Cada nivel interior queda sangrado con una guía a la izquierda. */
 .inv-cuerpo {
     margin: 0.15rem 0 0.4rem 1.35rem;
     padding-left: 0.6rem;
     border-left: 1px solid var(--border-color);
 }
 
+/* Nivel 1: tipo (tarjeta, igual que las secciones de empleados). */
 .inv-n1 {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
@@ -110,11 +111,13 @@
     font-size: 1.1rem;
 }
 
+/* Nivel 4: unidad física, más compacto. */
 .inv-n4 > .inv-cab {
     padding: 0.45rem 0.8rem;
     font-size: 0.85rem;
 }
 
+/* El título de la unidad es su código de barras. */
 .inv-n4 > .inv-cab .inv-titulo {
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 0.85rem;
@@ -125,6 +128,7 @@
     color: var(--text-muted);
 }
 
+/* ---------- Contenido de los niveles ---------- */
 .inv-vacio {
     padding: 0.7rem 0.8rem;
     font-size: 0.88rem;
@@ -145,12 +149,6 @@
     line-height: 1.5;
     color: var(--text-muted);
     white-space: pre-line;
-}
-
-.inv-precio {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--text-light);
 }
 
 .inv-datos {
@@ -177,6 +175,7 @@
     overflow-wrap: anywhere;
 }
 
+/* ---------- Conteo y estado: solo texto, sin pastilla ---------- */
 .inv-conteo {
     font-size: 0.8rem;
     font-weight: 600;
