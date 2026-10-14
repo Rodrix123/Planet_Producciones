@@ -5,8 +5,8 @@ import { api } from './api';
 
 interface Evento {
     id: number;
-    fecha: string; // YYYY-MM-DD
-    hora: string; // HH:MM:SS
+    fecha: string | null; // YYYY-MM-DD; nulo si el evento aún no tiene fecha
+    hora: string | null; // HH:MM:SS; nulo si el evento aún no tiene hora
     tipo: string | null;
     lugar: string | null;
     ciudad: string | null;
@@ -94,6 +94,16 @@ function formatearHora(hora: string): string {
     return d.toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit' });
 }
 
+function horaTexto(e: Evento): string {
+    return e.hora ? formatearHora(e.hora) : 'Hora por definir';
+}
+
+/** Del más antiguo al más reciente; los eventos sin fecha al final y, en un mismo día, los sin hora. */
+function porFechaYHora(a: Evento, b: Evento): number {
+    const clave = (e: Evento) => `${e.fecha ?? '9999-99-99'} ${e.hora ?? '99:99:99'}`;
+    return clave(a).localeCompare(clave(b));
+}
+
 function formatearFechaLarga(iso: string): string {
     return capitalizar(deISO(iso).toLocaleDateString('es-CO', {
         weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
@@ -134,8 +144,10 @@ function filtrar(): Evento[] {
             const valor = filtrosEstado[clave];
             if (valor !== 'todos' && e[clave] !== (valor === 'si')) return false;
         }
-        if (desde && e.fecha < desde) return false;
-        if (hasta && e.fecha > hasta) return false;
+        // Sin fecha no se puede saber si cae dentro de un rango: con un rango activo se oculta.
+        if ((desde || hasta) && !e.fecha) return false;
+        if (desde && e.fecha! < desde) return false;
+        if (hasta && e.fecha! > hasta) return false;
         return true;
     });
 }
@@ -151,7 +163,7 @@ function iconosEstado(e: Evento): string {
 
 function renderLista(visibles: Evento[]): void {
     // Todos los eventos que pasan los filtros, del más antiguo al más reciente.
-    const items = [...visibles].sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora));
+    const items = [...visibles].sort(porFechaYHora);
     // Único contador de eventos: los que coinciden con los filtros ("N de M" cuando hay filtros activos).
     listaConteo.textContent = hayFiltros() ? `${items.length} de ${eventos.length}` : String(items.length);
     listaConteo.title = `${listaConteo.textContent} eventos`;
@@ -164,14 +176,19 @@ function renderLista(visibles: Evento[]): void {
     }
 
     listaEventos.innerHTML = items.map(e => {
-        const d = deISO(e.fecha);
-        const mesCorto = d.toLocaleDateString('es-CO', { month: 'short' }).replace('.', '');
+        let dia = '—';
+        let mesCorto = 'sin fecha';
+        if (e.fecha) {
+            const d = deISO(e.fecha);
+            dia = String(d.getDate());
+            mesCorto = d.toLocaleDateString('es-CO', { month: 'short' }).replace('.', '');
+        }
         return `
         <button type="button" class="lista-item" data-evento="${e.id}">
-            <div class="lista-fecha"><strong>${d.getDate()}</strong><span>${esc(mesCorto)}</span></div>
+            <div class="lista-fecha"><strong>${dia}</strong><span>${esc(mesCorto)}</span></div>
             <div class="lista-info">
                 <div class="lista-tipo">${esc(nombreTipo(e))}</div>
-                <div class="lista-sub">${esc(formatearHora(e.hora))} · ${esc(lugarTexto(e))}</div>
+                <div class="lista-sub">${esc(horaTexto(e))} · ${esc(lugarTexto(e))}</div>
             </div>
             ${iconosEstado(e)}
         </button>`;
@@ -183,7 +200,7 @@ function renderLista(visibles: Evento[]): void {
 
 // ---------- Calendario ----------
 function pildora(e: Evento, conHora = false): string {
-    const hora = conHora ? `<span class="pop-hora">${esc(formatearHora(e.hora))}</span>` : '';
+    const hora = conHora ? `<span class="pop-hora">${esc(e.hora ? formatearHora(e.hora) : '—')}</span>` : '';
     return `<button type="button" class="cal-evt" data-evento="${e.id}" data-confirmado="${e.confirmado}"
         title="${esc(nombreTipo(e))} · ${esc(lugarTexto(e))}">${hora}${esc(nombreTipo(e))}</button>`;
 }
@@ -194,11 +211,12 @@ function renderCalendario(visibles: Evento[]): void {
 
     const porDia = new Map<string, Evento[]>();
     for (const e of visibles) {
+        if (!e.fecha) continue; // sin fecha no tiene casilla: solo aparece en la lista
         const lista = porDia.get(e.fecha) ?? [];
         lista.push(e);
         porDia.set(e.fecha, lista);
     }
-    for (const lista of porDia.values()) lista.sort((a, b) => a.hora.localeCompare(b.hora));
+    for (const lista of porDia.values()) lista.sort(porFechaYHora);
 
     // Semana que empieza en lunes.
     const desfase = (mes.getDay() + 6) % 7;
@@ -229,7 +247,7 @@ function renderCalendario(visibles: Evento[]): void {
 
 function abrirPopover(fecha: string): void {
     cerrarPopover();
-    const delDia = filtrar().filter(e => e.fecha === fecha).sort((a, b) => a.hora.localeCompare(b.hora));
+    const delDia = filtrar().filter(e => e.fecha === fecha).sort(porFechaYHora);
     if (delDia.length === 0) return;
     popoverFecha = fecha;
 
@@ -304,7 +322,7 @@ function htmlDetalle(e: Evento): string {
             </div>
         </div>
         <div class="detalle-grid">
-            ${bloque('Fecha y hora', `<p>${esc(formatearFechaLarga(e.fecha))}</p><p><small>${esc(formatearHora(e.hora))}</small></p>`)}
+            ${bloque('Fecha y hora', `<p>${esc(e.fecha ? formatearFechaLarga(e.fecha) : 'Fecha por definir')}</p><p><small>${esc(horaTexto(e))}</small></p>`)}
             ${bloque('Lugar', `<p>${esc(lugarTexto(e))}</p><p><small>${esc(e.direccion ?? 'Sin dirección')}</small></p>`)}
             ${bloque('Cliente', cliente)}
             ${bloque('Cotización', `
@@ -344,7 +362,7 @@ function seleccionar(id: number): void {
 
     // Si el evento está en otro mes, llevar el calendario hasta él.
     const evento = eventos.find(e => e.id === seleccionadoId);
-    if (evento) {
+    if (evento?.fecha) {
         const d = deISO(evento.fecha);
         if (d.getFullYear() !== mes.getFullYear() || d.getMonth() !== mes.getMonth()) {
             mes = new Date(d.getFullYear(), d.getMonth(), 1);
@@ -390,6 +408,10 @@ async function cargar(): Promise<void> {
             avisar('Evento creado');
         }
     } catch (err) {
+        // Si el fallo ocurrió al pintar, los paneles ya estaban visibles y quedaban en blanco sin explicación.
+        deck.hidden = true;
+        detalle.hidden = true;
+        estadoCarga.hidden = false;
         estadoCarga.classList.add('error');
         estadoCarga.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> No se pudieron cargar los eventos: ${esc((err as Error).message)}`;
     }

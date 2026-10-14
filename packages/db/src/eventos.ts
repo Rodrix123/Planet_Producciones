@@ -9,10 +9,10 @@ export interface ClienteEvento {
 
 export interface Evento {
   id: number;
-  /** YYYY-MM-DD */
-  fecha: string;
-  /** HH:MM:SS */
-  hora: string;
+  /** YYYY-MM-DD. Nulo si ni el evento ni su cotización tienen fecha. */
+  fecha: string | null;
+  /** HH:MM:SS. Nulo si ni el evento ni su cotización tienen hora. */
+  hora: string | null;
   tipo: string | null;
   lugar: string | null;
   ciudad: string | null;
@@ -30,12 +30,14 @@ export interface Evento {
   transporte: string | null;
 }
 
-/** public.quote: la cotización guarda cuándo, dónde, para quién y qué se cotiza. */
-interface FilaCotizacion {
-  total: number | string;
-  /** Es opcional en la base: una cotización puede existir sin fecha. */
+/**
+ * Cuándo, dónde y para quién es el evento. public.events y public.quote guardan
+ * las mismas columnas; todas son opcionales en la base (un evento o una cotización
+ * puede no tener fecha u hora todavía).
+ */
+interface Logistica {
   date: string | null;
-  hour: string;
+  hour: string | null;
   event_type: string | null;
   address: string | null;
   /** Lugar escrito a mano cuando la sede no está registrada (venue_id nulo). */
@@ -46,8 +48,13 @@ interface FilaCotizacion {
   transportation: { city: string } | null;
 }
 
+/** public.quote: además de la logística, lo que se cotizó. */
+interface FilaCotizacion extends Logistica {
+  total: number | string;
+}
+
 /** public.events: estado del evento (confirmación, pagos, contrato) y su cotización. */
-interface FilaEvento {
+interface FilaEvento extends Logistica {
   id: number;
   confirmed: boolean;
   initial_payment: boolean;
@@ -58,17 +65,18 @@ interface FilaEvento {
   event_staff: { profile_id: string }[] | null;
 }
 
-type FilaEventoConFecha = FilaEvento & { quote: FilaCotizacion & { date: string } };
+const LOGISTICA = [
+  "date, hour, event_type, address, venue_nombre_manual, venue_direccion_manual",
+  "venue(name, city)",
+  "client:users!client_id(name, email, phone)",
+  "transportation(city)",
+].join(", ");
 
 const COLUMNAS = [
   "id, confirmed, initial_payment, total_paid",
   "contrato_enviado_en, contrato_firmado_subido_en",
-  [
-    "quote(total, date, hour, event_type, address, venue_nombre_manual, venue_direccion_manual",
-    "venue(name, city)",
-    "client:users!client_id(name, email, phone)",
-    "transportation(city))",
-  ].join(", "),
+  LOGISTICA,
+  `quote(total, ${LOGISTICA})`,
   "event_staff(profile_id)",
 ].join(", ");
 
@@ -98,35 +106,54 @@ async function nombresPorPerfil(supabase: SupabaseClient, ids: string[]): Promis
 const idsDelPersonal = (filas: FilaEvento[]): string[] =>
   filas.flatMap((f) => (f.event_staff ?? []).map((s) => s.profile_id));
 
-const tieneFecha = (f: FilaEvento): f is FilaEventoConFecha => Boolean(f.quote?.date);
+type DatosEvento = Pick<
+  Evento,
+  "fecha" | "hora" | "tipo" | "lugar" | "ciudad" | "direccion" | "cliente" | "transporte"
+>;
 
 /**
- * Cuándo, dónde, quién y qué se cotizó sale de la cotización del evento; el
- * evento aporta confirmación, pagos y contrato.
+ * Cuándo, dónde y para quién es el evento. Cada dato sale del propio evento y, si
+ * falta ahí, de su cotización: el evento tiene su logística desde que se confirma y
+ * antes (o en eventos anteriores) solo la tiene la cotización.
  */
-function aEvento(f: FilaEventoConFecha, nombrePorPerfil: Map<string, string>): Evento {
-  const q = f.quote;
+function datosDelEvento(f: Logistica & { quote: Logistica | null }): DatosEvento {
+  const fuentes = f.quote ? [f, f.quote] : [f];
+  const primero = <T>(leer: (l: Logistica) => T | null | undefined): T | null => {
+    for (const l of fuentes) {
+      const valor = leer(l);
+      if (valor !== null && valor !== undefined && valor !== "") return valor;
+    }
+    return null;
+  };
+  const cliente = primero((l) => l.client);
+  return {
+    fecha: primero((l) => l.date),
+    hora: primero((l) => l.hour),
+    tipo: primero((l) => l.event_type),
+    lugar: primero((l) => l.venue?.name ?? l.venue_nombre_manual),
+    ciudad: primero((l) => l.venue?.city),
+    direccion: primero((l) => l.address ?? l.venue_direccion_manual),
+    cliente: cliente ? { nombre: cliente.name, email: cliente.email, telefono: cliente.phone } : null,
+    transporte: primero((l) => l.transportation?.city),
+  };
+}
+
+function aEvento(f: FilaEvento, nombrePorPerfil: Map<string, string>): Evento {
   return {
     id: f.id,
-    fecha: q.date,
-    hora: q.hour,
-    tipo: q.event_type,
-    lugar: q.venue?.name ?? q.venue_nombre_manual,
-    ciudad: q.venue?.city ?? null,
-    direccion: q.address ?? q.venue_direccion_manual,
-    cliente: q.client
-      ? { nombre: q.client.name, email: q.client.email, telefono: q.client.phone }
-      : null,
-    total: Number(q.total),
+    ...datosDelEvento(f),
+    total: f.quote ? Number(f.quote.total) : null,
     totalPagado: Number(f.total_paid),
     confirmado: f.confirmed,
     pagoInicial: f.initial_payment,
     firmado: f.contrato_firmado_subido_en !== null,
     contratoEnviadoEn: f.contrato_enviado_en,
     personal: (f.event_staff ?? []).map((s) => nombrePorPerfil.get(s.profile_id) ?? "Sin nombre"),
-    transporte: q.transportation?.city ?? null,
   };
 }
+
+/** Orden cronológico; los eventos sin fecha van al final y, en un mismo día, los sin hora. */
+const claveDeOrden = (e: Evento): string => `${e.fecha ?? "9999-99-99"} ${e.hora ?? "99:99:99"}`;
 
 /**
  * Fecha de hoy en Colombia (YYYY-MM-DD). Se usa la hora local y no la UTC para que
@@ -135,33 +162,32 @@ function aEvento(f: FilaEventoConFecha, nombrePorPerfil: Map<string, string>): E
 const hoyEnColombia = (): string => new Date().toLocaleDateString("en-CA", { timeZone: "America/Bogota" });
 
 /**
- * Solo lectura. Devuelve únicamente los eventos vigentes: los de hoy en adelante.
- * Un evento de hoy cuenta como vigente todo el día, aunque su hora ya haya pasado,
- * porque los eventos no guardan duración y puede seguir en curso.
+ * Solo lectura. Devuelve los eventos vigentes: los de hoy en adelante, más los que
+ * todavía no tienen fecha (no se pueden dar por pasados). Un evento de hoy cuenta como
+ * vigente todo el día, aunque su hora ya haya pasado, porque los eventos no guardan
+ * duración y puede seguir en curso.
  *
  * - public.events + public.quote (+ venue, users, transportation) -> datos del evento
  * - public.event_staff + auth.users (Admin API)                   -> personal asignado y su nombre
  *
- * La fecha y la hora viven en la cotización, así que el orden cronológico se
- * aplica aquí. Un evento cuya cotización no tiene fecha no se puede ubicar en el
- * calendario: se omite y se deja constancia en el log del servidor.
+ * Fecha y hora salen del evento o, si faltan, de su cotización; el orden cronológico
+ * se aplica aquí. Ningún evento se descarta por falta de datos: el navegador decide
+ * cómo mostrar los que no tienen fecha u hora.
  */
 export async function listarEventos(supabase: SupabaseClient): Promise<{ eventos: Evento[] }> {
   const eventosRes = await supabase.from("events").select(COLUMNAS);
   if (eventosRes.error) throw eventosRes.error;
 
-  const todas = eventosRes.data as unknown as FilaEvento[];
-  const conFecha = todas.filter(tieneFecha);
-  if (conFecha.length < todas.length) {
-    const omitidos = todas.filter((f) => !tieneFecha(f)).map((f) => f.id);
-    console.warn(`Eventos omitidos: su cotización no tiene fecha (events.id ${omitidos.join(", ")}).`);
-  }
   const hoy = hoyEnColombia();
-  const filas = conFecha.filter((f) => f.quote.date >= hoy);
-  filas.sort((a, b) => `${a.quote.date} ${a.quote.hour}`.localeCompare(`${b.quote.date} ${b.quote.hour}`));
+  const filas = (eventosRes.data as unknown as FilaEvento[]).filter((f) => {
+    const { fecha } = datosDelEvento(f);
+    return fecha === null || fecha >= hoy;
+  });
 
   const nombrePorPerfil = await nombresPorPerfil(supabase, idsDelPersonal(filas));
-  return { eventos: filas.map((f) => aEvento(f, nombrePorPerfil)) };
+  const eventos = filas.map((f) => aEvento(f, nombrePorPerfil));
+  eventos.sort((a, b) => claveDeOrden(a).localeCompare(claveDeOrden(b)));
+  return { eventos };
 }
 
 async function cargarEvento(supabase: SupabaseClient, id: number): Promise<Evento> {
@@ -169,7 +195,6 @@ async function cargarEvento(supabase: SupabaseClient, id: number): Promise<Event
   if (eventoRes.error) throw eventoRes.error;
 
   const fila = eventoRes.data as unknown as FilaEvento;
-  if (!tieneFecha(fila)) throw new ErrorEvento("La cotización del evento no tiene fecha.", 500);
   const nombrePorPerfil = await nombresPorPerfil(supabase, idsDelPersonal([fila]));
   return aEvento(fila, nombrePorPerfil);
 }
@@ -218,7 +243,7 @@ export interface NuevoEvento {
   venueId?: number | null;
   lugarManual?: string;
   direccionLugarManual?: string;
-  /** quote.address */
+  /** address (events y quote) */
   direccion?: string;
   transporteId?: number | null;
   cliente: {
@@ -280,15 +305,6 @@ export interface ValidacionFecha {
   mensaje: string | null;
 }
 
-interface FilaSolape {
-  quote: {
-    hour: string;
-    event_type: string | null;
-    venue_nombre_manual: string | null;
-    venue: { name: string } | null;
-  };
-}
-
 const formatearHora = (hora: string): string => {
   const [h = "0", m = "0"] = hora.split(":");
   return new Date(2000, 0, 1, Number(h), Number(m)).toLocaleTimeString("es-CO", { hour: "numeric", minute: "2-digit" });
@@ -300,18 +316,16 @@ const formatearHora = (hora: string): string => {
  * a la misma hora del mismo día. La cotización no entra en esta regla: solo el evento.
  */
 async function mensajeDeSolape(supabase: SupabaseClient, fecha: string, hora: string): Promise<string | null> {
-  const { data, error } = await supabase
-    .from("events")
-    .select("quote!inner(hour, event_type, venue_nombre_manual, venue(name))")
-    .eq("quote.date", fecha);
+  // La fecha puede estar en el evento o solo en su cotización, así que se comparan en código.
+  const { data, error } = await supabase.from("events").select(`id, ${LOGISTICA}, quote(${LOGISTICA})`);
   if (error) throw error;
 
-  const existente = (data as unknown as FilaSolape[]).find((f) => f.quote.hour.slice(0, 5) === hora.slice(0, 5));
+  const existente = (data as unknown as (Logistica & { quote: Logistica | null })[])
+    .map(datosDelEvento)
+    .find((d) => d.fecha === fecha && d.hora?.slice(0, 5) === hora.slice(0, 5));
   if (!existente) return null;
 
-  const detalle = [existente.quote.event_type, existente.quote.venue?.name ?? existente.quote.venue_nombre_manual]
-    .filter(Boolean)
-    .join(" · ");
+  const detalle = [existente.tipo, existente.lugar].filter(Boolean).join(" · ");
   return (
     `Ya hay un evento a las ${formatearHora(hora)}${detalle ? ` (${detalle})` : ""}. ` +
     "Los eventos no pueden solaparse: elige otra hora u otra fecha."
@@ -504,10 +518,11 @@ async function obtenerCliente(
 
 /**
  * Crea un evento nuevo. events.quote_id es obligatorio y único, así que cada
- * evento lleva su propia cotización (public.quote). La cotización guarda los
- * datos del evento (fecha, hora, tipo, lugar, dirección, cliente y transporte) y
- * sus servicios (public.quote_items); el total sale de esos servicios. El evento
- * (public.events) solo guarda lo que le es propio: confirmación, pagos y contrato.
+ * evento lleva su propia cotización (public.quote) con sus servicios
+ * (public.quote_items); el total sale de esos servicios. Los datos del evento
+ * (fecha, hora, tipo, lugar, dirección, cliente y transporte) se guardan en las dos
+ * tablas: la cotización los conserva y el evento los hereda al crearse. Así la
+ * regla de fecha máxima de la base (trigger sobre events.date) también se aplica.
  * Al crearlo no se asigna ningún pago: events.total_paid empieza en 0 y sube con
  * las transacciones.
  *
@@ -561,27 +576,26 @@ export async function crearEvento(supabase: SupabaseClient, datos: NuevoEvento):
   };
 
   try {
-    const quote = await supabase
-      .from("quote")
-      .insert({
-        client_id: cliente.id,
-        event_type: tipo,
-        transportation_id: transporteId,
-        date: fecha,
-        hour: hora,
-        address: direccion || null,
-        venue_id: venueId,
-        venue_nombre_manual: venueId === null ? lugarManual : null,
-        venue_direccion_manual: venueId === null ? direccionLugarManual || null : null,
-      })
-      .select("id")
-      .single();
+    // events y quote usan los mismos nombres de columna para esta información.
+    const logistica = {
+      client_id: cliente.id,
+      event_type: tipo,
+      transportation_id: transporteId,
+      date: fecha,
+      hour: hora,
+      address: direccion || null,
+      venue_id: venueId,
+      venue_nombre_manual: venueId === null ? lugarManual : null,
+      venue_direccion_manual: venueId === null ? direccionLugarManual || null : null,
+    };
+
+    const quote = await supabase.from("quote").insert(logistica).select("id").single();
     if (quote.error) throw quote.error;
     quoteId = quote.data.id as number;
 
     const evento = await supabase
       .from("events")
-      .insert({ quote_id: quoteId, confirmed: datos.confirmado === true })
+      .insert({ quote_id: quoteId, confirmed: datos.confirmado === true, ...logistica })
       .select("id")
       .single();
     if (evento.error) throw evento.error;

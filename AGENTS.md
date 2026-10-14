@@ -39,18 +39,21 @@ eventos (Manizales, Caldas). Monorepo con dos workspaces:
 - La cotización no depende del inventario: se puede hacer siempre, haya o no
   stock en bodega de lo cotizado. La única restricción es del evento: no puede
   solaparse con otro.
-- Modelo de eventos y cotizaciones: `quote` guarda los datos del evento (fecha,
-  hora, tipo, sede `venue_id` o lugar escrito a mano con `venue_nombre_manual` /
-  `venue_direccion_manual`, dirección, cliente, transporte), su `estado`
-  (`recibida`, `en_revision`, `finalizada`, `cancelada`) y sus servicios
-  (`quote_items`, con `nota` opcional); `events` solo guarda lo propio del evento
+- Modelo de eventos y cotizaciones: `quote` y `events` guardan las mismas columnas de
+  logística (fecha, hora, tipo de evento, sede `venue_id` o lugar escrito a mano con
+  `venue_nombre_manual` / `venue_direccion_manual`, dirección, cliente y transporte).
+  Todas son opcionales: un evento o una cotización puede no tener fecha u hora todavía.
+  `quote` además tiene su `estado` (`recibida`, `en_revision`, `finalizada`, `cancelada`) y sus
+  servicios (`quote_items`, con `nota` opcional); `events` guarda lo propio del evento
   (confirmación, pagos, contrato) y apunta a su cotización con `events.quote_id`.
-  `events` ya no tiene fecha, hora, lugar ni dirección: no se deben leer ni escribir ahí.
+  Al leer, cada dato sale del evento y, si falta ahí, de su cotización; al crear un evento
+  se escribe en las dos tablas (así los triggers de la base sobre `events` también aplican).
 - El menú de eventos solo muestra los eventos vigentes: `listarEventos` devuelve los
-  de hoy en adelante (fecha de la cotización, hora de Colombia) y los que ya pasaron
-  no se envían al navegador. Un evento de hoy sigue vigente todo el día.
-  `listarEventos` (`packages/db/src/eventos.ts`) une ambas tablas y ordena por
-  fecha y hora de la cotización.
+  de hoy en adelante (hora de Colombia) más los que aún no tienen fecha; los que ya pasaron
+  no se envían al navegador. Un evento de hoy sigue vigente todo el día. Los eventos sin
+  fecha aparecen en la lista (como "sin fecha") pero no en el calendario, y los que no
+  tienen hora muestran "Hora por definir". `listarEventos`
+  (`packages/db/src/eventos.ts`) los ordena por fecha y hora.
 
 ## Comandos útiles
 
