@@ -162,11 +162,13 @@ function iconosEstado(e: Evento): string {
 }
 
 function renderLista(visibles: Evento[]): void {
+
     // Todos los eventos que pasan los filtros, del más antiguo al más reciente.
     const items = [...visibles].sort(porFechaYHora);
     // Único contador de eventos: los que coinciden con los filtros ("N de M" cuando hay filtros activos).
     listaConteo.textContent = hayFiltros() ? `${items.length} de ${eventos.length}` : String(items.length);
     listaConteo.title = `${listaConteo.textContent} eventos`;
+
 
     if (items.length === 0) {
         listaEventos.innerHTML = `<p class="lista-vacia">${hayFiltros()
@@ -176,6 +178,7 @@ function renderLista(visibles: Evento[]): void {
     }
 
     listaEventos.innerHTML = items.map(e => {
+
         let dia = '—';
         let mesCorto = 'sin fecha';
         if (e.fecha) {
@@ -186,6 +189,7 @@ function renderLista(visibles: Evento[]): void {
         return `
         <button type="button" class="lista-item" data-evento="${e.id}">
             <div class="lista-fecha"><strong>${dia}</strong><span>${esc(mesCorto)}</span></div>
+
             <div class="lista-info">
                 <div class="lista-tipo">${esc(nombreTipo(e))}</div>
                 <div class="lista-sub">${esc(horaTexto(e))} · ${esc(lugarTexto(e))}</div>
@@ -194,7 +198,10 @@ function renderLista(visibles: Evento[]): void {
         </button>`;
     }).join('');
 
+
     // El API solo trae eventos vigentes: el primero de la lista es el próximo.
+
+
     listaEventos.scrollTop = 0;
 }
 

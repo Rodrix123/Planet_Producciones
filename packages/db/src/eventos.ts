@@ -83,6 +83,17 @@ const COLUMNAS = [
 const POR_PAGINA = 200;
 
 /**
+ * Orden alfabético en español para todas las listas del menú de eventos: no
+ * distingue mayúsculas ni tildes ("Ñ" va después de "N") y compara los números
+ * por su valor (2 antes que 10). Se ordena aquí y no solo en la consulta porque
+ * el orden del motor de la base depende de su collation.
+ */
+const ALFABETICO = new Intl.Collator("es", { sensitivity: "base", numeric: true });
+
+/** Nombre con el que la lista de la web titula cada evento: su tipo, o "Evento" si no tiene. */
+const nombreTipoEvento = (e: Evento): string => e.tipo?.trim() || "Evento";
+
+/**
  * Nombres de los usuarios indicados, leídos de auth.users (Admin API): public.profiles
  * ya no guarda el nombre. Sin nombre en los metadatos se usa la parte local del correo.
  * Solo recorre las páginas necesarias y no llama a la API si no hay personal asignado.
@@ -173,6 +184,11 @@ const hoyEnColombia = (): string => new Date().toLocaleDateString("en-CA", { tim
  * Fecha y hora salen del evento o, si faltan, de su cotización; el orden cronológico
  * se aplica aquí. Ningún evento se descarta por falta de datos: el navegador decide
  * cómo mostrar los que no tienen fecha u hora.
+ * - public.events (+ venue, users, transportation, quote) -> datos del evento
+ * - public.event_staff + auth.users (Admin API)           -> personal asignado y su nombre
+ *
+ * Los eventos salen en orden alfabético por tipo; a igual tipo conservan el orden
+ * por fecha y hora de la consulta (Array.sort es estable).
  */
 export async function listarEventos(supabase: SupabaseClient): Promise<{ eventos: Evento[] }> {
   const eventosRes = await supabase.from("events").select(COLUMNAS);
@@ -394,25 +410,33 @@ async function existeFila(supabase: SupabaseClient, tabla: "venue" | "transporta
   if (!data) throw new ErrorEvento(`${nombre} no existe.`);
 }
 
-/** Sedes y transportes que se pueden elegir al crear un evento. */
+/**
+ * Sedes y transportes que se pueden elegir al crear un evento, en orden
+ * alfabético: las sedes por el nombre que se muestra (y la ciudad si se repite)
+ * y los transportes por ciudad.
+ */
 export async function listarOpcionesEvento(supabase: SupabaseClient): Promise<OpcionesEvento> {
   const [sedesRes, transportesRes] = await Promise.all([
-    supabase.from("venue").select("id, name, city").order("city").order("name"),
+    supabase.from("venue").select("id, name, city").order("name").order("city"),
     supabase.from("transportation").select("id, city, price").order("city"),
   ]);
   if (sedesRes.error) throw sedesRes.error;
   if (transportesRes.error) throw transportesRes.error;
   return {
-    sedes: sedesRes.data.map((s) => ({
-      id: s.id as number,
-      nombre: s.name as string,
-      ciudad: (s.city as string | null) ?? null,
-    })),
-    transportes: transportesRes.data.map((t) => ({
-      id: t.id as number,
-      ciudad: t.city as string,
-      precio: Number(t.price),
-    })),
+    sedes: sedesRes.data
+      .map((s) => ({
+        id: s.id as number,
+        nombre: s.name as string,
+        ciudad: (s.city as string | null) ?? null,
+      }))
+      .sort((a, b) => ALFABETICO.compare(a.nombre, b.nombre) || ALFABETICO.compare(a.ciudad ?? "", b.ciudad ?? "")),
+    transportes: transportesRes.data
+      .map((t) => ({
+        id: t.id as number,
+        ciudad: t.city as string,
+        precio: Number(t.price),
+      }))
+      .sort((a, b) => ALFABETICO.compare(a.ciudad, b.ciudad)),
   };
 }
 
@@ -429,7 +453,7 @@ const MAX_NOTA = 500;
 interface FilaVariante {
   id: number;
   simple_description: string;
-  price: number | string;
+  price_variants: number | string;
   inventory: { type: string } | null;
 }
 
@@ -446,12 +470,12 @@ async function resolverItems(supabase: SupabaseClient, items: unknown): Promise<
 
   const { data, error } = await supabase
     .from("inventory_variants")
-    .select("id, simple_description, price, inventory(type)");
+    .select("id, simple_description, price_variants, inventory(type)");
   if (error) throw error;
 
   const variantes = new Map<string, { id: number; precio: number }>();
   for (const v of data as unknown as FilaVariante[]) {
-    variantes.set(`${v.inventory?.type}||${v.simple_description}`, { id: v.id, precio: Number(v.price) });
+    variantes.set(`${v.inventory?.type}||${v.simple_description}`, { id: v.id, precio: Number(v.price_variants) });
   }
 
   // Si un mismo servicio llega dos veces, se suman las cantidades.

@@ -20,6 +20,7 @@ import {
     listarOpcionesEvento,
     validarFechaEvento
 } from '@my-app/db/eventos';
+import { listarInventario } from '@my-app/db/inventario';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -267,6 +268,10 @@ app.get('/api/eventos/fecha', (req: Request, res: Response) =>
 
 app.post('/api/eventos', (req: Request, res: Response) =>
     conEmpleados(res, async db => ({ evento: await crearEvento(db, req.body) }), 201));
+
+// Inventario en niveles: tipo > elemento > variante > unidad física (stock). Solo lectura.
+app.get('/api/inventario', (_req: Request, res: Response) =>
+    conEmpleados(res, listarInventario));
 
 app.get('/api/empleados', (_req: Request, res: Response) =>
     conEmpleados(res, listarEmpleados));
