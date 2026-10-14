@@ -47,6 +47,13 @@ app.use('/api/panel', panelRouter);
 // Manejador de errores central: toda ruta async usa asyncHandler() (ver src/asyncHandler.ts),
 // que reenvía acá cualquier error en vez de dejarlo crashear el proceso.
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+    // P0001 = RAISE EXCEPTION desde un trigger de Postgres (ej. validaciones de negocio
+    // como límites de fecha en `events`): el mensaje ya está pensado para el usuario final,
+    // no es un bug — se muestra tal cual en vez del 500 genérico.
+    if ((err as NodeJS.ErrnoException & { code?: string }).code === 'P0001') {
+        return res.status(400).json({ status: 'error', message: err.message });
+    }
+
     console.error('Error no controlado en una ruta:', err);
     if (res.headersSent) return;
     res.status(500).json({ status: 'error', message: 'Ocurrió un error inesperado en el servidor. Intenta de nuevo.' });

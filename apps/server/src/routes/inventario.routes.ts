@@ -9,15 +9,21 @@ export const inventarioRouter = Router();
 // (tipo -> elemento -> variante -> unidad física) a partir de inventory,
 // inventory_variants y stock. No se crea/edita nada acá.
 inventarioRouter.get('/', requireAuth, requireRole('administrador', 'jefe_logistica'), asyncHandler(async (_req, res) => {
-    const [elementos, variantes, unidades] = await Promise.all([
+    const [elementos, variantes, unidades, tramosBase] = await Promise.all([
         pool.query<{ id: number; name: string; type: string }>('select id, name, type from inventory order by id'),
-        pool.query<{ id: number; inventory_id: number; simple_description: string | null; detailed_description: string | null; price: string }>(
-            'select id, inventory_id, simple_description, detailed_description, price from inventory_variants order by id'
+        pool.query<{ id: number; inventory_id: number; simple_description: string | null; detailed_description: string | null }>(
+            'select id, inventory_id, simple_description, detailed_description from inventory_variants order by id'
         ),
         pool.query<{ id: number; id_inventory_variant: number; state: string; state_description: string | null; barcode: string | null; created_at: string; updated_at: string }>(
             'select id, id_inventory_variant, state, state_description, barcode, created_at, updated_at from stock order by id'
-        )
+        ),
+        // Precio base de cada variante (tramo quantity=1); el precio ya no vive en
+        // inventory_variants sino en "PriceVariants".
+        pool.query<{ id_variant: number; price: string }>('select id_variant, price from "PriceVariants" where quantity = 1')
     ]);
+
+    const precioBasePorVariante = new Map<number, number>();
+    for (const t of tramosBase.rows) precioBasePorVariante.set(t.id_variant, Number(t.price));
 
     const unidadesPorVariante = new Map<number, typeof unidades.rows>();
     for (const u of unidades.rows) {
@@ -40,7 +46,7 @@ inventarioRouter.get('/', requireAuth, requireRole('administrador', 'jefe_logist
                 id: v.id,
                 nombre: v.simple_description,
                 descripcionDetallada: v.detailed_description,
-                precio: Number(v.price),
+                precio: precioBasePorVariante.get(v.id) ?? 0,
                 unidades: (unidadesPorVariante.get(v.id) || []).map((u) => ({
                     id: u.id,
                     codigoBarras: u.barcode,

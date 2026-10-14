@@ -65,7 +65,7 @@ const editorCatalogoEl = document.getElementById('editorCatalogo') as HTMLElemen
 const catalogoContenedorEl = document.getElementById('catalogoContenedor') as HTMLElement;
 const ciudadSelect = document.getElementById('inpCiudad') as HTMLSelectElement;
 const lugarSelect = document.getElementById('inpLugar') as HTMLSelectElement;
-const transporteSelect = document.getElementById('inpTransporte') as HTMLSelectElement;
+const transporteHintEl = document.getElementById('inpTransporteHint') as HTMLElement;
 const lugarOtroWrap = document.getElementById('inpLugarOtroWrap') as HTMLElement;
 const lugarOtroNombreInput = document.getElementById('inpLugarOtroNombre') as HTMLInputElement;
 const lugarOtroDireccionInput = document.getElementById('inpLugarOtroDireccion') as HTMLInputElement;
@@ -109,6 +109,21 @@ function poblarLugarParaCiudad(ciudad: string | null) {
     optOtro.value = OTRO_VALUE;
     optOtro.textContent = 'Otro (no está en la lista)';
     lugarSelect.appendChild(optOtro);
+}
+
+// El transporte ya no se elige a mano: se resuelve a partir de la ciudad (una fila de
+// `transportation` por ciudad en el catálogo), igual que en el cotizador público.
+function transportePorCiudad(): { id: number; city: string; price: number } | undefined {
+    return catalogo?.transportation.find((t) => t.city === ciudadSelect.value);
+}
+
+function actualizarTransporteHint() {
+    const transporte = transportePorCiudad();
+    transporteHintEl.textContent = !ciudadSelect.value
+        ? ''
+        : transporte
+            ? `Transporte incluido (${transporte.city}): ${formatterCOP.format(transporte.price)}`
+            : 'Esta ciudad no tiene costo de transporte registrado.';
 }
 
 function nombreItem(item: ItemSeleccionado): string {
@@ -164,7 +179,6 @@ async function abrirDetalle(id: string) {
     (document.getElementById('inpClienteTelefono') as HTMLInputElement).value = cotizacion.clienteTelefono;
     (document.getElementById('inpFechaEvento') as HTMLInputElement).value = cotizacion.fechaEvento || '';
     (document.getElementById('inpTipoEvento') as HTMLSelectElement).value = cotizacion.tipoEvento || '';
-    transporteSelect.value = cotizacion.transportationId ? String(cotizacion.transportationId) : '';
 
     lugarOtroNombreInput.value = '';
     lugarOtroDireccionInput.value = '';
@@ -187,6 +201,7 @@ async function abrirDetalle(id: string) {
         poblarLugarParaCiudad(null);
         lugarSelect.value = '';
     }
+    actualizarTransporteHint();
 
     (document.getElementById('linkVerPdf') as HTMLAnchorElement).href = apiUrl(`/api/cotizaciones/${id}/pdf`);
 
@@ -332,16 +347,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         ciudadSelect.appendChild(opt);
     });
 
-    catalogo.transportation.forEach((t) => {
-        const opt = document.createElement('option');
-        opt.value = String(t.id);
-        opt.textContent = `${t.city} — ${formatterCOP.format(t.price)}`;
-        transporteSelect.appendChild(opt);
-    });
-
     ciudadSelect.addEventListener('change', () => {
         poblarLugarParaCiudad(ciudadSelect.value || null);
         lugarOtroWrap.style.display = 'none';
+        actualizarTransporteHint();
     });
     lugarSelect.addEventListener('change', () => {
         lugarOtroWrap.style.display = lugarSelect.value === OTRO_VALUE ? 'grid' : 'none';
@@ -363,7 +372,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 venueId: (lugarSelect.value && !esLugarManual) ? Number(lugarSelect.value) : undefined,
                 venueNombreManual: esLugarManual ? lugarOtroNombreInput.value.trim() : undefined,
                 venueDireccionManual: esLugarManual ? lugarOtroDireccionInput.value.trim() : undefined,
-                transportationId: transporteSelect.value ? Number(transporteSelect.value) : undefined,
+                transportationId: transportePorCiudad()?.id ?? null,
                 fechaEvento: (document.getElementById('inpFechaEvento') as HTMLInputElement).value || undefined
             })
         });

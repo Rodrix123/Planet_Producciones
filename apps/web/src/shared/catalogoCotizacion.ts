@@ -4,11 +4,19 @@
 // como en el editor de servicios del panel de Maritza.
 import { apiUrl } from './api';
 
+export interface TramoPrecio {
+    cantidad: number;
+    precio: number;
+}
+
 export interface VarianteCatalogo {
     id: number;
     simpleDescription: string;
     detailedDescription: string;
     price: number;
+    /** Tramos de cantidad/precio (ej. "x8" a un precio, "x12" a otro). Casi todas las
+     *  variantes solo tienen un tramo (cantidad=1, precio=price). */
+    tramos: TramoPrecio[];
 }
 
 export interface InventoryCatalogo {
@@ -70,11 +78,15 @@ export function renderCatalogoEnContenedor(contenedor: HTMLElement, catalogo: Ca
             <label for="inv-${inv.id}">${inv.name || tituloLegible(inv.type)}</label>
             <select id="inv-${inv.id}" class="precio-select" data-tag="${inv.type}">
                 <option value="" data-precio="0" data-variant-id="" selected>-- No incluir --</option>
-                ${inv.variants.map((v) => `
-                    <option value="${v.id}" data-variant-id="${v.id}" data-precio="${v.price}" data-incluye="${(v.detailedDescription || '').replace(/"/g, '&quot;')}">
-                        ${v.simpleDescription} — ${formatterCOP.format(v.price)}
-                    </option>
-                `).join('')}
+                ${inv.variants.flatMap((v) => {
+                    const tramos = v.tramos.length > 0 ? v.tramos : [{ cantidad: 1, precio: v.price }];
+                    const variasOpciones = tramos.length > 1;
+                    return tramos.map((t) => `
+                        <option value="${v.id}_${t.cantidad}" data-variant-id="${v.id}" data-cantidad="${t.cantidad}" data-precio="${t.precio}" data-incluye="${(v.detailedDescription || '').replace(/"/g, '&quot;')}">
+                            ${v.simpleDescription}${variasOpciones ? ` (x${t.cantidad})` : ''} — ${formatterCOP.format(t.precio)}
+                        </option>
+                    `);
+                }).join('')}
             </select>
             <small class="field-hint" id="inv-${inv.id}-hint"></small>
         </div>
@@ -143,15 +155,19 @@ export function calcularDesdeCatalogo(contenedor: ParentNode): ResultadoCatalogo
         if (!variantId || select.selectedIndex <= 0) return;
         const precio = parseFloat(opt.getAttribute('data-precio') || '') || 0;
         if (precio <= 0) return;
+        // El precio del tramo elegido es el TOTAL de ese tramo (ej. "x8" = $600.000),
+        // no un precio por unidad; se reparte entre la cantidad para que el resto de
+        // la app (que multiplica precioUnit * cantidad) reconstruya el mismo total.
+        const cantidad = parseInt(opt.getAttribute('data-cantidad') || '1', 10) || 1;
 
         total += precio;
         itemsSeleccionados.push({
             variantId: Number(variantId),
-            cantidad: 1,
+            cantidad,
             tag: select.dataset.tag || 'SERVICIO',
             nombre: opt.textContent?.split(' — ')[0].trim() || '',
             descripcion: incluye,
-            precioUnit: precio
+            precioUnit: precio / cantidad
         });
     });
 
@@ -208,10 +224,20 @@ export function preseleccionarCatalogo(contenedor: ParentNode, items: ItemSelecc
         return restantes.splice(idx, 1)[0];
     }
 
+    // Una variante puede tener varias opciones (una por tramo de cantidad): hay que
+    // calzar variantId Y cantidad para marcar el tramo exacto que se había guardado.
+    function tomarConCantidad(variantId: number, cantidad: number): ItemSeleccionado | undefined {
+        const idx = restantes.findIndex((i) => i.variantId === variantId && i.cantidad === cantidad);
+        if (idx === -1) return undefined;
+        return restantes.splice(idx, 1)[0];
+    }
+
     contenedor.querySelectorAll<HTMLSelectElement>('select.precio-select').forEach((select) => {
         for (const opt of Array.from(select.options)) {
             const variantId = opt.getAttribute('data-variant-id');
-            if (variantId && tomar(Number(variantId))) {
+            if (!variantId) continue;
+            const cantidad = parseInt(opt.getAttribute('data-cantidad') || '1', 10) || 1;
+            if (tomarConCantidad(Number(variantId), cantidad)) {
                 select.value = opt.value;
                 break;
             }

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { pool } from '../db';
 import { requireAuth, requireRole } from '../auth';
 import { asyncHandler } from '../asyncHandler';
-import { transporter } from '../mailer';
+import { enviarCorreo } from '../mailer';
 import { generarCotizacionPdfBuffer, type ItemCotizacionPdf } from '../pdf/cotizacionPdf';
 
 const ESTADOS_VALIDOS = ['recibida', 'en_revision', 'finalizada', 'contrato_enviado', 'programada', 'cancelada'] as const;
@@ -124,24 +124,37 @@ async function obtenerFilaCotizacion(id: string): Promise<FilaCotizacion | null>
 }
 
 async function obtenerItems(quoteId: string | number): Promise<ItemGuardado[]> {
+    // El precio vive en "PriceVariants": un tramo exacto para (variante, cantidad)
+    // ya es el precio TOTAL de ese tramo (ej. x8 = $3.700.000); si no hay tramo exacto
+    // (cantidades libres como sillas/mesas), se usa el tramo base (quantity=1) como
+    // precio por unidad.
     const { rows } = await pool.query(
-        `select qi.variant_id, qi.quantity, qi.nota, iv.simple_description, iv.detailed_description, iv.price, i.type
+        `select qi.variant_id, qi.quantity, qi.nota, iv.simple_description, iv.detailed_description, i.type,
+                exact.price as precio_tramo_exacto,
+                base.price as precio_base
          from quote_items qi
          join inventory_variants iv on iv.id = qi.variant_id
          join inventory i on i.id = iv.inventory_id
+         left join "PriceVariants" exact on exact.id_variant = qi.variant_id and exact.quantity = qi.quantity
+         left join "PriceVariants" base on base.id_variant = qi.variant_id and base.quantity = 1
          where qi.quote_id = $1
          order by i.type, iv.simple_description`,
         [quoteId]
     );
-    return rows.map((r) => ({
-        variantId: Number(r.variant_id),
-        cantidad: r.quantity,
-        tag: r.type,
-        nombre: r.simple_description,
-        descripcion: r.detailed_description || '',
-        precioUnit: Number(r.price),
-        nota: r.nota
-    }));
+    return rows.map((r) => {
+        const precioUnit = r.precio_tramo_exacto !== null
+            ? Number(r.precio_tramo_exacto) / r.quantity
+            : Number(r.precio_base) || 0;
+        return {
+            variantId: Number(r.variant_id),
+            cantidad: r.quantity,
+            tag: r.type,
+            nombre: r.simple_description,
+            descripcion: r.detailed_description || '',
+            precioUnit,
+            nota: r.nota
+        };
+    });
 }
 
 async function precioTransporte(transportationId: number | null): Promise<number> {
@@ -240,7 +253,7 @@ cotizacionesRouter.post('/', asyncHandler(async (req, res) => {
     if (process.env.EMAIL_JEFE) {
         const { rows: totalRows } = await pool.query<{ total: string }>('select total from quote where id = $1', [quoteId]);
         const totalFinal = Number(totalRows[0]?.total || 0);
-        transporter.sendMail({
+        enviarCorreo({
             from: `"Planet Producciones" <${process.env.EMAIL_USER}>`,
             to: process.env.EMAIL_JEFE,
             subject: `Nueva cotización recibida: ${cliente.nombre} (${numeroReferencia(quoteId, quoteRows[0].created_at)})`,
@@ -323,12 +336,20 @@ cotizacionesRouter.put('/:id/datos', requireRole('administrador'), asyncHandler(
         venueId?: number;
         venueNombreManual?: string;
         venueDireccionManual?: string;
-        transportationId?: number;
+        transportationId?: number | null;
         fechaEvento?: string;
     };
 
     const fila = await obtenerFilaCotizacion(req.params.id);
     if (!fila) return res.status(404).json({ status: 'error', message: 'Cotización no encontrada' });
+
+    // El transporte se resuelve en el frontend a partir de la ciudad elegida (ya no es un
+    // select aparte), así que cuando el editor de Maritza manda este campo puede venir en
+    // null (ciudad sin transporte registrado o sin ciudad elegida) y eso debe LIMPIAR el
+    // transporte, a diferencia de otras pantallas (eventos-proceso) que ni siquiera mandan
+    // este campo y cuyo valor anterior debe quedar intacto.
+    const transportationIdProvisto = Object.prototype.hasOwnProperty.call(body, 'transportationId');
+    const nuevoTransportationId = body.transportationId ?? null;
 
     if (fila.client_id) {
         await pool.query(
@@ -359,7 +380,7 @@ cotizacionesRouter.put('/:id/datos', requireRole('administrador'), asyncHandler(
         `update ${destino} set
             event_type = coalesce($1, event_type),
             venue_id = case when $6 then $2 when $7 then null else venue_id end,
-            transportation_id = coalesce($3, transportation_id),
+            transportation_id = case when $10 then $3 else transportation_id end,
             date = coalesce($4, date),
             venue_nombre_manual = case when $7 then $8 when $6 then null else venue_nombre_manual end,
             venue_direccion_manual = case when $7 then $9 when $6 then null else venue_direccion_manual end,
@@ -368,22 +389,23 @@ cotizacionesRouter.put('/:id/datos', requireRole('administrador'), asyncHandler(
         [
             body.tipoEvento?.trim() || null,
             body.venueId || null,
-            body.transportationId || null,
+            nuevoTransportationId,
             body.fechaEvento || null,
             fila.event_id ? fila.event_id : req.params.id,
             eligiendoVenueCatalogo,
             eligiendoVenueManual,
             body.venueNombreManual?.trim() || null,
-            body.venueDireccionManual?.trim() || null
+            body.venueDireccionManual?.trim() || null,
+            transportationIdProvisto
         ]
     );
 
     // El transporte no pasa por quote_items, así que a diferencia de los servicios
     // (que el trigger update_total_quote mantiene solo) hay que ajustar `quote.total`
-    // a mano por la diferencia exacta cuando cambia.
-    if (body.transportationId && body.transportationId !== fila.transportation_id) {
+    // a mano por la diferencia exacta cuando cambia (incluyendo el caso de quitarlo del todo).
+    if (transportationIdProvisto && nuevoTransportationId !== fila.transportation_id) {
         const [precioNuevo, precioViejo] = await Promise.all([
-            precioTransporte(body.transportationId),
+            precioTransporte(nuevoTransportationId),
             precioTransporte(fila.transportation_id)
         ]);
         await pool.query('update quote set total = total + $1 where id = $2', [precioNuevo - precioViejo, fila.id]);

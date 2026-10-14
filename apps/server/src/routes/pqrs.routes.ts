@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { pool } from '../db';
 import { requireAuth, requireRole } from '../auth';
 import { asyncHandler } from '../asyncHandler';
-import { transporter } from '../mailer';
+import { enviarCorreo } from '../mailer';
 
 export const pqrsRouter = Router();
 
@@ -24,7 +24,7 @@ pqrsRouter.post('/', asyncHandler(async (req, res) => {
     );
 
     if (process.env.EMAIL_SECRETARIA) {
-        transporter.sendMail({
+        enviarCorreo({
             from: `"Planet Producciones" <${process.env.EMAIL_USER}>`,
             to: process.env.EMAIL_SECRETARIA,
             subject: `Nuevo PQRS recibido: ${nombre}`,
@@ -69,7 +69,7 @@ pqrsRouter.post('/:id/responder', asyncHandler(async (req, res) => {
     if (!fila) return res.status(404).json({ status: 'error', message: 'PQRS no encontrado' });
 
     try {
-        await transporter.sendMail({
+        await enviarCorreo({
             from: `"Planet Producciones" <${process.env.EMAIL_USER}>`,
             to: fila.correo,
             subject: 'Respuesta a tu PQRS - Planet Producciones',

@@ -290,10 +290,16 @@ async function insertarInventory(seed: InventorySeed): Promise<void> {
     const inventoryId = rows[0].id;
 
     for (const v of seed.variantes) {
+        const { rows: varRows } = await pool.query<{ id: number }>(
+            `insert into inventory_variants (inventory_id, simple_description, detailed_description)
+             values ($1, $2, $3) returning id`,
+            [inventoryId, v.simple, v.detalle || null]
+        );
+        // El precio vive en "PriceVariants" (tramo base quantity=1), no en
+        // inventory_variants.
         await pool.query(
-            `insert into inventory_variants (inventory_id, simple_description, detailed_description, price)
-             values ($1, $2, $3, $4)`,
-            [inventoryId, v.simple, v.detalle || null, v.precio]
+            `insert into "PriceVariants" (id_variant, quantity, price) values ($1, 1, $2)`,
+            [varRows[0].id, v.precio]
         );
     }
 }

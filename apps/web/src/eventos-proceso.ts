@@ -128,21 +128,21 @@ async function abrirDetalle(id: string) {
 
 function renderContrato(cotizacion: Cotizacion, contrato: ContratoInfo) {
     const estadoEl = document.getElementById('estadoContrato')!;
-    const bloqueGenerar = document.getElementById('bloqueGenerarContrato')!;
     const bloqueSubir = document.getElementById('bloqueSubirFirmado')!;
     const btnMarcarDefinitivo = document.getElementById('btnMarcarDefinitivo') as HTMLButtonElement;
     const linkContratoGenerado = document.getElementById('linkVerContratoGenerado') as HTMLAnchorElement;
 
-    bloqueGenerar.classList.add('hidden');
     bloqueSubir.classList.add('hidden');
     btnMarcarDefinitivo.classList.add('hidden');
 
+    // Generar y enviar el contrato es responsabilidad exclusiva de Mariana (secretaria) —
+    // Maritza solo ve aquí el estado y, una vez enviado, sube el firmado y oficializa.
     if (!contrato.enviadoEn) {
         estadoEl.innerHTML = '<i class="fa-solid fa-circle-exclamation" style="color:var(--orange-main);"></i> El contrato todavía no se ha generado ni enviado al cliente.';
         if (!cotizacion.clienteDocumento || !cotizacion.fechaEvento) {
             estadoEl.innerHTML += `<br><span style="color:#f87171; font-size:0.85rem;">Falta ${!cotizacion.clienteDocumento ? 'el documento del cliente' : ''}${!cotizacion.clienteDocumento && !cotizacion.fechaEvento ? ' y ' : ''}${!cotizacion.fechaEvento ? 'la fecha del evento' : ''} — completalo arriba, en "Datos del cliente y el evento", y guarda los cambios.</span>`;
         } else {
-            bloqueGenerar.classList.remove('hidden');
+            estadoEl.innerHTML += '<br><span style="font-size:0.85rem;">Ya puede enviarse: pídele a Mariana que lo genere y lo envíe desde su panel de "Cotizaciones definitivas".</span>';
         }
         return;
     }
@@ -212,29 +212,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
         Swal.fire({ icon: 'success', title: 'Datos guardados', confirmButtonColor: '#f97316', timer: 1400, showConfirmButton: false });
-        await abrirDetalle(cotizacionActual.id);
-    }));
-
-    document.getElementById('btnGenerarContrato')?.addEventListener('click', conManejoDeErrores(async () => {
-        if (!cotizacionActual) return;
-        const confirmacion = await Swal.fire({
-            icon: 'question',
-            title: '¿Generar y enviar el contrato?',
-            text: `Se enviará un correo a ${cotizacionActual.clienteCorreo} con el contrato en PDF.`,
-            showCancelButton: true,
-            confirmButtonText: 'Sí, enviar',
-            cancelButtonText: 'Cancelar',
-            confirmButtonColor: '#f97316'
-        });
-        if (!confirmacion.isConfirmed) return;
-
-        const res = await apiFetch(`/api/contratos/${cotizacionActual.id}/generar-y-enviar`, { method: 'POST' });
-        const datos = await res.json();
-        if (!res.ok) {
-            Swal.fire({ icon: 'error', title: 'No se pudo enviar', text: datos.message, confirmButtonColor: '#f97316' });
-            return;
-        }
-        await Swal.fire({ icon: 'success', title: 'Contrato enviado', confirmButtonColor: '#f97316' });
         await abrirDetalle(cotizacionActual.id);
     }));
 

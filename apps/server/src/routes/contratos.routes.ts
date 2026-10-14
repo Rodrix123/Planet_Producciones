@@ -5,7 +5,7 @@ import fs from 'fs';
 import { pool } from '../db';
 import { requireAuth, requireRole } from '../auth';
 import { asyncHandler } from '../asyncHandler';
-import { transporter } from '../mailer';
+import { enviarCorreo } from '../mailer';
 import { generarContratoPdfBuffer, type ItemContratoPdf } from '../pdf/contratoPdf';
 
 const UPLOAD_DIR = path.join(__dirname, '..', '..', 'uploads', 'contratos-firmados');
@@ -111,7 +111,9 @@ contratosRouter.get('/:cotizacionId/pdf', requireRole('administrador', 'secretar
     res.send(buffer);
 }));
 
-contratosRouter.post('/:cotizacionId/generar-y-enviar', requireRole('administrador', 'secretaria'), asyncHandler(async (req, res) => {
+// Enviar el contrato por correo es responsabilidad exclusiva de Mariana (secretaria);
+// Maritza (administradora) solo revisa/sube el firmado y oficializa el evento.
+contratosRouter.post('/:cotizacionId/generar-y-enviar', requireRole('secretaria'), asyncHandler(async (req, res) => {
     const fila = await obtenerFila(req.params.cotizacionId);
     if (!fila) return res.status(404).json({ status: 'error', message: 'Cotización no encontrada' });
 
@@ -152,7 +154,7 @@ contratosRouter.post('/:cotizacionId/generar-y-enviar', requireRole('administrad
     }
 
     try {
-        await transporter.sendMail({
+        await enviarCorreo({
             from: `"Planet Producciones" <${process.env.EMAIL_USER}>`,
             to: fila.cliente_correo,
             ...(correoAdmin ? { cc: correoAdmin } : {}),

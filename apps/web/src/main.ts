@@ -86,7 +86,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const catalogoDinamicoEl = document.getElementById('catalogoDinamico') as HTMLElement;
     const ciudadSelect = document.getElementById('ciudad') as HTMLSelectElement;
     const lugarSelect = document.getElementById('lugar') as HTMLSelectElement;
-    const transporteSelect = document.getElementById('transporte') as HTMLSelectElement;
+    const transporteHintEl = document.getElementById('transporte-hint') as HTMLElement;
     const lugarOtroWrap = document.getElementById('lugarOtroWrap') as HTMLElement;
     const lugarOtroNombreInput = document.getElementById('lugarOtroNombre') as HTMLInputElement;
     const lugarOtroDireccionInput = document.getElementById('lugarOtroDireccion') as HTMLInputElement;
@@ -121,6 +121,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         ciudadSelect.appendChild(opt);
     });
 
+    // El transporte ya no es un select aparte: se resuelve automáticamente a partir de la
+    // ciudad elegida (una sola fila de `transportation` por ciudad en el catálogo).
+    function transportePorCiudad(): { id: number; city: string; price: number } | undefined {
+        return catalogo.transportation.find((t) => t.city === ciudadSelect.value);
+    }
+
     function actualizarLugaresPorCiudad() {
         const ciudad = ciudadSelect.value;
         lugarSelect.innerHTML = '';
@@ -133,6 +139,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             opt.selected = true;
             lugarSelect.appendChild(opt);
             lugarOtroWrap.style.display = 'none';
+            transporteHintEl.textContent = '';
             return;
         }
 
@@ -156,19 +163,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         lugarSelect.appendChild(optOtro);
 
         lugarOtroWrap.style.display = 'none';
+
+        const transporte = transportePorCiudad();
+        transporteHintEl.textContent = transporte
+            ? `Transporte incluido (${transporte.city}): ${formatterCOP.format(transporte.price)}`
+            : 'Esta ciudad no tiene costo de transporte registrado.';
     }
 
     ciudadSelect.addEventListener('change', actualizarLugaresPorCiudad);
     lugarSelect.addEventListener('change', () => {
         lugarOtroWrap.style.display = lugarSelect.value === OTRO_VALUE ? 'grid' : 'none';
-    });
-
-    catalogo.transportation.forEach((t) => {
-        const opt = document.createElement('option');
-        opt.value = String(t.id);
-        opt.dataset.precio = String(t.price);
-        opt.textContent = `${t.city} — ${formatterCOP.format(t.price)}`;
-        transporteSelect.appendChild(opt);
     });
 
     // Convierte logo.png local a Base64 para garantizar que html2canvas lo dibuje sin errores
@@ -194,28 +198,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    function precioTransporteSeleccionado(): number {
-        const opt = transporteSelect.options[transporteSelect.selectedIndex];
-        return opt ? parseFloat(opt.dataset.precio || '') || 0 : 0;
-    }
-
     // Cálculo dinámico de cotización: delega en el módulo compartido (shared/catalogoCotizacion)
     // para el catálogo propiamente dicho (inventory/inventory_variants); el transporte se suma
     // aparte porque vive en su propia tabla, no en el catálogo de servicios.
     function calcularCotizacion(): ResultadoCatalogo {
         const { itemsSeleccionados } = calcularDesdeCatalogo(catalogoDinamicoEl);
-        const precioTransporte = precioTransporteSeleccionado();
+        const transporte = transportePorCiudad();
+        const precioTransporte = transporte?.price || 0;
         const total = itemsSeleccionados.reduce((acc, i) => acc + i.precioUnit * i.cantidad, 0) + precioTransporte;
 
         precioTotalEl.textContent = formatterCOP.format(total);
         listaResumenEl.innerHTML = '';
 
         const itemsParaMostrar = formatearItemsParaMostrar(formatterCOP, itemsSeleccionados);
-        const transporteOpt = transporteSelect.options[transporteSelect.selectedIndex];
-        if (precioTransporte > 0 && transporteOpt?.value) {
+        if (precioTransporte > 0 && transporte) {
             itemsParaMostrar.unshift({
                 tag: 'TRANSPORTE Y LOGÍSTICA',
-                nombre: transporteOpt.textContent?.split(' — ')[0].trim() || '',
+                nombre: transporte.city,
                 descripcion: '',
                 precio: precioTransporte
             });
@@ -457,7 +456,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const lugarNombre = esLugarManual
             ? [venueNombreManual, venueDireccionManual].filter(Boolean).join(' — ')
             : (lugarOpt?.textContent?.trim() || '');
-        const transportationId = transporteSelect.value ? Number(transporteSelect.value) : null;
+        const transportationId = transportePorCiudad()?.id ?? null;
 
         if (!nombre || !correo || !telefono) {
             Swal.fire({
@@ -511,12 +510,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             const refNum = guardada?.numeroReferencia || `PL-2026-${Math.floor(1000 + Math.random() * 9000)}`;
 
             const itemsParaMostrar = formatearItemsParaMostrar(formatterCOP, resultado.itemsSeleccionados);
-            const precioTransporte = precioTransporteSeleccionado();
-            const transporteOpt = transporteSelect.options[transporteSelect.selectedIndex];
-            if (precioTransporte > 0 && transporteOpt?.value) {
+            const transporte = transportePorCiudad();
+            const precioTransporte = transporte?.price || 0;
+            if (precioTransporte > 0 && transporte) {
                 itemsParaMostrar.unshift({
                     tag: 'TRANSPORTE Y LOGÍSTICA',
-                    nombre: transporteOpt.textContent?.split(' — ')[0].trim() || '',
+                    nombre: transporte.city,
                     descripcion: '',
                     precio: precioTransporte
                 });
