@@ -17,6 +17,7 @@
     "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.116.0",
     "@my-app/env": "*",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",

@@ -8,7 +8,29 @@ export default defineConfig({
     publicDir: 'public',
     build: {
         outDir: 'dist',
-        emptyOutDir: true
+        emptyOutDir: true,
+        rollupOptions: {
+            // Sitio multi-página: landing (index), cotizador, login y los
+            // paneles internos por rol.
+            input: {
+                main: 'index.html',
+                cotizador: 'cotizador.html',
+                login: 'login.html',
+                cambiarPassword: 'cambiar-password.html',
+                panelAdmin: 'panel-admin.html',
+                panelSecretaria: 'panel-secretaria.html',
+                panelLogistica: 'panel-logistica.html',
+                cotizaciones: 'cotizaciones.html',
+                empleados: 'empleados.html',
+                eventos: 'eventos.html',
+                eventosProceso: 'eventos-proceso.html',
+                eventosProgramados: 'eventos-programados.html',
+                cotizacionesDefinitivas: 'cotizaciones-definitivas.html',
+                pqrsAdmin: 'pqrs-admin.html',
+                inventario: 'inventario.html',
+                galeria: 'galeria.html'
+            }
+        }
     },
     server: {
         port: 5173

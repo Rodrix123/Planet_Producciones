@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galería de Eventos | Planet Producciones</title>
+    <meta name="description" content="Fotos reales de eventos realizados por Planet Producciones, con y sin pantalla LED.">
+
+    <link rel="icon" type="image/png" href="logo.png?v=2">
+    <link rel="shortcut icon" type="image/png" href="logo.png?v=2">
+    <link rel="apple-touch-icon" href="logo.png?v=2">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="landing-body">
+
+    <header class="promo-header">
+        <div class="header-container">
+            <div class="logo-box">
+                <img src="logo.png?v=2" alt="Planet Producciones Logo" class="logo-img">
+                <div class="logo-text">
+                    <h1>Planet Producciones</h1>
+                    <p>Eventos VIP & Producción Técnica</p>
+                </div>
+            </div>
+
+            <nav class="promo-nav">
+                <a href="index.html#inicio">Inicio</a>
+                <a href="index.html#servicios">Servicios</a>
+                <a href="index.html#nosotros">Por Qué Elegirnos</a>
+                <a href="galeria.html" style="color:var(--orange-main);">Galería</a>
+                <a href="index.html#preguntas-frecuentes">Preguntas Frecuentes</a>
+                <a href="index.html#contacto">Contacto</a>
+            </nav>
+
+            <div class="nav-cta-group">
+                <a href="login.html" class="login-link"><i class="fa-solid fa-right-to-bracket"></i> Iniciar Sesión</a>
+                <a href="cotizador.html" class="submit-btn nav-cta-btn"><i class="fa-solid fa-file-invoice-dollar"></i> Cotizar Ahora</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="promo-main">
+        <section class="galeria-hero">
+            <div class="pill-badge pill-badge-light">
+                <i class="fa-solid fa-images"></i> Eventos Realizados
+            </div>
+            <h1 class="hero-title" style="font-size: clamp(1.8rem, 4vw, 2.6rem);">Galería de Eventos</h1>
+            <p class="hero-desc" style="margin: 0 auto;">
+                Una muestra real de nuestros eventos. Filtra entre montajes con pantalla LED y sin pantalla.
+            </p>
+
+            <div class="galeria-tabs" role="tablist">
+                <button type="button" class="galeria-tab active" data-categoria="con_pantalla" role="tab" aria-selected="true">
+                    <i class="fa-solid fa-tv"></i> Eventos con pantalla
+                </button>
+                <button type="button" class="galeria-tab" data-categoria="sin_pantalla" role="tab" aria-selected="false">
+                    <i class="fa-solid fa-lightbulb"></i> Eventos sin pantalla
+                </button>
+            </div>
+        </section>
+
+        <section class="galeria-grid-section">
+            <div id="galeriaGrid" class="galeria-grid"></div>
+            <p id="galeriaVacio" class="galeria-vacio hidden">
+                <i class="fa-solid fa-circle-info"></i> Todavía no hay fotos en esta categoría.
+            </p>
+        </section>
+    </main>
+
+    <div id="lightbox" class="lightbox" aria-hidden="true">
+        <button type="button" class="lightbox-cerrar" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+        <button type="button" class="lightbox-flecha lightbox-prev" aria-label="Anterior"><i class="fa-solid fa-chevron-left"></i></button>
+        <img id="lightboxImg" src="" alt="">
+        <button type="button" class="lightbox-flecha lightbox-next" aria-label="Siguiente"><i class="fa-solid fa-chevron-right"></i></button>
+    </div>
+
+    <footer class="promo-footer" id="contacto">
+        <div class="promo-footer-grid">
+            <div class="footer-col">
+                <div class="footer-brand">
+                    <img src="logo.png?v=2" alt="Planet Producciones" class="footer-logo">
+                    <div>
+                        <div class="footer-brand-name">Planet Producciones</div>
+                        <div class="footer-brand-sub">Eventos VIP & Producción Técnica</div>
+                    </div>
+                </div>
+                <div class="footer-love"><i class="fa-solid fa-heart"></i> Hecho con pasión para tus momentos únicos</div>
+            </div>
+
+            <div class="footer-col">
+                <div class="footer-col-title">Contacto</div>
+                <a href="tel:+573127817072" class="footer-contact-line"><i class="fa-solid fa-phone"></i> +57 312 781 70 72</a>
+                <a href="https://www.instagram.com/planet.producciones/" target="_blank" rel="noopener noreferrer" class="footer-contact-line"><i class="fa-brands fa-instagram"></i> @planet.producciones</a>
+            </div>
+
+            <div class="footer-col">
+                <div class="footer-col-title">Cotiza tu Evento</div>
+                <a href="cotizador.html" class="footer-cta-btn"><i class="fa-solid fa-file-invoice-dollar"></i> Cotizar Ahora</a>
+            </div>
+        </div>
+        <div class="promo-footer-bottom">
+            <p>© 2026 Planet Producciones. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <script type="module" src="/src/galeria.ts"></script>
+</body>
+</html>

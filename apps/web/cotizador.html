@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planet Producciones | Cotizador VIP 2026</title>
+
+    <!-- Favicon optimizado con Cache-Buster para forzar actualización en la pestaña -->
+    <link rel="icon" type="image/png" href="logo.png?v=2">
+    <link rel="shortcut icon" type="image/png" href="logo.png?v=2">
+    <link rel="apple-touch-icon" href="logo.png?v=2">
+
+    <!-- CDN LIBRERÍAS EXTERNAS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- LIBRERÍA HTML2PDF (Motor PDF Alta Resolución) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <!-- LIBRERÍA EXCEL (SheetJS) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+
+    <header>
+        <div class="header-container">
+            <div class="logo-box">
+                <!-- Logo real cargado desde logo.png -->
+                <img src="logo.png?v=2" alt="Planet Producciones Logo" class="logo-img">
+                <div class="logo-text">
+                    <h1>Planet Producciones</h1>
+                    <p>Eventos VIP & Producción Técnica</p>
+                </div>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:0.75rem;">
+                <a href="index.html" class="back-home-btn">
+                    <i class="fa-solid fa-arrow-left"></i> Volver al Inicio
+                </a>
+                <a href="https://www.instagram.com/planet.producciones/" target="_blank" rel="noopener noreferrer" class="insta-btn">
+                    <i class="fa-brands fa-instagram"></i> @planet.producciones
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="layout-grid">
+
+            <div class="card-panel">
+                <div class="section-header">
+                    <h2><i class="fa-solid fa-sliders" style="color: var(--orange-main);"></i> Diseña tu Cotización</h2>
+                    <p>Selecciona los componentes para tu evento en 2026 y descarga tus archivos en PDF y Excel.</p>
+                </div>
+
+                <form id="quoteForm" onsubmit="return false;">
+
+                    <!-- 1. Datos del Cliente -->
+                    <div class="form-group" id="seccionDatosContacto">
+                        <div class="form-section-title">
+                            <i class="fa-solid fa-user-astronaut"></i> 1. Datos de Contacto
+                        </div>
+                        <div class="grid-3">
+                            <div>
+                                <label for="nombre">Nombre Completo *</label>
+                                <input type="text" id="nombre" required placeholder="Ej. Valentina Gómez">
+                            </div>
+                            <div>
+                                <label for="correo">Correo Electrónico *</label>
+                                <input type="email" id="correo" required placeholder="correo@ejemplo.com">
+                            </div>
+                            <div>
+                                <label for="telefono">Teléfono / WhatsApp *</label>
+                                <input type="tel" id="telefono" required placeholder="+57 300 123 4567">
+                            </div>
+                            <div>
+                                <label for="documento">Documento / Cédula</label>
+                                <input type="text" id="documento" placeholder="Ej. 1012345678">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. Ubicación y Tipo de Evento -->
+                    <div class="form-group" id="seccionCoberturaEvento">
+                        <div class="form-section-title">
+                            <i class="fa-solid fa-location-dot"></i> 2. Cobertura & Evento
+                        </div>
+                        <div class="grid-3">
+                            <div>
+                                <label for="tipoEvento">Tipo de Evento</label>
+                                <select id="tipoEvento">
+                                    <option value="" selected>-- Selecciona Tipo de Evento --</option>
+                                    <option value="Boda VIP / Matrimonio">Boda VIP / Matrimonio</option>
+                                    <option value="Fiesta de 15 Años Deluxe">Fiesta de 15 Años Deluxe</option>
+                                    <option value="Evento Corporativo / Gala">Evento Corporativo / Gala</option>
+                                    <option value="Grado / Prom Night">Grado / Prom Night</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="ciudad">Ciudad del Evento</label>
+                                <select id="ciudad">
+                                    <option value="" selected>-- Selecciona Ciudad --</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="lugar">Sede / Recinto</label>
+                                <select id="lugar" disabled>
+                                    <option value="" selected>-- Primero selecciona una ciudad --</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="fechaEvento">Fecha del Evento (tentativa)</label>
+                                <input type="date" id="fechaEvento">
+                            </div>
+                        </div>
+                        <small class="field-hint" id="transporte-hint"></small>
+                        <div class="grid-2" id="lugarOtroWrap" style="display:none; margin-top:1rem;">
+                            <div>
+                                <label for="lugarOtroNombre">Nombre del lugar</label>
+                                <input type="text" id="lugarOtroNombre" placeholder="Ej. Salón Los Cedros">
+                            </div>
+                            <div>
+                                <label for="lugarOtroDireccion">Dirección del lugar</label>
+                                <input type="text" id="lugarOtroDireccion" placeholder="Ej. Cra 23 # 45-12">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Solo aparece si se llegó desde "Nuevo evento" (ver src/borrador-evento.ts) -->
+                    <div class="info-box aviso-evento" id="avisoEvento" hidden>
+                        <i class="fa-solid fa-calendar-plus"></i>
+                        <span>Esta cotización se asociará al evento que estás creando.</span>
+                        <a href="eventos.html?nuevo=1" class="aviso-evento-enlace">Volver al evento</a>
+                    </div>
+
+                    <div id="seccionCatalogoServicios">
+                    <div id="catalogoDinamico">
+                        <p style="color: var(--text-muted); font-size: 0.85rem;">Cargando catálogo de servicios…</p>
+                    </div>
+
+                    </div>
+
+                    <button type="button" id="btnSubmit" class="submit-btn">
+                        <i class="fa-solid fa-file-pdf"></i>
+                        <span>Generar Cotización (PDF & Excel)</span>
+                    </button>
+
+                    <button type="button" id="btnCrearEvento" class="submit-btn" hidden>
+                        <i class="fa-solid fa-calendar-check"></i>
+                        <span>Guardar cotización y crear evento</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Resumen Lateral -->
+            <div>
+                <div class="summary-card">
+                    <div>
+                        <span class="badge">Presupuesto Estimado</span>
+                        <div class="price-tag" id="precioTotal">$ 0 COP</div>
+                        <div class="price-sub">Precios actualizados para la temporada 2026.</div>
+                    </div>
+
+                    <div>
+                        <div class="summary-list-title">Desglose de Servicios:</div>
+                        <ul id="listaResumen">
+                            <li><em>Selecciona tus opciones en el formulario para calcular el costo.</em></li>
+                        </ul>
+                    </div>
+
+                    <div class="info-box">
+                        <i class="fa-solid fa-circle-info" style="margin-top:2px;"></i>
+                        <span>Al hacer clic se descargarán automáticamente los archivos PDF HD (con marca de agua) y Excel profesional.</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <footer>
+        <p>© 2026 Planet Producciones. Todos los derechos reservados. Manizales - Caldas, Colombia.</p>
+    </footer>
+
+    <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

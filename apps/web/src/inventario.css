@@ -1,0 +1,227 @@
+/* Estilos de inventario.html. Se apoya en panel.css (riel, buscador, conteos) y
+   en las variables de style.css para conservar la identidad visual. */
+
+.inv-resumen {
+    margin: -1.25rem 0 1.25rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.inv-resumen[hidden] {
+    display: none;
+}
+
+.inv-arbol {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+/* ---------- Niveles desplegables ---------- */
+.inv-nodo {
+    min-width: 0;
+}
+
+.inv-cab {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.6rem 0.7rem;
+    width: 100%;
+    padding: 0.65rem 0.8rem;
+    background: transparent;
+    border: 0;
+    border-radius: 12px;
+    color: inherit;
+    font-size: 0.92rem;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.inv-cab:hover {
+    background: var(--bg-input);
+}
+
+.inv-cab:focus-visible {
+    outline: 2px solid var(--orange-main);
+    outline-offset: -2px;
+}
+
+.inv-flecha {
+    flex-shrink: 0;
+    width: 0.8rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    transition: transform 0.2s;
+}
+
+.inv-cab[aria-expanded="true"] .inv-flecha {
+    transform: rotate(90deg);
+}
+
+.inv-icono {
+    flex-shrink: 0;
+    width: 1.2rem;
+    text-align: center;
+    color: var(--orange-main);
+}
+
+.inv-titulo {
+    flex: 1 1 7rem;
+    min-width: 0;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.inv-meta {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-left: auto;
+}
+
+.inv-cuerpo[hidden] {
+    display: none;
+}
+
+/* Cada nivel interior queda sangrado con una guía a la izquierda. */
+.inv-cuerpo {
+    margin: 0.15rem 0 0.4rem 1.35rem;
+    padding-left: 0.6rem;
+    border-left: 1px solid var(--border-color);
+}
+
+/* Nivel 1: tipo (tarjeta, igual que las secciones de empleados). */
+.inv-n1 {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 0.35rem;
+}
+
+.inv-n1 > .inv-cab {
+    padding: 0.8rem 1rem;
+    border-radius: 16px;
+    font-size: 1.05rem;
+}
+
+.inv-n1 > .inv-cab .inv-icono {
+    font-size: 1.1rem;
+}
+
+/* Nivel 4: unidad física, más compacto. */
+.inv-n4 > .inv-cab {
+    padding: 0.45rem 0.8rem;
+    font-size: 0.85rem;
+}
+
+/* El título de la unidad es su código de barras. */
+.inv-n4 > .inv-cab .inv-titulo {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.inv-n4 > .inv-cab .inv-icono {
+    color: var(--text-muted);
+}
+
+/* ---------- Contenido de los niveles ---------- */
+.inv-vacio {
+    padding: 0.7rem 0.8rem;
+    font-size: 0.88rem;
+    color: var(--text-muted);
+}
+
+.inv-arbol > .inv-vacio {
+    text-align: center;
+    padding: 2rem;
+}
+
+.inv-detalle {
+    margin: 0.2rem 0 0.4rem;
+    padding: 0.6rem 0.8rem;
+    background: var(--bg-input);
+    border-radius: 12px;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+    white-space: pre-line;
+}
+
+.inv-datos {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(190px, 100%), 1fr));
+    gap: 0.6rem 1.2rem;
+    margin: 0.1rem 0 0.4rem;
+    padding: 0.7rem 0.8rem;
+    background: var(--bg-input);
+    border-radius: 12px;
+}
+
+.inv-dato dt {
+    margin-bottom: 0.15rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.inv-dato dd {
+    font-size: 0.88rem;
+    overflow-wrap: anywhere;
+}
+
+/* ---------- Conteo y estado: solo texto, sin pastilla ---------- */
+.inv-conteo {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.inv-estado {
+    font-size: 0.8rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.inv-estado-bueno {
+    color: var(--emerald-green);
+}
+
+.inv-estado-danado {
+    color: #f87171;
+}
+
+.inv-estado-en_reparacion {
+    color: #fbbf24;
+}
+
+.inv-estado-dado_de_baja {
+    color: var(--text-muted);
+}
+
+.inv-estado-perdido {
+    color: #a78bfa;
+}
+
+@media (max-width: 700px) {
+    .inv-cuerpo {
+        margin-left: 0.7rem;
+        padding-left: 0.4rem;
+    }
+    .inv-resumen {
+        margin-top: -1rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .inv-cab,
+    .inv-flecha {
+        transition: none;
+    }
+}
