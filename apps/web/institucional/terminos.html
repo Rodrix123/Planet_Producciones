@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es-CO">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Términos y condiciones | {{valor:nombreComercial}}</title>
+    <meta name="description" content="Condiciones de uso del sitio web de {{valor:nombreComercial}}, alcance de las cotizaciones y cómo se confirma la contratación.">
+    <meta property="og:title" content="Términos y condiciones | {{valor:nombreComercial}}">
+    <meta property="og:description" content="Condiciones de uso del sitio, cotizaciones y contratación.">
+{{parcial:cabeza}}
+</head>
+<body class="landing-body">
+{{parcial:encabezado}}
+
+    <main class="promo-main" id="contenido">
+        <section class="documento-legal">
+            <!-- pendiente:TERM -->
+            <article class="documento-contenido">
+                <p class="documento-tipo">Documento legal</p>
+                <h1>Términos y condiciones de uso del sitio web</h1>
+                <p class="documento-fecha">Vigentes desde: {{dato:fechaVigencia}}</p>
+
+                <p>
+                    Estos términos regulan el uso de este sitio web. Al navegarlo, usted acepta estos términos; si no está
+                    de acuerdo con ellos, le pedimos no usarlo.
+                </p>
+
+                <h2 id="identificacion">1. Quiénes somos</h2>
+                <dl class="documento-ficha">
+                    <div><dt>Razón social</dt><dd>{{dato:razonSocial}}</dd></div>
+                    <div><dt>Nombre comercial</dt><dd>{{dato:nombreComercial}}</dd></div>
+                    <div><dt>NIT</dt><dd>{{dato:nit}}</dd></div>
+                    <div><dt>Dirección</dt><dd>{{dato:domicilio}}</dd></div>
+                    <div><dt>Ciudad</dt><dd>{{dato:ciudad}}, {{dato:departamento}}, Colombia</dd></div>
+                    <div><dt>Correo</dt><dd>{{dato:correo}}</dd></div>
+                    <div><dt>Teléfono</dt><dd>{{dato:telefono}}</dd></div>
+                </dl>
+
+                <h2 id="objeto">2. Para qué sirve este sitio</h2>
+                <p>
+                    Este sitio informa sobre {{dato:nombreComercial}} y sus servicios de {{dato:actividad}}, y le permite
+                    contactarnos. En el sitio no se venden productos ni se reciben pagos.
+                </p>
+
+                <h2 id="servicios">3. Nuestros servicios</h2>
+                <p>
+                    Ofrecemos {{dato:serviciosResumen}}, entre otros servicios descritos en la
+                    <a href="/#servicios">página de inicio</a>. La disponibilidad de equipos, personal y fechas se confirma
+                    para cada evento.
+                </p>
+
+                <h2 id="cotizaciones">4. Cotizaciones</h2>
+                <p>
+                    La información del sitio es de carácter informativo. Las cotizaciones se preparan con los datos que
+                    usted nos da sobre el evento (tipo, fecha, lugar y servicios) y pueden cambiar si cambian esos datos,
+                    los requerimientos técnicos o el lugar. Cada cotización indica su vigencia y las condiciones para
+                    reservar la fecha. Una cotización por sí sola no reserva la fecha ni lo obliga a contratar.
+                </p>
+
+                <h2 id="contratacion">5. Cómo se confirma la contratación</h2>
+                <p>
+                    La contratación queda confirmada cuando las partes firman el contrato de prestación de servicios y se
+                    realiza el pago de reserva indicado en la cotización o en el contrato. Las condiciones de pago,
+                    cancelación, cambios de fecha o de lugar, horas adicionales y responsabilidad por los equipos son las
+                    que establece ese contrato.
+                </p>
+
+                <h2 id="uso">6. Uso permitido del sitio</h2>
+                <p>Usted se compromete a usar el sitio de forma lícita. No está permitido:</p>
+                <ul>
+                    <li>Usar el sitio para actividades ilegales o para engañar a otras personas.</li>
+                    <li>Intentar acceder sin autorización a nuestros sistemas o afectar el funcionamiento del sitio.</li>
+                    <li>Copiar o usar sus contenidos con fines comerciales sin nuestra autorización.</li>
+                </ul>
+
+                <h2 id="propiedad-intelectual">7. Propiedad intelectual</h2>
+                <p>
+                    El nombre, el logo, los textos, las fotos y los demás contenidos del sitio pertenecen a
+                    {{dato:nombreComercial}} o a sus respectivos titulares, y están protegidos por las normas de propiedad
+                    intelectual. Puede compartir enlaces a este sitio; para cualquier otro uso necesita nuestra
+                    autorización previa y por escrito.
+                </p>
+
+                <h2 id="terceros">8. Enlaces a otros sitios</h2>
+                <p>
+                    El sitio enlaza a servicios de terceros, como Instagram y WhatsApp. Su uso se rige por los términos y
+                    políticas de esos servicios, sobre los cuales no tenemos control.
+                </p>
+
+                <h2 id="alcance">9. Alcance de la información</h2>
+                <p>
+                    Procuramos que la información del sitio sea correcta y esté actualizada, pero puede contener errores o
+                    cambiar sin previo aviso. Para un servicio contratado prevalece lo acordado en la cotización y en el
+                    contrato. El sitio puede no estar disponible en algunos momentos por mantenimiento o por causas ajenas a
+                    nosotros.
+                </p>
+                <p>
+                    Nada de lo anterior limita los derechos que la Ley 1480 de 2011 (Estatuto del Consumidor) y las demás
+                    normas colombianas reconocen a los consumidores.
+                </p>
+
+                <h2 id="datos-personales">10. Datos personales</h2>
+                <p>
+                    El tratamiento de sus datos personales se rige por nuestra
+                    <a href="/privacidad">Política de privacidad y tratamiento de datos personales</a>.
+                </p>
+
+                <h2 id="contacto">11. Contacto</h2>
+                <p>
+                    Para preguntas sobre estos términos escríbanos a <a href="mailto:{{valor:correo}}">{{dato:correo}}</a>
+                    o llámenos al <a href="tel:{{valor:telefonoInternacional}}">{{dato:telefono}}</a>.
+                </p>
+
+                <h2 id="cambios">12. Cambios a estos términos</h2>
+                <p>
+                    Podemos actualizar estos términos. La nueva versión regirá desde su publicación en esta página, con su
+                    fecha, y no afectará los contratos ya firmados.
+                </p>
+
+                <h2 id="ley-aplicable">13. Ley aplicable</h2>
+                <p>Estos términos se rigen por las leyes de la República de Colombia.</p>
+
+                <p class="documento-relacionados">
+                    Ver también: <a href="/privacidad">Política de privacidad</a> · <a href="/eliminacion-datos">Eliminación de datos</a>
+                </p>
+            </article>
+            <!-- /pendiente:TERM -->
+        </section>
+    </main>
+
+{{parcial:pie}}
+
+    <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

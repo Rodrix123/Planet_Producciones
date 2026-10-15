@@ -9,3 +9,4 @@ apps/**/dist/
 apps/**/node_modules/
 apps/server/uploads/
 supabase/.temp/
+.claude/worktrees/

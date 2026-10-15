@@ -1,0 +1,12 @@
+    {{meta-robots}}
+    <meta name="theme-color" content="#0a0a0c">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="es_CO">
+    <meta property="og:site_name" content="{{valor:nombreComercial}}">
+
+    <link rel="icon" type="image/png" href="{{recurso:logo.png}}">
+    <link rel="apple-touch-icon" href="{{recurso:logo.png}}">
+    <!-- integrity: el navegador rechaza el archivo si alguien lo altera en el CDN (hash publicado por cdnjs) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer">
+    <!-- Sin estilos ni scripts en línea: la política de seguridad (publico/_headers) los bloquearía.
+         El menú sin JavaScript está en src/institucional.css, con @media (scripting: none). -->

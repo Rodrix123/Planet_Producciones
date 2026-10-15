@@ -1,0 +1,33 @@
+    <footer class="promo-footer">
+        <div class="promo-footer-grid">
+            <div class="footer-col">
+                <div class="footer-brand">
+                    <img src="{{recurso:logo.png}}" alt="" class="footer-logo">
+                    <div>
+                        <div class="footer-brand-name">{{dato:nombreComercial}}</div>
+                        <div class="footer-brand-sub">{{dato:actividad|mayuscula}}</div>
+                    </div>
+                </div>
+                <p class="footer-desc">{{dato:serviciosResumen|mayuscula}} para {{dato:tiposEvento}}.</p>
+            </div>
+
+            <div class="footer-col">
+                <div class="footer-col-title">Contacto</div>
+                <a href="tel:{{valor:telefonoInternacional}}" class="footer-contact-line"><i class="fa-solid fa-phone" aria-hidden="true"></i> {{dato:telefono}}</a>
+                <a href="mailto:{{valor:correo}}" class="footer-contact-line"><i class="fa-solid fa-envelope" aria-hidden="true"></i> {{dato:correo}}</a>
+                <a href="{{valor:instagramEnlace}}" target="_blank" rel="noopener noreferrer" class="footer-contact-line"><i class="fa-brands fa-instagram" aria-hidden="true"></i> {{dato:instagramUsuario}}</a>
+                <div class="footer-contact-line"><i class="fa-solid fa-location-dot" aria-hidden="true"></i> {{dato:ciudad}}, {{dato:departamento}}, Colombia</div>
+            </div>
+
+            <div class="footer-col">
+                <div class="footer-col-title">Información legal</div>
+                {{legal:privacidad}}
+                {{legal:terminos}}
+                {{legal:eliminacion-datos}}
+            </div>
+        </div>
+
+        <div class="promo-footer-bottom">
+            <p>© {{anio}} {{dato:nombreComercial}}. Todos los derechos reservados.</p>
+        </div>
+    </footer>

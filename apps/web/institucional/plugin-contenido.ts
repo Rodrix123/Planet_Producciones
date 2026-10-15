@@ -1,5 +1,5 @@
-import { existsSync } from 'node:fs';
-import { dirname, relative, resolve } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, isAbsolute, relative, resolve } from 'node:path';
 import type { IndexHtmlTransformContext, Logger, Plugin } from 'vite';
 import { DATOS, FOTOS, PENDIENTES, type CampoDato, type FotoCandidata, type IdPendiente } from './contenido';
 
@@ -7,6 +7,7 @@ import { DATOS, FOTOS, PENDIENTES, type CampoDato, type FotoCandidata, type IdPe
  * Llena las páginas institucionales con los datos de contenido.ts.
  *
  * Marcadores que entiende en el HTML:
+ *   {{parcial:nombre}}   inserta parciales/nombre.html (encabezado, pie…) antes de lo demás
  *   {{dato:campo}}       texto visible (en la vista local se resalta si está sin confirmar)
  *   {{valor:campo}}      valor plano, para atributos y <head>
  *   {{lista:campo}}      <li> por cada elemento de una lista
@@ -54,22 +55,40 @@ function tieneClave<T extends object>(objeto: T, clave: string): clave is Extrac
     return Object.prototype.hasOwnProperty.call(objeto, clave);
 }
 
-function informe(pagina: string, sinConfirmar: string[], faltantes: string[], legales: string[]): string {
-    const lineas = [`La web institucional (${pagina}) todavía no se puede publicar.`];
-    if (sinConfirmar.length > 0) {
-        lineas.push('', 'Sin confirmar por la dueña (docs/institucional/datos-pendientes.md):', ...sinConfirmar.map((l) => `  · ${l}`));
-    }
-    if (faltantes.length > 0) lineas.push('', 'Datos que faltan:', ...faltantes.map((l) => `  · ${l}`));
-    if (legales.length > 0) lineas.push('', 'Páginas legales que aún no existen (Numeral 4):', ...legales.map((l) => `  · ${l}`));
+/** Lo que una página usa y todavía no se puede publicar. */
+interface Revision {
+    sinConfirmar: Set<IdPendiente>;
+    sinValor: Set<IdPendiente>;
+    legales: Set<string>;
+}
+
+/** Informe de una o varias páginas, en el mismo orden que docs/institucional/datos-pendientes.md. */
+function informe(revisiones: Map<string, Revision>): string {
+    const todas = [...revisiones.values()];
+    const enOrden = (elegir: (r: Revision) => Set<IdPendiente>) =>
+        Object.keys(PENDIENTES)
+            .filter((id): id is IdPendiente => tieneClave(PENDIENTES, id) && todas.some((r) => elegir(r).has(id)))
+            .map((id) => `  · ${id}  ${PENDIENTES[id].descripcion}`);
+    const sinConfirmar = enOrden((r) => r.sinConfirmar);
+    const sinValor = enOrden((r) => r.sinValor);
+    const legales = [...new Set(todas.flatMap((r) => [...r.legales]))].map((ruta) => `  · ${ruta}`);
+
+    const lineas = [`La web institucional todavía no se puede publicar (${[...revisiones.keys()].join(', ')}).`];
+    if (sinConfirmar.length > 0) lineas.push('', 'Sin confirmar (docs/institucional/datos-pendientes.md):', ...sinConfirmar);
+    if (sinValor.length > 0) lineas.push('', 'Datos que faltan:', ...sinValor);
+    if (legales.length > 0) lineas.push('', 'Páginas legales que aún no existen:', ...legales);
     lineas.push('', 'Para verlos resaltados: npm run dev:institucional');
     return lineas.join('\n');
 }
 
 export function pluginContenido({ raiz, carpetaRecursos }: Opciones): Plugin {
+    const carpetaParciales = resolve(raiz, 'parciales');
     let esServidor = true;
     let vistaLocal = true;
     let logger: Logger | undefined;
     let avisoMostrado = false;
+    /** Pendientes de cada página compilada; el build los informa todos juntos al final. */
+    const revisiones = new Map<string, Revision>();
 
     /** En el servidor local, /@fs/…; en el build, ruta relativa para que Vite copie el archivo. */
     function urlRecurso(rutaRelativa: string, archivoHtml: string): string {
@@ -159,16 +178,28 @@ export function pluginContenido({ raiz, carpetaRecursos }: Opciones): Plugin {
             return `<script type="application/ld+json">\n${json}\n</script>`;
         };
 
-        // 1. Bloques que dependen de un pendiente
-        html = html.replace(
-            /<!--\s*pendiente:(\w+)\s*-->([\s\S]*?)<!--\s*\/pendiente:\1\s*-->/g,
-            (_coincidencia: string, id: string, contenido: string) => {
-                if (!tieneClave(PENDIENTES, id)) throw new Error(`Pendiente desconocido en el HTML: ${id}`);
-                ids.add(id);
-                if (!pendienteVisible(id)) return contenido;
-                return `<div class="bloque-pendiente" data-pendiente="${id} · ${escapar(PENDIENTES[id].descripcion)}">${contenido}</div>`;
-            }
-        );
+        // 0. Parciales compartidos (encabezado, pie…): se insertan antes de procesar lo demás
+        html = html.replace(/\{\{\s*parcial:([\w-]+)\s*\}\}/g, (_coincidencia: string, nombre: string) => {
+            const archivo = resolve(carpetaParciales, `${nombre}.html`);
+            if (!existsSync(archivo)) throw new Error(`No existe el parcial "${nombre}" (${archivo}).`);
+            return readFileSync(archivo, 'utf8');
+        });
+
+        // 1. Bloques que dependen de un pendiente. Se repite hasta que no quede ninguno,
+        //    porque un bloque puede ir dentro de otro (G5 dentro de la política, PRIV).
+        let anterior: string;
+        do {
+            anterior = html;
+            html = html.replace(
+                /<!--\s*pendiente:(\w+)\s*-->([\s\S]*?)<!--\s*\/pendiente:\1\s*-->/g,
+                (_coincidencia: string, id: string, contenido: string) => {
+                    if (!tieneClave(PENDIENTES, id)) throw new Error(`Pendiente desconocido en el HTML: ${id}`);
+                    ids.add(id);
+                    if (!pendienteVisible(id)) return contenido;
+                    return `<div class="bloque-pendiente" data-pendiente="${id} · ${escapar(PENDIENTES[id].descripcion)}">${contenido}</div>`;
+                }
+            );
+        } while (html !== anterior);
 
         // 2. Partes que solo existen si hay fotos que mostrar (sección, enlace del menú y visor)
         html = html.replace(/<!--\s*si-hay-fotos\s*-->([\s\S]*?)<!--\s*\/si-hay-fotos\s*-->/g, (_coincidencia: string, contenido: string) =>
@@ -223,19 +254,17 @@ export function pluginContenido({ raiz, carpetaRecursos }: Opciones): Plugin {
         const sobrante = html.match(/\{\{[^}]*\}\}|<!--\s*\/?(?:pendiente|si-hay-fotos)[^>]*-->/);
         if (sobrante) throw new Error(`Marcador sin procesar o mal cerrado en el HTML: ${sobrante[0]}`);
 
-        // En el mismo orden que docs/institucional/datos-pendientes.md
-        const usados = Object.keys(PENDIENTES).filter((id): id is IdPendiente => tieneClave(PENDIENTES, id) && ids.has(id));
-        const linea = (id: IdPendiente) => `${id}  ${PENDIENTES[id].descripcion}`;
-        const sinConfirmar = usados.filter((id) => !PENDIENTES[id].confirmado && !faltantes.has(id)).map(linea);
-        const sinValor = usados.filter((id) => faltantes.has(id)).map(linea);
-        const hayPendientes = sinConfirmar.length > 0 || sinValor.length > 0 || legales.size > 0;
-
-        if (hayPendientes) {
-            const mensaje = informe(relative(raiz, archivoHtml).replace(/\\/g, '/'), sinConfirmar, sinValor, [...legales]);
-            if (!vistaLocal) throw new Error(mensaje);
-            if (!avisoMostrado) {
+        const revision: Revision = {
+            sinConfirmar: new Set([...ids].filter((id) => !PENDIENTES[id].confirmado && !faltantes.has(id))),
+            sinValor: faltantes,
+            legales
+        };
+        if (revision.sinConfirmar.size > 0 || revision.sinValor.size > 0 || revision.legales.size > 0) {
+            const pagina = relative(raiz, archivoHtml).replace(/\\/g, '/');
+            revisiones.set(pagina, revision);
+            if (esServidor && !avisoMostrado) {
                 avisoMostrado = true;
-                logger?.warn(`\n${mensaje}\n`);
+                logger?.warn(`\n${informe(new Map([[pagina, revision]]))}\n`);
             }
         }
         return html;
@@ -247,6 +276,24 @@ export function pluginContenido({ raiz, carpetaRecursos }: Opciones): Plugin {
             esServidor = config.command === 'serve';
             vistaLocal = esServidor || config.mode === 'borrador';
             logger = config.logger;
+        },
+        buildStart() {
+            revisiones.clear();
+        },
+        buildEnd(error) {
+            // Con todas las páginas ya revisadas: un solo informe. En borrador solo avisa.
+            if (error || revisiones.size === 0) return;
+            const mensaje = informe(revisiones);
+            if (!vistaLocal) throw new Error(mensaje);
+            logger?.warn(`\n${mensaje}\n`);
+        },
+        configureServer(server) {
+            // Los parciales no pasan por el grafo de módulos de Vite: al editarlos se recarga la página
+            server.watcher.add(carpetaParciales);
+            server.watcher.on('change', (archivo) => {
+                const ruta = relative(carpetaParciales, archivo);
+                if (ruta && !ruta.startsWith('..') && !isAbsolute(ruta)) server.ws.send({ type: 'full-reload' });
+            });
         },
         transformIndexHtml: {
             order: 'pre',

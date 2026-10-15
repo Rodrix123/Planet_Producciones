@@ -5,61 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{valor:nombreComercial}} | {{valor:actividad|mayuscula}} en {{valor:ciudad}}</title>
     <meta name="description" content="{{valor:nombreComercial}}: {{valor:serviciosResumen}} para {{valor:tiposEvento}} en {{valor:ciudad}}, {{valor:departamento}}.">
-    {{meta-robots}}
-    <meta name="theme-color" content="#0a0a0c">
-
-    <meta property="og:type" content="website">
-    <meta property="og:locale" content="es_CO">
-    <meta property="og:site_name" content="{{valor:nombreComercial}}">
     <meta property="og:title" content="{{valor:nombreComercial}} | {{valor:actividad|mayuscula}}">
     <meta property="og:description" content="{{valor:serviciosResumen|mayuscula}} para {{valor:tiposEvento}} en {{valor:ciudad}}, {{valor:departamento}}.">
-
-    <link rel="icon" type="image/png" href="{{recurso:logo.png}}">
-    <link rel="apple-touch-icon" href="{{recurso:logo.png}}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <!-- Sin JavaScript, el menú se muestra completo en lugar del botón desplegable -->
-    <noscript>
-        <style>
-            .menu-toggle { display: none !important; }
-            .promo-nav { display: flex !important; position: static !important; flex-direction: row !important; padding: 0 !important; border: none !important; background: none !important; }
-        </style>
-    </noscript>
-
+{{parcial:cabeza}}
     {{jsonld}}
 </head>
 <body class="landing-body">
-    <a class="saltar-contenido" href="#contenido">Saltar al contenido</a>
-    {{aviso-vista-local}}
-
-    <header class="promo-header">
-        <div class="header-container">
-            <a href="#inicio" class="logo-box marca-enlace">
-                <img src="{{recurso:logo.png}}" alt="" class="logo-img">
-                <div class="logo-text">
-                    <p class="marca-nombre">{{dato:nombreComercial}}</p>
-                    <p>{{dato:actividad|mayuscula}}</p>
-                </div>
-            </a>
-
-            <button type="button" class="menu-toggle" aria-expanded="false" aria-controls="menu-principal" aria-label="Abrir menú">
-                <i class="fa-solid fa-bars" aria-hidden="true"></i>
-            </button>
-
-            <nav class="promo-nav" id="menu-principal" aria-label="Secciones de la página">
-                <a href="#inicio">Inicio</a>
-                <a href="#nosotros">Nosotros</a>
-                <a href="#servicios">Servicios</a>
-                <a href="#cobertura">Cobertura</a>
-                <!-- si-hay-fotos --><a href="#galeria">Galería</a><!-- /si-hay-fotos -->
-                <a href="#contacto">Contacto</a>
-            </nav>
-
-            <div class="nav-cta-group">
-                <a href="#contacto" class="submit-btn nav-cta-btn"><i class="fa-solid fa-comments" aria-hidden="true"></i> Contáctanos</a>
-            </div>
-        </div>
-    </header>
+{{parcial:encabezado}}
 
     <main class="promo-main" id="contenido">
 
@@ -238,39 +190,7 @@
         </section>
     </main>
 
-    <footer class="promo-footer">
-        <div class="promo-footer-grid">
-            <div class="footer-col">
-                <div class="footer-brand">
-                    <img src="{{recurso:logo.png}}" alt="" class="footer-logo">
-                    <div>
-                        <div class="footer-brand-name">{{dato:nombreComercial}}</div>
-                        <div class="footer-brand-sub">{{dato:actividad|mayuscula}}</div>
-                    </div>
-                </div>
-                <p class="footer-desc">{{dato:serviciosResumen|mayuscula}} para {{dato:tiposEvento}}.</p>
-            </div>
-
-            <div class="footer-col">
-                <div class="footer-col-title">Contacto</div>
-                <a href="tel:{{valor:telefonoInternacional}}" class="footer-contact-line"><i class="fa-solid fa-phone" aria-hidden="true"></i> {{dato:telefono}}</a>
-                <a href="mailto:{{valor:correo}}" class="footer-contact-line"><i class="fa-solid fa-envelope" aria-hidden="true"></i> {{dato:correo}}</a>
-                <a href="{{valor:instagramEnlace}}" target="_blank" rel="noopener noreferrer" class="footer-contact-line"><i class="fa-brands fa-instagram" aria-hidden="true"></i> {{dato:instagramUsuario}}</a>
-                <div class="footer-contact-line"><i class="fa-solid fa-location-dot" aria-hidden="true"></i> {{dato:ciudad}}, {{dato:departamento}}, Colombia</div>
-            </div>
-
-            <div class="footer-col">
-                <div class="footer-col-title">Información legal</div>
-                {{legal:privacidad}}
-                {{legal:terminos}}
-                {{legal:eliminacion-datos}}
-            </div>
-        </div>
-
-        <div class="promo-footer-bottom">
-            <p>© {{anio}} {{dato:nombreComercial}}. Todos los derechos reservados.</p>
-        </div>
-    </footer>
+{{parcial:pie}}
 
     <!-- si-hay-fotos -->
     <div id="lightbox" class="lightbox" aria-hidden="true">

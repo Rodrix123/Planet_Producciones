@@ -14,15 +14,25 @@
 export const PENDIENTES = {
     TXT: { descripcion: 'Textos de la página revisados y aprobados', confirmado: false },
     A1: { descripcion: 'Nombre comercial', confirmado: false },
+    A2: { descripcion: 'Razón social o nombre legal', confirmado: false },
+    A4: { descripcion: 'NIT con dígito de verificación', confirmado: false },
     B1: { descripcion: 'Descripción de la actividad', confirmado: false },
     B3: { descripcion: 'Tipos de evento que atiende', confirmado: false },
+    C1: { descripcion: 'Domicilio y dirección del responsable', confirmado: false },
     C2: { descripcion: 'Ciudad y departamento', confirmado: false },
     C3: { descripcion: 'Ciudades de cobertura', confirmado: false },
     D1: { descripcion: 'Servicios que se anuncian', confirmado: false },
     E1: { descripcion: 'Teléfono comercial', confirmado: false },
     E2: { descripcion: 'WhatsApp en el número comercial', confirmado: false },
     E3: { descripcion: 'Correo de la empresa', confirmado: false },
-    E4: { descripcion: 'Instagram oficial', confirmado: false }
+    E4: { descripcion: 'Instagram oficial', confirmado: false },
+    G2: { descripcion: 'Cargo o área que atiende consultas y reclamos', confirmado: false },
+    G3: { descripcion: 'Correo para solicitudes sobre datos personales', confirmado: false },
+    G4: { descripcion: 'Fecha de entrada en vigencia de los documentos legales', confirmado: false },
+    G5: { descripcion: 'Proveedores tecnológicos que intervienen (lo confirma el equipo)', confirmado: false },
+    PRIV: { descripcion: 'Política de privacidad revisada y aprobada por la dueña', confirmado: false },
+    TERM: { descripcion: 'Términos y condiciones revisados y aprobados por la dueña', confirmado: false },
+    ELIM: { descripcion: 'Procedimiento de eliminación de datos revisado y aprobado por la dueña', confirmado: false }
 };
 
 export type IdPendiente = keyof typeof PENDIENTES;
@@ -47,7 +57,15 @@ export const DATOS = {
     whatsappNumero: { id: 'E2', valor: '573127817072' },
     correo: { id: 'E3', valor: null },
     instagramEnlace: { id: 'E4', valor: 'https://www.instagram.com/planet.producciones/' },
-    instagramUsuario: { id: 'E4', valor: '@planet.producciones' }
+    instagramUsuario: { id: 'E4', valor: '@planet.producciones' },
+    // Documentos legales (Numeral 4). Nunca se completan con suposiciones: solo con lo que
+    // confirme la dueña con el RUT o el certificado de Cámara de Comercio.
+    razonSocial: { id: 'A2', valor: null },
+    nit: { id: 'A4', valor: null },
+    domicilio: { id: 'C1', valor: null },
+    areaResponsable: { id: 'G2', valor: null },
+    correoDatos: { id: 'G3', valor: null },
+    fechaVigencia: { id: 'G4', valor: null }
 } satisfies Record<string, Dato>;
 
 export type CampoDato = keyof typeof DATOS;

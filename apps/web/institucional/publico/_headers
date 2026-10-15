@@ -1,0 +1,16 @@
+# Encabezados de seguridad de la web institucional en Cloudflare Pages.
+# Vite copia este archivo tal cual a la raíz de institucional/dist. Formato y límites:
+# https://developers.cloudflare.com/pages/configuration/headers/
+#
+# Content-Security-Policy: el navegador solo carga lo que sale del propio sitio, más la hoja de
+# estilos y las fuentes de Font Awesome desde cdnjs. No permite scripts ni estilos en línea, ni
+# peticiones a servidores, ni formularios, ni que otro sitio muestre estas páginas dentro de un
+# marco. Si se agrega un recurso externo, hay que permitirlo aquí y en la auditoría
+# (vite.config.institucional.ts), o el navegador lo bloqueará.
+/*
+  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self' https://cdnjs.cloudflare.com; font-src https://cdnjs.cloudflare.com; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+  Cross-Origin-Opener-Policy: same-origin

@@ -78,10 +78,11 @@ Mientras quede alguno sin confirmar, la versión publicable de la web no se gene
 | G1 | Identificación del responsable | Se completa con A2, A4, C1, E1 y E3 | Pendiente | Sí | P | RUT |
 | G2 | Cargo o área que atiende consultas y reclamos sobre datos personales | — | Pendiente | Sí (el cargo; el nombre es opcional) | P | Dueña |
 | G3 | Correo para solicitudes sobre datos personales | — (puede ser el mismo de E3) | Pendiente | Sí | P M | Dueña |
-| G4 | Fecha desde la que rige la política | — | Pendiente | Sí | P | Dueña |
+| G4 | Fecha de entrada en vigencia de los documentos legales | — | Pendiente | Sí | P T | Dueña |
+| G5 | Proveedores tecnológicos que intervienen | Supabase, Google (Gmail) y Cloudflare; Meta y n8n en preparación | Confirmar (lo confirma el equipo) | Sí | P | Equipo |
 
-Los datos personales que recoge el sistema y los proveedores tecnológicos que intervienen se
-documentarán desde el código al redactar la política (Numeral 4).
+Los datos personales que trata el sistema y la evidencia de cada proveedor están en el
+[inventario de datos personales](inventario-datos-personales.md).
 
 ## 8. Canal para consultas y reclamos
 
@@ -97,6 +98,17 @@ documentarán desde el código al redactar la política (Numeral 4).
 | I1 | ¿La empresa tiene dominio propio? ¿A nombre de quién está? | — | Pendiente | — | S M | Dueña (Numeral 9) |
 | I2 | Correo de la empresa que será titular de las cuentas de Cloudflare y Meta | — | Pendiente | No | — | Dueña |
 | I3 | ¿Ya existe un portafolio en Meta Business Suite? ¿Quién lo administra y con qué nombre se creó? | — | Pendiente | No | M | Dueña |
+
+## 10. Aprobación de los textos y documentos legales
+
+| ID | Documento | Página | Estado | Quién aprueba |
+|---|---|---|---|---|
+| TXT | Textos de la página de inicio | `/` ([index.html](../../apps/web/institucional/index.html)) | Pendiente | Dueña |
+| PRIV | Política de privacidad y tratamiento de datos personales | `/privacidad` ([privacidad.html](../../apps/web/institucional/privacidad.html)) | Pendiente | Dueña, idealmente con revisión jurídica |
+| TERM | Términos y condiciones de uso del sitio | `/terminos` ([terminos.html](../../apps/web/institucional/terminos.html)) | Pendiente | Dueña, idealmente con revisión jurídica |
+| ELIM | Procedimiento de eliminación de datos | `/eliminacion-datos` ([eliminacion-datos.html](../../apps/web/institucional/eliminacion-datos.html)) | Pendiente | Dueña, idealmente con revisión jurídica |
+
+Antes de aprobarlos conviene leer las [notas para la revisión jurídica](notas-revision-juridica.md).
 
 ## Documentos de respaldo
 

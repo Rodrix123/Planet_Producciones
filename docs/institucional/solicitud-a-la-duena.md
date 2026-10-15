@@ -57,4 +57,16 @@ CUENTAS DE LA EMPRESA
 28. ¿Qué correo de la empresa debe quedar como dueño de las cuentas de la página web y de Meta? Debe ser un correo de la empresa, no el de alguien del equipo.
 29. ¿Ya existe una cuenta de Meta Business Suite? ¿Quién la administra?
 
+DOCUMENTOS LEGALES (privacidad, términos y eliminación de datos)
+
+30. ¿Desde qué fecha quiere que rijan la política de privacidad y los términos?
+31. ¿La empresa envía o quiere enviar promociones a sus clientes (por WhatsApp, correo o redes)? Si es así, les pediremos una autorización aparte.
+32. ¿Hoy usan WhatsApp para hablar con clientes y con el personal? ¿Desde qué número?
+33. ¿Publican en Instagram fotos o videos donde se reconozca a personas, o nombres o iniciales de clientes? ¿Piden autorización para hacerlo?
+34. Además del sistema, ¿guardan datos de clientes o trabajadores en otros lugares (cuadernos, hojas de Excel, Google Drive, el celular)?
+35. Según su contador, ¿cuánto tiempo deben conservar contratos, facturas y comprobantes de pago?
+36. ¿La empresa está inscrita en el Registro Nacional de Bases de Datos de la Superintendencia de Industria y Comercio?
+37. ¿Un abogado puede revisar los documentos legales antes de publicarlos?
+38. Le mostraremos los tres documentos: política de privacidad, términos y eliminación de datos. ¿Los aprueba o qué cambiaría?
+
 Gracias. Con sus respuestas preparamos los textos y se los mostramos antes de publicarlos.

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es-CO">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Página no encontrada | {{valor:nombreComercial}}</title>
+{{parcial:cabeza}}
+</head>
+<body class="landing-body">
+{{parcial:encabezado}}
+
+    <!-- Cloudflare Pages muestra esta página, con código 404, en cualquier dirección que no exista.
+         Por eso los enlaces y recursos usan rutas desde la raíz (/…), nunca relativas. -->
+    <main class="promo-main" id="contenido">
+        <section class="documento-legal pagina-no-encontrada">
+            <article class="documento-contenido">
+                <p class="documento-tipo">Error 404</p>
+                <h1>Esta página no existe</h1>
+                <p>
+                    Puede que la dirección esté mal escrita o que la página haya cambiado de lugar. En el inicio
+                    encontrará nuestros servicios, la cobertura y los datos de contacto.
+                </p>
+                <div class="hero-buttons">
+                    <a href="/" class="submit-btn hero-btn-primary"><i class="fa-solid fa-house" aria-hidden="true"></i> Ir al inicio</a>
+                    <a href="/#contacto" class="hero-btn-outline"><i class="fa-solid fa-comments" aria-hidden="true"></i> Contáctanos</a>
+                </div>
+            </article>
+        </section>
+    </main>
+
+{{parcial:pie}}
+
+    <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
