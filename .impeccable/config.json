@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "flat-type-hierarchy",
+        "value": "*",
+        "files": [
+          "apps/web/cotizador.html"
+        ],
+        "createdAt": "2026-10-10T17:51:27.330Z",
+        "reason": "Decidido por Claude, no confirmado por el usuario: el detector no resuelve style.css (se importa desde src/main.ts, sin <link>) y lo lee todo a 16px; los tamanos reales son body 16px, h1 1.25rem, h2 1.35rem. Mismo resultado en el commit anterior."
+      },
+      {
+        "rule": "layout-transition",
+        "value": "*",
+        "files": [
+          "apps/web/src/eventos.css"
+        ],
+        "createdAt": "2026-10-10T19:27:18.758Z",
+        "reason": "user confirmed: el usuario pidio explicitamente (10-oct-2026) que el calendario se extienda al pasar el cursor y que la lista de eventos se retraiga horizontalmente; la animacion del ancho de .deck-panel es ese efecto."
+      }
+    ]
+  }
+}

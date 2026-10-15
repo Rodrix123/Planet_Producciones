@@ -1,41 +1,179 @@
 import './style.css';
+import { apiFetch, apiUrl } from './shared/api';
+import { borrarBorrador, leerBorrador } from './borrador-evento';
+import {
+    calcularDesdeCatalogo,
+    obtenerCatalogo,
+    renderCatalogoEnContenedor,
+    type Catalogo,
+    type ItemSeleccionado,
+    type ResultadoCatalogo
+} from './shared/catalogoCotizacion';
 
 // Librerías cargadas vía CDN en index.html (sin tipos propios en este proyecto)
 declare const Swal: any;
 declare const html2pdf: any;
 declare const XLSX: any;
 
-interface ItemSeleccionado {
+interface DatosCliente {
+    nombre: string;
+    correo: string;
+    telefono: string;
+    documento: string;
+    tipoEvento: string;
+    ciudad: string;
+    lugar: string;
+    fechaEvento: string;
+}
+
+const OTRO_VALUE = 'otro';
+
+/** Ítem listo para mostrarse en el PDF/Excel (precio ya multiplicado por la cantidad,
+ *  nombre con el prefijo "N x" cuando aplica). */
+interface ItemParaMostrar {
     tag: string;
     nombre: string;
     descripcion: string;
     precio: number;
 }
 
-interface DatosCotizacion {
-    total: number;
-    itemsSeleccionados: ItemSeleccionado[];
+function formatearItemsParaMostrar(formatterCOP: Intl.NumberFormat, items: ItemSeleccionado[]): ItemParaMostrar[] {
+    return items.map((item) => ({
+        tag: item.tag,
+        nombre: item.cantidad > 1 ? `${item.cantidad} x ${item.nombre} (${formatterCOP.format(item.precioUnit)} c/u)` : item.nombre,
+        descripcion: item.descripcion,
+        precio: item.precioUnit * item.cantidad
+    }));
 }
 
-interface DatosCliente {
-    nombre: string;
-    correo: string;
-    telefono: string;
-    tipoEvento: string;
-    ciudad: string;
-    lugar: string;
+/** Intenta guardar la cotización en la base de datos para que Maritza la vea en su panel.
+ *  Si falla (red/servidor caído), no interrumpe la descarga del PDF/Excel del cliente: solo
+ *  se pierde la persistencia, no la experiencia de quien está cotizando. */
+async function guardarCotizacionReal(
+    datosCliente: DatosCliente,
+    venueId: number | null,
+    venueNombreManual: string | null,
+    venueDireccionManual: string | null,
+    transportationId: number | null,
+    items: ItemSeleccionado[]
+): Promise<{ id: number; numeroReferencia: string } | null> {
+    try {
+        const res = await fetch(apiUrl('/api/cotizaciones'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                cliente: { nombre: datosCliente.nombre, correo: datosCliente.correo, telefono: datosCliente.telefono, documento: datosCliente.documento || undefined },
+                tipoEvento: datosCliente.tipoEvento,
+                venueId,
+                venueNombreManual: venueNombreManual || undefined,
+                venueDireccionManual: venueDireccionManual || undefined,
+                transportationId,
+                fechaEvento: datosCliente.fechaEvento || undefined,
+                items: items.map((i) => ({ variantId: i.variantId, cantidad: i.cantidad }))
+            })
+        });
+        if (!res.ok) return null;
+        return (await res.json()) as { id: number; numeroReferencia: string };
+    } catch {
+        return null;
+    }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     const form = document.getElementById('quoteForm') as HTMLFormElement;
     const precioTotalEl = document.getElementById('precioTotal') as HTMLElement;
     const listaResumenEl = document.getElementById('listaResumen') as HTMLElement;
     const btnSubmit = document.getElementById('btnSubmit') as HTMLButtonElement;
+    const catalogoDinamicoEl = document.getElementById('catalogoDinamico') as HTMLElement;
+    const ciudadSelect = document.getElementById('ciudad') as HTMLSelectElement;
+    const lugarSelect = document.getElementById('lugar') as HTMLSelectElement;
+    const transporteHintEl = document.getElementById('transporte-hint') as HTMLElement;
+    const lugarOtroWrap = document.getElementById('lugarOtroWrap') as HTMLElement;
+    const lugarOtroNombreInput = document.getElementById('lugarOtroNombre') as HTMLInputElement;
+    const lugarOtroDireccionInput = document.getElementById('lugarOtroDireccion') as HTMLInputElement;
 
     const formatterCOP = new Intl.NumberFormat('es-CO', {
         style: 'currency',
         currency: 'COP',
         minimumFractionDigits: 0
+    });
+
+    let catalogo: Catalogo;
+    try {
+        catalogo = await obtenerCatalogo();
+    } catch {
+        catalogoDinamicoEl.innerHTML = '<p style="color:#f87171;">No se pudo cargar el catálogo de precios. Recarga la página.</p>';
+        return;
+    }
+
+    renderCatalogoEnContenedor(catalogoDinamicoEl, catalogo);
+
+    // Ciudades disponibles: unión de las ciudades con sede propia y las ciudades
+    // cubiertas por transporte, para que "Otro" siempre sea seleccionable aunque la
+    // ciudad todavía no tenga ninguna sede cargada en el catálogo.
+    const ciudades = Array.from(new Set([
+        ...catalogo.venues.map((v) => v.city).filter((c): c is string => !!c),
+        ...catalogo.transportation.map((t) => t.city)
+    ]));
+    ciudades.forEach((ciudad) => {
+        const opt = document.createElement('option');
+        opt.value = ciudad;
+        opt.textContent = ciudad;
+        ciudadSelect.appendChild(opt);
+    });
+
+    // El transporte ya no es un select aparte: se resuelve automáticamente a partir de la
+    // ciudad elegida (una sola fila de `transportation` por ciudad en el catálogo).
+    function transportePorCiudad(): { id: number; city: string; price: number } | undefined {
+        return catalogo.transportation.find((t) => t.city === ciudadSelect.value);
+    }
+
+    function actualizarLugaresPorCiudad() {
+        const ciudad = ciudadSelect.value;
+        lugarSelect.innerHTML = '';
+
+        if (!ciudad) {
+            lugarSelect.disabled = true;
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.textContent = '-- Primero selecciona una ciudad --';
+            opt.selected = true;
+            lugarSelect.appendChild(opt);
+            lugarOtroWrap.style.display = 'none';
+            transporteHintEl.textContent = '';
+            return;
+        }
+
+        lugarSelect.disabled = false;
+        const optVacio = document.createElement('option');
+        optVacio.value = '';
+        optVacio.textContent = '-- Selecciona Sede --';
+        optVacio.selected = true;
+        lugarSelect.appendChild(optVacio);
+
+        catalogo.venues.filter((v) => v.city === ciudad).forEach((v) => {
+            const opt = document.createElement('option');
+            opt.value = String(v.id);
+            opt.textContent = v.name;
+            lugarSelect.appendChild(opt);
+        });
+
+        const optOtro = document.createElement('option');
+        optOtro.value = OTRO_VALUE;
+        optOtro.textContent = 'Otro (no está en la lista)';
+        lugarSelect.appendChild(optOtro);
+
+        lugarOtroWrap.style.display = 'none';
+
+        const transporte = transportePorCiudad();
+        transporteHintEl.textContent = transporte
+            ? `Transporte incluido (${transporte.city}): ${formatterCOP.format(transporte.price)}`
+            : 'Esta ciudad no tiene costo de transporte registrado.';
+    }
+
+    ciudadSelect.addEventListener('change', actualizarLugaresPorCiudad);
+    lugarSelect.addEventListener('change', () => {
+        lugarOtroWrap.style.display = lugarSelect.value === OTRO_VALUE ? 'grid' : 'none';
     });
 
     // Convierte logo.png local a Base64 para garantizar que html2canvas lo dibuje sin errores
@@ -61,88 +199,32 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Lee el atributo data-incluye (lista separada por "|") y la devuelve como texto legible
-    function obtenerIncluye(el: Element): string {
-        const raw = el.getAttribute('data-incluye');
-        if (!raw) return '';
-        const partes = raw.split('|').map(p => p.trim()).filter(Boolean);
-        return partes.join(' • ');
-    }
+    // Cálculo dinámico de cotización: delega en el módulo compartido (shared/catalogoCotizacion)
+    // para el catálogo propiamente dicho (inventory/inventory_variants); el transporte se suma
+    // aparte porque vive en su propia tabla, no en el catálogo de servicios.
+    function calcularCotizacion(): ResultadoCatalogo {
+        const { itemsSeleccionados } = calcularDesdeCatalogo(catalogoDinamicoEl);
+        const transporte = transportePorCiudad();
+        const precioTransporte = transporte?.price || 0;
+        const total = itemsSeleccionados.reduce((acc, i) => acc + i.precioUnit * i.cantidad, 0) + precioTransporte;
 
-    // Cálculo dinámico de cotización: lee genéricamente cualquier <select>, checkbox o
-    // input de cantidad marcado con las clases .precio-select / .precio-check / .precio-qty
-    // y sus atributos data-precio / data-tag / data-nombre / data-incluye. Esto permite
-    // ampliar el catálogo de precios (apps/web/index.html) sin tocar esta lógica.
-    function calcularCotizacion(): DatosCotizacion {
-        let total = 0;
-        const itemsSeleccionados: ItemSeleccionado[] = [];
-
-        // 1. Selects de catálogo (una sola opción por categoría)
-        const selects = form.querySelectorAll<HTMLSelectElement>('select.precio-select');
-        selects.forEach(select => {
-            const hint = document.getElementById(`${select.id}-hint`);
-            const opt = select.options[select.selectedIndex];
-            const incluye = opt ? obtenerIncluye(opt) : '';
-
-            if (hint) {
-                hint.innerHTML = (select.selectedIndex > 0 && incluye) ? `<strong>Incluye:</strong> ${incluye}` : '';
-            }
-
-            if (select.selectedIndex <= 0 || !opt) return;
-            const precio = parseFloat(opt.getAttribute('data-precio') || '') || 0;
-            if (precio <= 0) return;
-
-            total += precio;
-            itemsSeleccionados.push({
-                tag: select.dataset.tag || 'SERVICIO',
-                nombre: opt.value,
-                descripcion: incluye,
-                precio
-            });
-        });
-
-        // 2. Checkboxes de efectos / add-ons
-        const checks = form.querySelectorAll<HTMLInputElement>('input.precio-check');
-        checks.forEach(chk => {
-            if (!chk.checked) return;
-            const precio = parseFloat(chk.getAttribute('data-precio') || '') || 0;
-            if (precio <= 0) return;
-
-            total += precio;
-            itemsSeleccionados.push({
-                tag: chk.dataset.tag || 'SERVICIO',
-                nombre: chk.dataset.nombre || chk.id,
-                descripcion: obtenerIncluye(chk),
-                precio
-            });
-        });
-
-        // 3. Ítems por cantidad (mobiliario y extras cobrados "c/u")
-        const qtys = form.querySelectorAll<HTMLInputElement>('input.precio-qty');
-        qtys.forEach(input => {
-            const cantidad = parseInt(input.value, 10) || 0;
-            if (cantidad <= 0) return;
-            const precioUnit = parseFloat(input.getAttribute('data-precio-unit') || '') || 0;
-            const precio = cantidad * precioUnit;
-            if (precio <= 0) return;
-
-            total += precio;
-            itemsSeleccionados.push({
-                tag: input.dataset.tag || 'SERVICIO',
-                nombre: `${cantidad} x ${input.dataset.nombre || input.id} (${formatterCOP.format(precioUnit)} c/u)`,
-                descripcion: obtenerIncluye(input),
-                precio
-            });
-        });
-
-        // Actualizar UI en vivo
         precioTotalEl.textContent = formatterCOP.format(total);
         listaResumenEl.innerHTML = '';
 
-        if (itemsSeleccionados.length === 0) {
+        const itemsParaMostrar = formatearItemsParaMostrar(formatterCOP, itemsSeleccionados);
+        if (precioTransporte > 0 && transporte) {
+            itemsParaMostrar.unshift({
+                tag: 'TRANSPORTE Y LOGÍSTICA',
+                nombre: transporte.city,
+                descripcion: '',
+                precio: precioTransporte
+            });
+        }
+
+        if (itemsParaMostrar.length === 0) {
             listaResumenEl.innerHTML = '<li><em>Selecciona tus opciones en el formulario para calcular el costo.</em></li>';
         } else {
-            itemsSeleccionados.forEach(item => {
+            itemsParaMostrar.forEach((item) => {
                 const li = document.createElement('li');
                 li.innerHTML = `<strong>${item.nombre}</strong>: ${formatterCOP.format(item.precio)}`;
                 listaResumenEl.appendChild(li);
@@ -160,13 +242,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // y cada fila muestra debajo del nombre lo que incluye el paquete (si aplica).
     function construirHTMLCotizacion(
         datosCliente: DatosCliente,
-        datosCotizacion: DatosCotizacion,
+        itemsParaMostrar: ItemParaMostrar[],
+        total: number,
         logoBase64: string,
         refNum: string,
         fechaHoy: string
     ): HTMLDivElement {
-        const grupos = new Map<string, ItemSeleccionado[]>();
-        datosCotizacion.itemsSeleccionados.forEach(item => {
+        const grupos = new Map<string, ItemParaMostrar[]>();
+        itemsParaMostrar.forEach(item => {
             if (!grupos.has(item.tag)) grupos.set(item.tag, []);
             grupos.get(item.tag)!.push(item);
         });
@@ -232,7 +315,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <table style="width: 100%; font-size: 10.5px; border-collapse: collapse; color: #334155;">
                         <tr>
                             <td style="padding: 2px 0;"><strong>Cliente:</strong> ${datosCliente.nombre}</td>
-                            <td style="padding: 2px 0;"><strong>Fecha del Evento:</strong> <span style="color: #ea580c; font-weight: 700;">A convenir 2026</span></td>
+                            <td style="padding: 2px 0;"><strong>Fecha del Evento:</strong> <span style="color: #ea580c; font-weight: 700;">${datosCliente.fechaEvento ? new Date(datosCliente.fechaEvento + 'T00:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'A convenir 2026'}</span></td>
                         </tr>
                         <tr>
                             <td style="padding: 2px 0;"><strong>Email:</strong> ${datosCliente.correo}</td>
@@ -240,8 +323,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         </tr>
                         <tr>
                             <td style="padding: 2px 0;"><strong>WhatsApp:</strong> ${datosCliente.telefono}</td>
-                            <td style="padding: 2px 0;"><strong>Ubicación / Sede:</strong> ${datosCliente.ciudad || 'Por confirmar'} (${datosCliente.lugar || 'Sede a confirmar'})</td>
+                            <td style="padding: 2px 0;"><strong>Sede:</strong> ${datosCliente.lugar || 'Por confirmar'}</td>
                         </tr>
+                        ${datosCliente.documento ? `
+                        <tr>
+                            <td style="padding: 2px 0;"><strong>Documento:</strong> ${datosCliente.documento}</td>
+                            <td></td>
+                        </tr>` : ''}
                     </table>
                 </div>
 
@@ -276,7 +364,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div style="flex: 0.8; background-color: rgba(236, 253, 245, 0.95); border: 1.5px solid #6ee7b7; border-radius: 10px; padding: 10px; text-align: center;">
                         <div style="font-size: 9px; font-weight: 800; color: #047857; text-transform: uppercase; letter-spacing: 0.5px;">PRESUPUESTO TOTAL ESTIMADO</div>
-                        <div style="font-size: 20px; font-weight: 900; color: #059669; margin-top: 2px;">$ ${datosCotizacion.total.toLocaleString('es-CO')} COP</div>
+                        <div style="font-size: 20px; font-weight: 900; color: #059669; margin-top: 2px;">$ ${total.toLocaleString('es-CO')} COP</div>
                     </div>
                 </div>
 
@@ -300,7 +388,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Exportación a Excel Profesional Estructurado
     function generarExcelEjecutivo(
         datosCliente: DatosCliente,
-        datosCotizacion: DatosCotizacion,
+        itemsParaMostrar: ItemParaMostrar[],
+        total: number,
         refNum: string,
         fechaHoy: string
     ): void {
@@ -310,14 +399,14 @@ document.addEventListener('DOMContentLoaded', () => {
             [""],
             ["1. DATOS DEL CLIENTE"],
             ["Cliente:", datosCliente.nombre, "Tipo Evento:", datosCliente.tipoEvento || 'N/A'],
-            ["Correo:", datosCliente.correo, "Ubicación:", datosCliente.ciudad],
-            ["WhatsApp:", datosCliente.telefono, "Sede:", datosCliente.lugar || 'Por definir'],
+            ["Correo:", datosCliente.correo, "Sede:", datosCliente.lugar || 'Por definir'],
+            ["WhatsApp:", datosCliente.telefono, "", ""],
             [""],
             ["2. DESGLOSE PREVENTIVO DE SERVICIOS"],
             ["Item", "Categoría", "Servicio / Descripción", "Valor COP"]
         ];
 
-        datosCotizacion.itemsSeleccionados.forEach((item, index) => {
+        itemsParaMostrar.forEach((item, index) => {
             aoaData.push([
                 index + 1,
                 item.tag,
@@ -327,7 +416,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         aoaData.push([""]);
-        aoaData.push(["", "", "TOTAL PRESUPUESTO ESTIMADO:", datosCotizacion.total]);
+        aoaData.push(["", "", "TOTAL PRESUPUESTO ESTIMADO:", total]);
 
         const worksheet = XLSX.utils.aoa_to_sheet(aoaData);
 
@@ -352,13 +441,86 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Evento Principal al Clic
+    // Evento en creación (viene de eventos.html): esta cotización se guarda junto con el
+    // evento, que se crea al guardarla. Si se entra al cotizador directamente, no hay borrador
+    // y la página funciona como siempre (guardar cotización, PDF y Excel).
+    const borrador = leerBorrador();
+    const btnCrearEvento = document.getElementById('btnCrearEvento') as HTMLButtonElement;
+    if (borrador) {
+        (document.getElementById('avisoEvento') as HTMLElement).hidden = false;
+        btnCrearEvento.hidden = false;
+        btnSubmit.classList.add('submit-btn-secundario');
+    }
+
+    btnCrearEvento.addEventListener('click', async () => {
+        if (!borrador) return;
+        const resultado = calcularCotizacion();
+        if (resultado.itemsSeleccionados.length === 0) {
+            Swal.fire({
+                icon: 'info',
+                title: 'Selección Vacía',
+                text: 'Selecciona al menos un servicio o montaje para cotizar.',
+                confirmButtonColor: '#f97316'
+            });
+            return;
+        }
+
+        Swal.fire({
+            title: 'Creando evento...',
+            text: 'Guardando el evento y su cotización',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); }
+        });
+
+        try {
+            const res = await apiFetch('/api/eventos', {
+                method: 'POST',
+                body: JSON.stringify({
+                    ...borrador,
+                    items: resultado.itemsSeleccionados.map(i => ({
+                        variantId: i.variantId,
+                        tag: i.tag,
+                        nombre: i.nombre,
+                        cantidad: i.cantidad
+                    }))
+                })
+            });
+            const json = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(json.message || `Error ${res.status}`);
+            borrarBorrador();
+            window.location.href = `eventos.html?creado=${json.evento.id}`;
+        } catch (error) {
+            // Los datos del evento siguen en el borrador: se pueden corregir y volver a intentar.
+            const respuesta = await Swal.fire({
+                icon: 'error',
+                title: 'No se pudo crear el evento',
+                text: (error as Error).message,
+                showCancelButton: true,
+                confirmButtonText: 'Volver al evento',
+                cancelButtonText: 'Cerrar',
+                confirmButtonColor: '#f97316'
+            });
+            if (respuesta.isConfirmed) window.location.href = 'eventos.html?nuevo=1';
+        }
+    });
+
     btnSubmit.addEventListener('click', async () => {
         const nombre = (document.getElementById('nombre') as HTMLInputElement).value.trim();
         const correo = (document.getElementById('correo') as HTMLInputElement).value.trim();
         const telefono = (document.getElementById('telefono') as HTMLInputElement).value.trim();
+        const documento = (document.getElementById('documento') as HTMLInputElement).value.trim();
         const tipoEvento = (document.getElementById('tipoEvento') as HTMLSelectElement).value;
-        const ciudad = (document.getElementById('transporte') as HTMLSelectElement).value;
-        const lugar = (document.getElementById('lugar') as HTMLSelectElement).value;
+        const fechaEvento = (document.getElementById('fechaEvento') as HTMLInputElement).value;
+
+        const esLugarManual = lugarSelect.value === OTRO_VALUE;
+        const lugarOpt = lugarSelect.options[lugarSelect.selectedIndex];
+        const venueId = (lugarSelect.value && !esLugarManual) ? Number(lugarSelect.value) : null;
+        const venueNombreManual = esLugarManual ? lugarOtroNombreInput.value.trim() : null;
+        const venueDireccionManual = esLugarManual ? lugarOtroDireccionInput.value.trim() : null;
+        const lugarNombre = esLugarManual
+            ? [venueNombreManual, venueDireccionManual].filter(Boolean).join(' — ')
+            : (lugarOpt?.textContent?.trim() || '');
+        const transportationId = transportePorCiudad()?.id ?? null;
 
         if (!nombre || !correo || !telefono) {
             Swal.fire({
@@ -370,9 +532,19 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const datosCotizacion = calcularCotizacion();
+        if (esLugarManual && !venueNombreManual) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Falta el nombre del lugar',
+                text: 'Escribe el nombre del lugar donde será el evento.',
+                confirmButtonColor: '#f97316'
+            });
+            return;
+        }
 
-        if (datosCotizacion.itemsSeleccionados.length === 0) {
+        const resultado = calcularCotizacion();
+
+        if (resultado.itemsSeleccionados.length === 0 && !transportationId) {
             Swal.fire({
                 icon: 'info',
                 title: 'Selección Vacía',
@@ -392,15 +564,32 @@ document.addEventListener('DOMContentLoaded', () => {
         let elementoHTML: HTMLDivElement | null = null;
 
         try {
-            const datosCliente: DatosCliente = { nombre, correo, telefono, tipoEvento, ciudad, lugar };
-            const refNum = `PL-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+            const datosCliente: DatosCliente = { nombre, correo, telefono, documento, tipoEvento, ciudad: ciudadSelect.value, lugar: lugarNombre, fechaEvento };
             const fechaHoy = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+            // Guarda la cotización real en la base de datos (panel de Maritza) y usa su
+            // número de referencia oficial; si no se pudo guardar, sigue con uno local
+            // para no bloquear la descarga del PDF/Excel del cliente.
+            const guardada = await guardarCotizacionReal(datosCliente, venueId, venueNombreManual, venueDireccionManual, transportationId, resultado.itemsSeleccionados);
+            const refNum = guardada?.numeroReferencia || `PL-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+
+            const itemsParaMostrar = formatearItemsParaMostrar(formatterCOP, resultado.itemsSeleccionados);
+            const transporte = transportePorCiudad();
+            const precioTransporte = transporte?.price || 0;
+            if (precioTransporte > 0 && transporte) {
+                itemsParaMostrar.unshift({
+                    tag: 'TRANSPORTE Y LOGÍSTICA',
+                    nombre: transporte.city,
+                    descripcion: '',
+                    precio: precioTransporte
+                });
+            }
 
             // Carga de Logo
             const logoBase64 = await obtenerLogoBase64();
 
             // Renderizado PDF HD
-            elementoHTML = construirHTMLCotizacion(datosCliente, datosCotizacion, logoBase64, refNum, fechaHoy);
+            elementoHTML = construirHTMLCotizacion(datosCliente, itemsParaMostrar, resultado.total, logoBase64, refNum, fechaHoy);
             document.body.appendChild(elementoHTML);
 
             // Vuelve el scroll al origen: si la página quedó desplazada (formulario largo)
@@ -434,7 +623,7 @@ document.addEventListener('DOMContentLoaded', () => {
             elementoHTML = null;
 
             // Exportación Excel Profesional
-            generarExcelEjecutivo(datosCliente, datosCotizacion, refNum, fechaHoy);
+            generarExcelEjecutivo(datosCliente, itemsParaMostrar, resultado.total, refNum, fechaHoy);
 
             Swal.fire({
                 icon: 'success',
