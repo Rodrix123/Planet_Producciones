@@ -126,7 +126,9 @@ octubre de 2026.
 
 Las fotos muestran decoración (flores, telas, mobiliario) que podría ser de otros
 proveedores: hay que confirmar quién las tomó y si la empresa puede usarlas. Cada PNG pesa
-entre 1,6 y 2,5 MB (17 MB en total); se optimizarán en el Numeral 3 sin cambiar su aspecto.
+entre 1,6 y 2,5 MB (17 MB en total); se optimizarán, sin cambiar su aspecto, cuando la dueña
+apruebe las fotos definitivas. La web institucional (Numeral 3) solo publica las fotos
+marcadas como autorizadas.
 
 ## 4. Condiciones y datos que se contradicen
 

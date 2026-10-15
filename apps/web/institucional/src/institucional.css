@@ -1,0 +1,355 @@
+/* Estilos propios de la web institucional. Se apoyan en src/style.css y
+   src/landing.css del aplicativo (variables, encabezado, secciones, pie y visor de
+   fotos) para mantener la misma identidad visual; aquí solo va lo nuevo. */
+
+html {
+    scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+}
+
+main section[id] {
+    scroll-margin-top: 84px;
+}
+
+.saltar-contenido {
+    position: absolute;
+    top: -4rem;
+    left: 1rem;
+    z-index: 100;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    background-color: var(--orange-main);
+    color: #ffffff;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.saltar-contenido:focus {
+    top: 1rem;
+}
+
+/* .submit-btn de style.css está pensado para <button>; aquí se usa en enlaces */
+a.submit-btn {
+    text-decoration: none;
+}
+
+/* ---------- ENCABEZADO ---------- */
+.marca-enlace {
+    color: inherit;
+    text-decoration: none;
+}
+
+.logo-text .marca-nombre {
+    font-size: 1.25rem;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #ffffff;
+}
+
+.menu-toggle {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    margin-left: auto;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-card);
+    color: var(--text-light);
+    font-size: 1.1rem;
+    cursor: pointer;
+}
+
+.menu-toggle:hover {
+    border-color: var(--orange-main);
+}
+
+@media (max-width: 960px) {
+    .promo-header {
+        padding: 0.75rem 1.25rem;
+    }
+
+    .promo-header .header-container {
+        flex-wrap: nowrap;
+    }
+
+    .menu-toggle {
+        display: inline-flex;
+        flex-shrink: 0;
+    }
+
+    .promo-nav {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        flex-direction: column;
+        gap: 0;
+        padding: 0.25rem 1.25rem 0.75rem;
+        background-color: var(--bg-dark);
+        border-bottom: 1px solid var(--border-color);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.45);
+    }
+
+    .promo-nav.abierto {
+        display: flex;
+    }
+
+    .promo-nav a {
+        padding: 0.9rem 0;
+        font-size: 1rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .promo-nav a:last-child {
+        border-bottom: none;
+    }
+
+    .nav-cta-group {
+        display: none;
+    }
+}
+
+@media (max-width: 420px) {
+    .promo-header .logo-box {
+        gap: 0.6rem;
+    }
+
+    .logo-text .marca-nombre {
+        font-size: 0.92rem;
+        letter-spacing: 0;
+    }
+
+    .logo-img {
+        height: 36px;
+    }
+}
+
+/* ---------- SECCIONES NUEVAS ---------- */
+.seccion-institucional {
+    padding: 5rem 1.5rem;
+    background-color: var(--bg-dark);
+}
+
+.seccion-alterna {
+    background-color: #0d0d11;
+}
+
+.seccion-contenido {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.seccion-contenido .section-desc {
+    max-width: 640px;
+}
+
+.servicios-grid {
+    list-style: none;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    text-align: left;
+}
+
+.servicio-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1.5rem;
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    background: linear-gradient(160deg, var(--bg-card), var(--bg-input));
+    transition: border-color 0.2s, transform 0.2s;
+}
+
+.servicio-card:hover {
+    border-color: rgba(249, 115, 22, 0.5);
+    transform: translateY(-2px);
+}
+
+.servicio-card .feature-title {
+    margin-bottom: 0;
+}
+
+.cobertura-lista {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.75rem;
+}
+
+.cobertura-lista li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.85rem 1.4rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-card);
+    color: var(--text-light);
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.cobertura-lista li::before {
+    content: '\f3c5';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    color: var(--orange-main);
+}
+
+.galeria-grid {
+    width: 100%;
+}
+
+.lightbox {
+    visibility: hidden;
+    transition: opacity 0.2s, visibility 0.2s;
+}
+
+.lightbox.open {
+    visibility: visible;
+}
+
+/* ---------- CONTACTO (sobre la banda naranja de landing.css) ---------- */
+#contacto .cta-content {
+    max-width: 1000px;
+}
+
+.contacto-grid {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.75rem;
+}
+
+.contacto-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    height: 100%;
+    padding: 1.4rem 1rem;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background-color: rgba(10, 10, 12, 0.18);
+    color: #ffffff;
+    text-decoration: none;
+    transition: background-color 0.15s, transform 0.15s;
+}
+
+.contacto-card:hover {
+    background-color: rgba(10, 10, 12, 0.3);
+    transform: translateY(-2px);
+}
+
+.contacto-card i {
+    font-size: 1.6rem;
+    margin-bottom: 0.25rem;
+}
+
+.contacto-tipo {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.85;
+}
+
+.contacto-valor {
+    font-size: 0.95rem;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.contacto-ubicacion {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+/* ---------- VISTA LOCAL: datos sin confirmar (no aparece en la versión publicada) ---------- */
+.aviso-vista-local {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    padding: 0.65rem 1rem;
+    background-color: #facc15;
+    color: #111111;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.dato-pendiente {
+    outline: 2px dashed #facc15;
+    outline-offset: 2px;
+    border-radius: 4px;
+    background-color: rgba(250, 204, 21, 0.16);
+}
+
+.bloque-pendiente {
+    position: relative;
+    width: 100%;
+    margin-top: 2rem;
+    outline: 2px dashed #facc15;
+    outline-offset: 8px;
+    border-radius: 12px;
+}
+
+.bloque-pendiente::before {
+    content: attr(data-pendiente);
+    position: absolute;
+    top: -2.1rem;
+    left: 0;
+    z-index: 2;
+    padding: 0.15rem 0.55rem;
+    border-radius: 6px;
+    background-color: #facc15;
+    color: #111111;
+    font-size: 0.72rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.contacto-grid > .bloque-pendiente {
+    margin-top: 0;
+}
+
+.contacto-grid > .bloque-pendiente::before {
+    top: auto;
+    bottom: -1.9rem;
+}
+
+.foto-pendiente::after {
+    content: attr(data-pendiente);
+    position: absolute;
+    left: 0.6rem;
+    bottom: 0.6rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 6px;
+    background-color: #facc15;
+    color: #111111;
+    font-size: 0.72rem;
+    font-weight: 700;
+}

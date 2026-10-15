@@ -10,6 +10,9 @@ M = formularios de Meta (Numeral 10).
 **Estado:** Pendiente (no se tiene) · Confirmar (se tiene, falta que la dueña lo confirme) ·
 Sin confirmar (aparece en el código) · Decidir (depende de una decisión de la dueña).
 
+Cuando la dueña confirme un dato, se marca también en `apps/web/institucional/contenido.ts`.
+Mientras quede alguno sin confirmar, la versión publicable de la web no se genera.
+
 ## 1. Nombre comercial y nombre legal
 
 | ID | Dato | Valor conocido | Estado | ¿Se publica? | Uso | Se comprueba con |

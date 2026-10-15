@@ -10,6 +10,8 @@ Cloudflare Pages. Esta carpeta no forma parte del sitio: el build de Vite solo c
 | [datos-pendientes.md](datos-pendientes.md) | Datos oficiales que faltan, dónde se usará cada uno y con qué documento se comprueba. | Equipo |
 | [solicitud-a-la-duena.md](solicitud-a-la-duena.md) | Mensaje listo para enviar a la dueña con las preguntas y los textos que debe aprobar. | Dueña |
 
+El sitio se construye en [apps/web/institucional/](../../apps/web/institucional/README.md).
+
 ## Reglas
 
 - **El repositorio es público.** Todo lo que se suba a esta carpeta lo puede leer cualquiera.
