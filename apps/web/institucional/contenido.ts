@@ -6,7 +6,8 @@
  * también los usarán, para que el sitio diga lo mismo en todas partes.
  *
  * Cada pendiente lleva el ID de docs/institucional/datos-pendientes.md. Cuando la
- * dueña lo confirme por escrito, cambie `confirmado` a true. Mientras quede alguno en
+ * dueña lo confirme por escrito, o un documento oficial lo compruebe (en ese caso se
+ * anota cuál en un comentario), cambie `confirmado` a true. Mientras quede alguno en
  * false, o un valor en null, `npm run build:institucional` se detiene con la lista y
  * `npm run dev:institucional` lo resalta en amarillo.
  */
@@ -14,15 +15,15 @@
 export const PENDIENTES = {
     TXT: { descripcion: 'Textos de la página revisados y aprobados', confirmado: false },
     A1: { descripcion: 'Nombre comercial', confirmado: false },
-    A2: { descripcion: 'Razón social o nombre legal', confirmado: false },
-    A4: { descripcion: 'NIT con dígito de verificación', confirmado: false },
+    A2: { descripcion: 'Razón social o nombre legal', confirmado: true }, // Certificado de la Cámara de Comercio, 12/08/2026
+    A4: { descripcion: 'NIT con dígito de verificación', confirmado: true }, // Certificado de la Cámara de Comercio, 12/08/2026
     B1: { descripcion: 'Descripción de la actividad', confirmado: false },
     B3: { descripcion: 'Tipos de evento que atiende', confirmado: false },
     C1: { descripcion: 'Domicilio y dirección del responsable', confirmado: false },
-    C2: { descripcion: 'Ciudad y departamento', confirmado: false },
+    C2: { descripcion: 'Ciudad y departamento', confirmado: true }, // Domicilio del certificado de la Cámara de Comercio
     C3: { descripcion: 'Ciudades de cobertura', confirmado: false },
     D1: { descripcion: 'Servicios que se anuncian', confirmado: false },
-    E1: { descripcion: 'Teléfono comercial', confirmado: false },
+    E1: { descripcion: 'Teléfono comercial', confirmado: true }, // Teléfono comercial 1 del certificado de la Cámara de Comercio
     E2: { descripcion: 'WhatsApp en el número comercial', confirmado: false },
     E3: { descripcion: 'Correo de la empresa', confirmado: false },
     E4: { descripcion: 'Instagram oficial', confirmado: false },
@@ -32,6 +33,7 @@ export const PENDIENTES = {
     G5: { descripcion: 'Proveedores tecnológicos que intervienen (lo confirma el equipo)', confirmado: false },
     PRIV: { descripcion: 'Política de privacidad revisada y aprobada por la dueña', confirmado: false },
     TERM: { descripcion: 'Términos y condiciones revisados y aprobados por la dueña', confirmado: false },
+    COND: { descripcion: 'Condiciones generales de contratación de los términos (pago, cancelación y responsabilidades) aprobadas por la dueña', confirmado: false },
     ELIM: { descripcion: 'Procedimiento de eliminación de datos revisado y aprobado por la dueña', confirmado: false }
 };
 
@@ -55,16 +57,20 @@ export const DATOS = {
     telefono: { id: 'E1', valor: '+57 312 781 70 72' },
     telefonoInternacional: { id: 'E1', valor: '+573127817072' },
     whatsappNumero: { id: 'E2', valor: '573127817072' },
-    correo: { id: 'E3', valor: null },
+    // Correo comercial que figura en el certificado de la Cámara de Comercio. La dueña debe confirmar que es el que se publica.
+    correo: { id: 'E3', valor: 'planet.producciones@outlook.com' },
     instagramEnlace: { id: 'E4', valor: 'https://www.instagram.com/planet.producciones/' },
     instagramUsuario: { id: 'E4', valor: '@planet.producciones' },
     // Documentos legales (Numeral 4). Nunca se completan con suposiciones: solo con lo que
-    // confirme la dueña con el RUT o el certificado de Cámara de Comercio.
-    razonSocial: { id: 'A2', valor: null },
-    nit: { id: 'A4', valor: null },
+    // confirme la dueña o compruebe el certificado de la Cámara de Comercio (12/08/2026).
+    razonSocial: { id: 'A2', valor: 'PLANETT PRODUCCIONES S.A.S.' }, // con doble T, como está registrada
+    nit: { id: 'A4', valor: '901.668.571-1' }, // con puntos, como figura en el contrato; la auditoría solo deja publicar este texto exacto
+    // Domicilio: sigue en null a propósito. La dirección del certificado parece una vivienda y el repositorio es
+    // público; la dueña decide si se publica completa o solo la ciudad (pregunta 5 de la solicitud).
     domicilio: { id: 'C1', valor: null },
     areaResponsable: { id: 'G2', valor: null },
-    correoDatos: { id: 'G3', valor: null },
+    // Propuesta: el mismo correo de E3. La dueña debe aprobarlo y comprometerse a revisarlo (los reclamos tienen plazos legales).
+    correoDatos: { id: 'G3', valor: 'planet.producciones@outlook.com' },
     fechaVigencia: { id: 'G4', valor: null }
 } satisfies Record<string, Dato>;
 

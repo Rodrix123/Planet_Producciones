@@ -58,7 +58,7 @@ will begin from this location»
 ## Qué pasará en el primer build
 
 Mientras falten los datos y aprobaciones de la dueña, el build se detendrá con la lista de
-pendientes (14 sin confirmar y 7 faltantes) y Cloudflare no publicará nada. Es lo esperado: es la
+pendientes (el 17 de octubre eran 15 sin confirmar y 3 faltantes; baja a medida que se confirman) y Cloudflare no publicará nada. Es lo esperado: es la
 misma protección que en el equipo. Cuando todo esté confirmado en
 `apps/web/institucional/contenido.ts`, el mismo comando genera la versión publicable. Se comprobó
 con una simulación con datos ficticios, hecha solo en una carpeta temporal y ya borrada.

@@ -2,7 +2,9 @@
 
 > Para el equipo: copie el texto que está debajo de la línea y envíelo por correo o
 > WhatsApp. Pida las respuestas por escrito. Si ella comparte el RUT o el certificado de
-> Cámara de Comercio, guárdelos fuera del repositorio.
+> Cámara de Comercio, guárdelos fuera del repositorio. El certificado de Cámara de Comercio
+> (12/08/2026) y un contrato firmado ya se recibieron: con ellos se completaron las preguntas
+> 1 a 3, y las preguntas 5, 10 a 13, 21, 22 y 39 se reformularon como confirmaciones.
 
 ---
 
@@ -12,11 +14,11 @@ Puede responder debajo de cada pregunta, en una o varias partes.
 
 DATOS LEGALES
 
-1. ¿Cuál es el nombre legal exacto de la empresa, como aparece en el RUT o en la Cámara de Comercio? En el contrato que genera el sistema aparece «PLANETT PRODUCCIONES S.A.S», con doble T. ¿Es correcto?
-2. ¿La empresa está registrada como sociedad o a nombre de una persona natural?
-3. ¿Cuál es el NIT con dígito de verificación? En el contrato aparece 901.668.571-1. ¿Es correcto?
+1. Con el certificado de la Cámara de Comercio ya tenemos los datos legales: PLANETT PRODUCCIONES S.A.S. (con doble T), sociedad por acciones simplificada, NIT 901.668.571-1, con domicilio en Manizales, Caldas. ¿Son los que deben aparecer en los documentos legales?
+2. Hacia el público usamos «Planet Producciones», con una sola T. ¿Ese es el nombre comercial correcto?
+3. ¿Tiene el RUT actualizado? No lo publicaremos; solo sirve para comprobar datos.
 4. ¿Autoriza que el nombre legal y el NIT aparezcan en la política de privacidad y en los términos de la página?
-5. ¿Cuál es la dirección registrada de la empresa? ¿Se puede publicar o prefiere que solo aparezca la ciudad?
+5. El certificado registra una dirección en Manizales que parece una vivienda. La política de privacidad debe identificar a la empresa con su domicilio y datos de contacto. ¿Prefiere publicar la dirección completa, o solo «Manizales, Caldas» junto con el correo y el teléfono?
 
 ACTIVIDAD, SERVICIOS Y COBERTURA
 
@@ -27,10 +29,10 @@ ACTIVIDAD, SERVICIOS Y COBERTURA
 
 CONTACTO
 
-10. ¿El +57 312 781 70 72 es el teléfono oficial de la empresa? ¿Recibe mensajes de WhatsApp?
-11. ¿Qué correo de la empresa podemos publicar?
-12. ¿A qué correo pueden escribir las personas para consultar, corregir o pedir que se borren sus datos? Puede ser el mismo.
-13. ¿Quién (cargo) responde esas solicitudes y las PQRS?
+10. El +57 312 781 70 72 figura en el certificado como teléfono comercial. ¿Recibe mensajes de WhatsApp?
+11. El certificado registra el correo planet.producciones@outlook.com. ¿Lo publicamos como correo de la empresa?
+12. ¿Ese mismo correo recibirá las solicitudes de las personas para consultar, corregir o pedir que se borren sus datos? Hay que revisarlo con frecuencia: la ley da plazos para responder (10 días hábiles las consultas y 15 los reclamos).
+13. ¿Quién (cargo) responde esas solicitudes y las PQRS? Por ejemplo, la gerencia.
 14. ¿La cuenta de Instagram @planet.producciones es la oficial? ¿Tienen página de Facebook u otra red?
 15. ¿Tienen un horario de atención para publicar?
 
@@ -41,8 +43,8 @@ TEXTOS DE LA PÁGINA (para cada uno, diga si se mantiene, se cambia o se quita)
 18. «Equipos propios» y «equipos de última generación: Line Array RCF, pantallas LED Pitch 3 y consolas digitales».
 19. «Montaje profesional garantizado» y «respaldo técnico inmediato con equipos de backup».
 20. «Cotización 100% gratuita y sin compromiso».
-21. La página y la cotización dicen que el total se paga 8 días antes del evento; el contrato dice 1 día antes. ¿Cuál es el correcto?
-22. Sobre cancelaciones, el contrato menciona 8 días en una cláusula y 30 días en otra. ¿Cuál aplica?
+21. La cotización en PDF dice que el total se paga 8 días antes del evento; el contrato firmado dice 1 día antes. Los términos ya dicen 1 día, como el contrato. ¿Se corrige la cotización?
+22. Sobre cancelaciones, el contrato pide aviso escrito con 30 días de anticipación y dice que con menos de 8 días no hay devolución. ¿Es la regla para todos los contratos?
 23. La página dice «técnico dedicado durante todo el evento»; el contrato dice «mínimo un técnico de sonido y uno de iluminación». ¿Cuál publicamos?
 
 FOTOS
@@ -68,5 +70,6 @@ DOCUMENTOS LEGALES (privacidad, términos y eliminación de datos)
 36. ¿La empresa está inscrita en el Registro Nacional de Bases de Datos de la Superintendencia de Industria y Comercio?
 37. ¿Un abogado puede revisar los documentos legales antes de publicarlos?
 38. Le mostraremos los tres documentos: política de privacidad, términos y eliminación de datos. ¿Los aprueba o qué cambiaría?
+39. En los términos resumimos las condiciones de su contrato: pago, cancelaciones, daños a los equipos, suspensión del servicio, proveedores externos (como la orquesta) y lo que pasa si la empresa no cumple (devolución más el 20 %, o reemplazo por otro proveedor de igual categoría). ¿Las publicamos como están, cambiamos alguna o prefiere no publicarlas?
 
 Gracias. Con sus respuestas preparamos los textos y se los mostramos antes de publicarlos.

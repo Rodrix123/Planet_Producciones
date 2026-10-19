@@ -16,20 +16,24 @@ El texto se consultó en el gestor normativo de Función Pública:
 |---|---|---|
 | Ley 1581 de 2012 | 5 (datos sensibles), 7 (menores), 8 (derechos), 9 (autorización), 10 (casos sin autorización), 14 (consultas: 10 días hábiles, prorrogables 5), 15 (reclamos: 5 días para completar, desistimiento a los 2 meses, 2 días hábiles para el traslado y para la leyenda «reclamo en trámite», 15 días hábiles prorrogables 8), 16 (queja ante la SIC) | Política (secciones 2 y 8 a 11) y eliminación de datos (secciones 3 y 7) |
 | Decreto 1377 de 2013, compilado en el Decreto 1074 de 2015 | 7 (modo de obtener la autorización), 9 (supresión y revocatoria; no proceden ante un deber legal o contractual), 11 (conservación), 12 (menores), 13 (contenido mínimo de la política), 20 (quién puede ejercer los derechos), 24 y 25 (transmisión a encargados) | Política y eliminación de datos |
-| Ley 1480 de 2011 (Estatuto del Consumidor) | Mención general | Términos, sección 9 |
+| Ley 1480 de 2011 (Estatuto del Consumidor) | Mención general. No se verificaron artículos concretos; ver el punto 8 | Términos, secciones 6 y 10 |
 
 ## Decisiones de redacción
 
 - Los plazos salen del texto de la ley; no se agregó ninguno.
-- Los términos no repiten cifras de pagos ni de cancelación: remiten a la cotización y al
-  contrato, que hoy se contradicen ([inventario de textos, sección 4](inventario-textos.md#4-condiciones-y-datos-que-se-contradicen)).
+- La sección 6 de los términos (bloque COND) resume las condiciones del contrato firmado de
+  julio de 2026, que coincide con la plantilla del sistema: pago total 1 día antes, aviso
+  escrito de cancelación con 30 días, sin devolución con menos de 8 días y recargo del 20 % si la
+  empresa incumple. No se copiaron precios, nombres ni datos del cliente. La cotización en PDF
+  todavía dice 8 días y 30 % de reserva ([inventario de textos, sección 4](inventario-textos.md#4-condiciones-y-datos-que-se-contradicen)).
 - Lo que no está activo se identifica como tal: el envío automático por WhatsApp, n8n y la
   inteligencia artificial.
 - En seguridad solo se mencionan controles que hoy existen en el código: usuario y
   contraseña, permisos por cargo y sesión de ocho horas.
-- Los datos de la empresa (razón social, NIT, dirección, correos, fecha de vigencia) no se
-  completaron. Quedan pendientes hasta que la dueña los confirme, y mientras tanto la versión
-  publicable no se genera.
+- La razón social y el NIT se completaron con el certificado de la Cámara de Comercio. Faltan
+  el domicilio (la dueña decide qué publicar), el área responsable y la fecha de vigencia. Los
+  correos son una propuesta: el correo comercial del certificado. Mientras falte algo, la
+  versión publicable no se genera.
 
 ## Puntos que necesitan criterio jurídico
 
@@ -46,8 +50,20 @@ El texto se consultó en el gestor normativo de Función Pública:
 6. **RNBD.** ¿La empresa está obligada a inscribir sus bases de datos en la SIC? Solo aplica
    con activos superiores a 100.000 UVT.
 7. **Aceptación de los términos** por el solo uso del sitio.
-8. **Fuera del sitio.** Algunas cláusulas del contrato, como la exclusión de reembolsos o la
-   suspensión sin reintegro, conviene revisarlas frente al Estatuto del Consumidor.
+8. **Condiciones generales de contratación** (sección 6 de los términos, que resume el
+   contrato). Revisar su redacción frente al Estatuto del Consumidor, en especial:
+   - no devolver el anticipo, y no devolver nada con menos de 8 días (las cláusulas séptima y
+     décima primera del contrato no son del todo coherentes: ¿el excedente del anticipo se
+     devuelve también en ese caso?);
+   - la suspensión del servicio sin reintegro;
+   - la exoneración por lo que hagan otros proveedores, como la orquesta;
+   - el recargo del 20 % y la opción de reemplazar con «otro proveedor», que choca con «equipos
+     propios»;
+   - si aplica el derecho de retracto cuando el contrato se celebra a distancia.
+   Son cláusulas de un contrato ya firmado, y ahora además serían públicas.
+9. **Domicilio.** El artículo 13 del Decreto 1377 pide identificar al responsable con su
+   domicilio y sus datos de contacto. ¿Basta con la ciudad, el correo y el teléfono, o debe
+   publicarse la dirección registrada, que parece una vivienda?
 
 ## Ley colombiana y requisitos de Meta
 

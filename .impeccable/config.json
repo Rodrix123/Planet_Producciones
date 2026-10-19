@@ -20,6 +20,17 @@
         ],
         "createdAt": "2026-10-10T19:27:18.758Z",
         "reason": "user confirmed: el usuario pidio explicitamente (10-oct-2026) que el calendario se extienda al pasar el cursor y que la lista de eventos se retraiga horizontalmente; la animacion del ancho de .deck-panel es ese efecto."
+      },
+      {
+        "rule": "flat-type-hierarchy",
+        "value": "*",
+        "files": [
+          "apps/web/institucional/eliminacion-datos.html",
+          "apps/web/institucional/privacidad.html",
+          "apps/web/institucional/terminos.html"
+        ],
+        "createdAt": "2026-10-18T02:22:59.588Z",
+        "reason": "Agent: el detector solo lee el HTML y no ve institucional.css (lo importa main.ts con Vite), por eso informa todo a 16px; la escala real es h1 clamp(1.6rem,3.6vw,2.3rem), h2 1.4rem y h3 1.1rem sobre cuerpo de 0.98rem (h2 = 1.43x), verificada en Edge"
       }
     ]
   }

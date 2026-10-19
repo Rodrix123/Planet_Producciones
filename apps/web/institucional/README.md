@@ -40,10 +40,13 @@ porqué están en `docs/institucional/configuracion-cloudflare-pages.md`.
 
 1. La dueña lo confirma por escrito (`docs/institucional/solicitud-a-la-duena.md`).
 2. Si el valor cambia, se corrige en `DATOS`; si falta (`null`), se completa.
-3. Su ID se pone en `confirmado: true` dentro de `PENDIENTES`. `TXT` se confirma cuando
-   la dueña aprueba los textos de la página de inicio; `PRIV`, `TERM` y `ELIM`, cuando aprueba
-   cada documento legal (ver `docs/institucional/notas-revision-juridica.md`). `G5` lo confirma
-   el equipo cuando verifica qué proveedores intervienen.
+3. Su ID se pone en `confirmado: true` dentro de `PENDIENTES`. También se puede confirmar con
+   un documento oficial (hoy, el certificado de la Cámara de Comercio), anotándolo en un
+   comentario. `TXT` se confirma cuando la dueña aprueba los textos de la página de inicio;
+   `PRIV`, `TERM` y `ELIM`, cuando aprueba cada documento legal (ver
+   `docs/institucional/notas-revision-juridica.md`); `COND`, cuando aprueba las condiciones
+   generales de contratación (sección 6 de los términos; si decide no publicarlas, se borra esa
+   sección y su ID). `G5` lo confirma el equipo cuando verifica qué proveedores intervienen.
 4. Las fotos se autorizan una por una con `autorizada: true` en `FOTOS`. Sin ninguna
    autorizada, la galería no aparece en la versión publicada y sus archivos no se copian.
 

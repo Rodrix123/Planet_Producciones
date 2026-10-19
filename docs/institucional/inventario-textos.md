@@ -147,6 +147,20 @@ publica tal cual: la dueña debe decidir cuál es la correcta antes de redactar 
 | Personal técnico | «Técnico DMX dedicado» ([208](../../apps/web/index.html#L208)) | «Técnico DMX dedicado» ([362](../../apps/web/src/main.ts#L362)) | Mínimo un técnico de sonido y uno de iluminación ([120](../../apps/server/src/pdf/contratoPdf.ts#L120)) |
 | Equipos | «Equipos propios» ([88](../../apps/web/index.html#L88), [190](../../apps/web/index.html#L190), [284](../../apps/web/index.html#L284)) | — | Puede suplirse con un «proveedor colega» ([151](../../apps/server/src/pdf/contratoPdf.ts#L151)) |
 
+Actualización del 17 de octubre de 2026, con el certificado de la Cámara de Comercio y un
+contrato firmado (julio de 2026):
+
+- **Nombre:** el certificado confirma «PLANETT PRODUCCIONES S.A.S.», con doble T, como razón
+  social. «Planet Producciones» es el nombre que se usa hacia el público.
+- **Contrato:** el contrato firmado coincide con la plantilla del sistema en el pago (1 día
+  antes), la cancelación (aviso escrito con 30 días y sin devolución con menos de 8), el recargo
+  del 20 % si la empresa incumple, el «proveedor colega» y el personal mínimo. Por eso los
+  términos resumen el contrato (sección 6).
+- **Sigue pendiente:** la cotización en PDF dice que el total se paga 8 días antes y que la
+  reserva es del 30 %, lo que choca con el contrato. «Equipos propios» y «técnico dedicado»
+  siguen sin respaldo en el contrato. La dueña decide y se corrige la cotización, fuera de este
+  sitio.
+
 ## 5. Fuera de este inventario
 
 Las páginas internas (paneles, inicio de sesión y cotizador) no forman parte de la versión
