@@ -1,17 +1,40 @@
 # Configuración de Cloudflare Pages
 
 Valores para conectar la web institucional a Cloudflare Pages Free (Numeral 6, 15 de octubre de
-2026). Salen de los archivos del proyecto y se comprobaron con una compilación en Linux y con el
-emulador oficial de Cloudflare. En este numeral no se tocó Cloudflare ni GitHub.
+2026; actualizados el 24 de octubre con la versión preliminar). Salen de los archivos del proyecto y
+se comprobaron con una compilación en Linux y con el emulador oficial de Cloudflare. Las pruebas
+hechas son locales: que el despliegue en Cloudflare funcione solo se sabe viendo su registro.
+
+## Tres versiones del sitio
+
+Una sola base de código y tres formas de compilarla (`npm run … --workspace apps/web`):
+
+| Comando | Para qué sirve | ¿Se publica? |
+|---|---|---|
+| `build:institucional:preliminar` | Versión **preliminar**. Muestra lo que ya tiene valor, aunque no esté confirmado por la dueña | **Sí, es la que usa Cloudflare por ahora** |
+| `build:institucional` | Versión **definitiva**. Se detiene mientras haya datos sin confirmar | Sí, cuando todo esté confirmado |
+| `build:institucional:borrador` | Revisión local, con todo lo pendiente resaltado en amarillo y las fotos sin autorizar | **Nunca.** Dentro de Cloudflare se niega a correr |
+
+La versión preliminar:
+- lleva en todas las páginas, arriba, una franja discreta: «Versión preliminar: la información de
+  este sitio está en revisión y puede cambiar»;
+- lleva `noindex`, para que los buscadores no guarden información sin confirmar;
+- escribe «(por confirmar)» donde falta un dato (hoy: dirección, área que atiende reclamos y fecha
+  de vigencia), en vez de inventarlo;
+- **no incluye las fotos sin autorizar** (hoy ninguna está autorizada, así que no hay galería);
+- **no incluye las condiciones generales de contratación** (sección 6 de los términos), porque son
+  compromisos que la dueña todavía no aprobó. Aparecen cuando se confirma `COND`;
+- sigue pasando los 11 controles de la auditoría. Una marca de revisión, una foto sin autorizar o
+  un dato privado hacen fallar el build igual que en la definitiva.
 
 ## Valores
 
 | Campo en Cloudflare | Valor | De dónde sale |
 |---|---|---|
-| Repositorio de GitHub | `Rodrix123/Planet_Producciones` | `git remote -v` |
-| Rama de producción | `produccion-institucional` (nueva, ver abajo) | Propuesta |
+| Repositorio de GitHub | `LuisCastillo04/Planet_Producciones_deploy` (fork). El original es `Rodrix123/Planet_Producciones` | Cloudflare lee el fork; los cambios llegan del original con los pasos de la [guía](guia-cloudflare-pages.md#sincronizar-el-fork) |
+| Rama de producción | `produccion-institucional` | Rama exclusiva del fork para publicar |
 | Framework preset | `None` | El sitio usa su propia configuración de Vite, no un framework con preset |
-| Comando de compilación | `npm run build:institucional --workspace apps/web` | Script `build:institucional` de `apps/web/package.json`, con la misma forma que los scripts de la raíz (`npm run build --workspace apps/web`) |
+| Comando de compilación | `npm run build:institucional:preliminar --workspace apps/web` | Script de `apps/web/package.json`. **No es** `build:institucional:borrador`: ese es de revisión local y publicaría marcas amarillas y fotos sin autorizar |
 | Directorio de salida | `apps/web/institucional/dist` | `build.outDir` de `apps/web/vite.config.institucional.ts` |
 | Directorio raíz (avanzado) | Vacío, es decir, la raíz del repositorio | Ver «Por qué la raíz del repositorio» |
 | Variables de entorno | Solo `NODE_VERSION` = `24.21.0` | Versión con la que se compila en el equipo y en la simulación |
@@ -26,9 +49,10 @@ Cloudflare actualice la suya, que hoy es la 22.16.0. El build también se probó
 
 **Rama de producción.** Se recomienda una rama exclusiva, que solo se actualiza cuando la dueña
 aprueba un cambio. Así publicar es un paso deliberado, y los avances en otras ramas no gastan
-compilaciones (el plan gratuito permite 500 al mes). Se crea en el Numeral 7, después del commit de
-los Numerales 4 a 6 y del arreglo de los submódulos. También se podría usar
-`feature/web-institucional-meta`, pero cada push intentaría publicar.
+compilaciones (el plan gratuito permite 500 al mes). Vive en el fork, y se actualiza desde el
+original con los pasos de la [guía](guia-cloudflare-pages.md#sincronizar-el-fork). También se
+podría publicar directamente `feature/web-institucional-meta`, pero cada push a esa rama
+publicaría.
 
 ## Por qué la raíz del repositorio
 
@@ -49,23 +73,35 @@ will begin from this location»
   el cotizador y los paneles no se compilan ni se publican.
 - Nunca se debe usar `npm run build`, `npm run build:web` ni `apps/web/dist`: generan el aplicativo
   completo, con el inicio de sesión, el cotizador y los paneles.
-- Si el comando es el correcto, el registro del build en Cloudflare muestra la lista «La web
-  institucional todavía no se puede publicar» mientras falten datos. Cuando el sitio compile,
-  mostrará «Auditoría de seguridad de la web institucional».
+- Si el comando es el correcto, el registro del build en Cloudflare muestra «Versión preliminar: se
+  publica con información pendiente» con la lista de lo que falta, y después «Auditoría de
+  seguridad de la web institucional (versión preliminar para publicar)».
 - El registro de instalación muestra avisos de `npm audit` sobre dependencias de desarrollo del
   monorepo. No llegan al sitio, que solo publica archivos estáticos.
 
-## Qué pasará en el primer build
+## Qué pasa en cada build
 
-Mientras falten los datos y aprobaciones de la dueña, el build se detendrá con la lista de
-pendientes (el 17 de octubre eran 15 sin confirmar y 3 faltantes; baja a medida que se confirman) y Cloudflare no publicará nada. Es lo esperado: es la
-misma protección que en el equipo. Cuando todo esté confirmado en
-`apps/web/institucional/contenido.ts`, el mismo comando genera la versión publicable. Se comprobó
-con una simulación con datos ficticios, hecha solo en una carpeta temporal y ya borrada.
+- **Preliminar** (la de hoy): compila y publica aunque falten datos. El registro de Cloudflare
+  muestra la lista de pendientes como aviso. Esa lista es la tarea pendiente con la dueña.
+- **Definitiva**: mientras falten datos o aprobaciones, se detiene con la misma lista y Cloudflare
+  no publica nada. Es la protección para no dar por definitivo algo sin confirmar.
+- Un build que falla no publica nada nuevo.
 
-## Bloqueo encontrado: submódulos sin `.gitmodules`
+### Pasar de la preliminar a la definitiva
 
-El repositorio tiene tres entradas de submódulo (gitlinks), sin el archivo `.gitmodules` que
+1. Confirmar con la dueña los pendientes de la lista y marcarlos en
+   `apps/web/institucional/contenido.ts` (`confirmado: true`; los datos en `null` se completan).
+   Ver «Cómo se publica un dato» en el [README del sitio](../../apps/web/institucional/README.md).
+2. Comprobar en local que la definitiva compila:
+   `npm run build:institucional --workspace apps/web`. Si no compila, muestra qué falta.
+3. Publicar el cambio en la rama de producción del fork (ver la guía).
+4. En Cloudflare, **Settings › Builds**, cambiar el comando de compilación a
+   `npm run build:institucional --workspace apps/web` y relanzar el despliegue. La franja de
+   «versión preliminar» y el `noindex` desaparecen solos.
+
+## Submódulos sin `.gitmodules` (resuelto en el índice)
+
+El repositorio tenía tres entradas de submódulo (gitlinks), sin el archivo `.gitmodules` que
 debería describirlas:
 
 - `.claude/worktrees/calendario-retrae-lista`
@@ -84,19 +120,14 @@ de prueba, `git submodule update --init --recursive` falla con:
 fatal: No url found for submodule path '.claude/worktrees/calendario-retrae-lista' in .gitmodules
 ```
 
-Con esto, lo más probable es que el primer build falle al clonar, antes de compilar.
+Eso fue lo que ocurrió en el primer despliegue: el build falló al clonar, antes de compilar.
 
-**Arreglo**, probado en el mismo clon, donde la inicialización termina sin error: sacar las tres
-entradas del índice. Las carpetas del equipo no se borran. `.gitignore` ya ignora
-`.claude/worktrees/` para que no se vuelvan a subir. Se ejecuta en la raíz del repositorio y
-entra en el próximo commit:
-
-```
-git rm --cached .claude/worktrees/calendario-retrae-lista .claude/worktrees/inventario-niveles .claude/worktrees/pin-paneles-eventos
-```
-
-Conviene hacer lo mismo en `Pagina-Principal`, pero solo esta rama, y la de producción que salga
-de ella, afectan a Cloudflare.
+**Arreglo**: sacar las tres entradas del índice con `git rm --cached`. Las carpetas del equipo
+no se borran, y `.gitignore` ya ignora `.claude/worktrees/` para que no se vuelvan a subir. El
+24 de octubre se aplicó en el índice de `feature/web-institucional-meta`: `git ls-files --stage`
+ya no muestra ninguna entrada de modo 160000 y `git submodule status` ya no da error. **Queda
+pendiente el commit y su llegada al fork.** Conviene hacer lo mismo en `Pagina-Principal`, pero
+solo la rama que se publica afecta a Cloudflare.
 
 ## Rutas
 
@@ -158,14 +189,26 @@ respuestas, también a la 404.
 | Emulador de Cloudflare, rutas y encabezados | Ver las tablas anteriores |
 | Edge con la política aplicada | Ninguna violación de la política en las 5 páginas. Font Awesome carga con su verificación de integridad, y funcionan los estilos, el logo, el menú del celular, la galería y el visor. Sin JavaScript, a 360 px, el menú se ve completo y sin desbordes |
 
+Verificación de la versión preliminar (24 de octubre, en el equipo; no es una prueba del
+despliegue remoto):
+
+| Prueba | Resultado |
+|---|---|
+| `build:institucional:preliminar` | Compila: 5 páginas, `_headers`, CSS, JS y logo. 11 de 11 controles. Ninguna foto, ninguna marca amarilla, ningún «Pendiente:» |
+| Con el entorno de Cloudflare (`CF_PAGES=1 CI=true NODE_VERSION=24.21.0`) | Compila igual |
+| `build:institucional` (definitiva) | Sigue deteniéndose con la lista de pendientes |
+| `build:institucional:borrador` | Igual que antes. Con `CF_PAGES=1` se niega y dice qué comando usar |
+| Pruebas negativas de la auditoría | 40 de 40 detectadas: los controles 1 a 9 y 11 de antes, más marca de revisión, texto «Pendiente:», aviso o `noindex` ausentes, foto sin autorizar y aviso de preliminar dentro de la definitiva |
+| Datos sensibles en lo publicado | La dirección y las cédulas no aparecen. Sí aparecen la razón social, el NIT, el teléfono y el correo comercial |
+| Edge sobre `vite preview` | Franja visible de 30 px (46 px en celular), `noindex`, «(por confirmar)» en cursiva gris, sin desbordes ni errores |
+| Aplicativo (cotizador, login, paneles) | No se modificó ningún archivo suyo; `typecheck` y `vite build` completos siguen bien |
+
 ## Pendiente para otros numerales
 
 - **Numeral 7**:
-  - commit de los Numerales 4 a 6 y del arreglo de los submódulos;
-  - crear la rama de producción;
-  - conectar el repositorio con los valores de arriba, con vista previa en `None`.
-  - La aplicación de Cloudflare en GitHub la tiene que autorizar alguien con permisos de
-    administración sobre `Rodrix123/Planet_Producciones`.
+  - commit del arreglo de los submódulos y de la versión preliminar, y su llegada al fork;
+  - cambiar el comando de compilación en Cloudflare y comprobar el primer despliegue real;
+  - la vista previa de otras ramas, en `None`.
   - Pages también funciona con repositorios privados, como se recomendó en el
     [informe de seguridad](auditoria-seguridad.md).
 - **Numeral 8**:

@@ -7,7 +7,9 @@ import { extname, join, relative } from 'node:path';
  *
  * Revisa la carpeta compilada antes de publicarla y devuelve un resultado por control.
  * plugin-auditoria.ts la ejecuta al final de cada build: cualquier problema detiene la
- * compilación. En el modo borrador, el contenido sin confirmar solo se avisa.
+ * compilación. En el modo borrador (revisión local), el contenido sin confirmar solo se avisa.
+ * En la versión preliminar, que sí se publica, las marcas de revisión siguen siendo un error,
+ * y además debe llevar su aviso y `noindex`. Ninguna versión publicable lleva fotos sin autorizar.
  * Nunca imprime el valor de una clave o de un dato privado, solo dónde está.
  */
 
@@ -32,6 +34,10 @@ export interface OpcionesAuditoria {
     dominiosEstilos: readonly string[];
     /** true en la versión para publicar: el contenido de borrador también bloquea */
     estricto: boolean;
+    /** true en la versión preliminar: debe llevar su aviso y `noindex`, que en la definitiva son un error */
+    preliminar?: boolean;
+    /** Archivos de public/galeria sin autorización de la dueña: no pueden llegar a una versión publicable */
+    fotosSinAutorizar?: readonly string[];
 }
 
 export interface ResultadoControl {
@@ -76,14 +82,16 @@ const PAGINAS_PRIVADAS =
 const DESTINOS_LOCALES = /localhost|127\.0\.0\.1|0\.0\.0\.0|:(?:3000|5173|5174)\b|\/@fs\/|^file:|^[A-Za-z]:[\\/]/i;
 const LLAMADAS_AL_SERVIDOR = /\/api\/|\bfetch\s*\(|XMLHttpRequest|new\s+WebSocket|sendBeacon/;
 
-const MARCAS_DE_BORRADOR: [string, RegExp][] = [
+/** El tercer valor marca lo que la versión preliminar lleva a propósito (se exige aparte, no cuenta como marca de revisión). */
+const MARCAS_DE_BORRADOR: [string, RegExp, boolean?][] = [
     ['dato resaltado como pendiente', /dato-pendiente/g],
     ['bloque pendiente de aprobación', /bloque-pendiente/g],
     ['foto sin autorización', /foto-pendiente/g],
     ['aviso de vista local', /aviso-vista-local/g],
     ['valor faltante', /PENDIENTE-[A-Z0-9]+|Pendiente:/g],
     ['marcador sin procesar', /\{\{|<!--\s*\/?(?:pendiente|si-hay-fotos)/g],
-    ['página marcada como no indexable', /name="robots" content="noindex/g]
+    ['aviso de versión preliminar', /class="aviso-preliminar"/g, true],
+    ['página marcada como no indexable', /name="robots" content="noindex/g, true]
 ];
 
 function listarArchivos(carpeta: string): string[] {
@@ -223,6 +231,14 @@ export function auditarSitio(opciones: OpcionesAuditoria): ResultadoControl[] {
         }
         if (extension === '.map') control(7).problemas.push(`${ruta}: mapa de código fuente (no se publica)`);
         if (!archivoPermitido(ruta, opciones.paginas)) control(7).problemas.push(`${ruta}: no está en la lista blanca del sitio`);
+        // Privacidad: una foto sin autorización (rostros, nombres o iniciales de clientes) no sale en ninguna versión publicable
+        if (opciones.estricto) {
+            for (const foto of opciones.fotosSinAutorizar ?? []) {
+                if (nombre.startsWith(`${foto.replace(/\.[^.]+$/, '')}-`)) {
+                    control(7).problemas.push(`${ruta}: foto sin autorización de la dueña (ver FOTOS en contenido.ts)`);
+                }
+            }
+        }
 
         const datos = leer(ruta);
         if (EXTENSIONES_TEXTO.has(extension) || ARCHIVOS_DE_PAGES.has(ruta)) {
@@ -305,12 +321,18 @@ export function auditarSitio(opciones: OpcionesAuditoria): ResultadoControl[] {
         }
 
         // 10. Contenido de borrador
-        for (const [descripcion, patron] of MARCAS_DE_BORRADOR) {
+        for (const [descripcion, patron, propiaDePreliminar] of MARCAS_DE_BORRADOR) {
+            if (opciones.preliminar && propiaDePreliminar) continue;
             const cantidad = (html.match(patron) ?? []).length;
             if (cantidad === 0) continue;
             const mensaje = `${pagina}: ${cantidad} × ${descripcion}`;
             if (opciones.estricto) control(10).problemas.push(mensaje);
             else control(10).avisos.push(mensaje);
+        }
+        // La versión preliminar se publica con pendientes, pero siempre identificada y sin indexar
+        if (opciones.preliminar) {
+            if (!/class="aviso-preliminar"/.test(html)) control(10).problemas.push(`${pagina}: no avisa que es una versión preliminar`);
+            if (!/name="robots" content="noindex/.test(html)) control(10).problemas.push(`${pagina}: la versión preliminar debe llevar noindex`);
         }
 
         // 11. Código en línea: en Cloudflare, la CSP de _headers lo bloquearía
@@ -376,8 +398,9 @@ export function auditarSitio(opciones: OpcionesAuditoria): ResultadoControl[] {
     return controles;
 }
 
-export function informeAuditoria(controles: ResultadoControl[], estricto: boolean): string {
-    const lineas = [`Auditoría de seguridad de la web institucional (${estricto ? 'versión para publicar' : 'borrador local'})`];
+export function informeAuditoria(controles: ResultadoControl[], estricto: boolean, preliminar = false): string {
+    const version = preliminar ? 'versión preliminar para publicar' : estricto ? 'versión para publicar' : 'borrador local';
+    const lineas = [`Auditoría de seguridad de la web institucional (${version})`];
     for (const c of controles) {
         const estado = c.problemas.length > 0 ? 'FALLA' : c.avisos.length > 0 ? 'AVISO' : 'OK   ';
         lineas.push(`  ${estado} ${String(c.numero).padStart(2)}. ${c.nombre}`);

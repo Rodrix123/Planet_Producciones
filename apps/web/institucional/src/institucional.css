@@ -504,6 +504,22 @@ a.submit-btn {
     }
 }
 
+/* ---------- VERSIÓN PRELIMINAR (solo en el build preliminar) ---------- */
+/* Aviso discreto sobre el encabezado y texto de los datos que faltan por confirmar */
+.aviso-preliminar {
+    padding: 0.4rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    background-color: #0d0d11;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    text-align: center;
+}
+
+.por-confirmar {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
 /* ---------- PÁGINA NO ENCONTRADA (404) ---------- */
 .pagina-no-encontrada {
     display: flex;

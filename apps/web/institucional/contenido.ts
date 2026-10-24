@@ -10,6 +10,10 @@
  * anota cuál en un comentario), cambie `confirmado` a true. Mientras quede alguno en
  * false, o un valor en null, `npm run build:institucional` se detiene con la lista y
  * `npm run dev:institucional` lo resalta en amarillo.
+ *
+ * La versión preliminar (`npm run build:institucional:preliminar`) es la única que se
+ * publica con pendientes: muestra lo que ya tiene valor, escribe «(por confirmar)» donde
+ * falta un dato y deja fuera lo de SOLO_SI_CONFIRMADO y las fotos sin autorizar.
  */
 
 export const PENDIENTES = {
@@ -38,6 +42,13 @@ export const PENDIENTES = {
 };
 
 export type IdPendiente = keyof typeof PENDIENTES;
+
+/**
+ * Bloques que ni siquiera la versión preliminar publica mientras no estén confirmados: son
+ * compromisos o afirmaciones legales que la dueña todavía no aprobó (hoy, las condiciones
+ * generales de contratación). Al confirmarlos aparecen en todas las versiones.
+ */
+export const SOLO_SI_CONFIRMADO: readonly IdPendiente[] = ['COND'];
 
 interface Dato {
     id: IdPendiente;

@@ -1,13 +1,14 @@
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
-import { DATOS } from './institucional/contenido';
+import { DATOS, FOTOS } from './institucional/contenido';
 import { pluginAuditoria } from './institucional/plugin-auditoria';
 import { pluginContenido } from './institucional/plugin-contenido';
 
 // Web institucional (Cloudflare Pages): sitio estático aparte del aplicativo, sin
 // backend ni variables de entorno. Solo compila las páginas de esta lista blanca.
 // Configuración de Cloudflare: docs/institucional/configuracion-cloudflare-pages.md
+// Modos de `vite build` (--mode): sin modo = definitiva · preliminar = publicable con pendientes · borrador = revisión local.
 const RAIZ = resolve(__dirname, 'institucional');
 const PAGINAS_LEGALES = ['privacidad', 'terminos', 'eliminacion-datos'];
 // 404: Cloudflare Pages la muestra en cualquier dirección inexistente (sin ella, mostraría el inicio)
@@ -36,7 +37,9 @@ export default defineConfig({
             telefonos: valores('telefonoInternacional', 'whatsappNumero').map((telefono) => telefono.replace(/\D/g, '')),
             numerosPermitidos: valores('nit'),
             dominiosEnlaces: ['www.instagram.com', 'wa.me', 'www.sic.gov.co'],
-            dominiosEstilos: ['cdnjs.cloudflare.com']
+            dominiosEstilos: ['cdnjs.cloudflare.com'],
+            // Ninguna versión publicable (preliminar o definitiva) puede llevar fotos que la dueña no autorizó
+            fotosSinAutorizar: FOTOS.filter((foto) => !foto.autorizada).map((foto) => foto.archivo)
         })
     ],
     server: {

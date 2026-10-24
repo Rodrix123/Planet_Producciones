@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, isAbsolute, relative, resolve } from 'node:path';
 import type { IndexHtmlTransformContext, Logger, Plugin } from 'vite';
-import { DATOS, FOTOS, PENDIENTES, type CampoDato, type FotoCandidata, type IdPendiente } from './contenido';
+import { DATOS, FOTOS, PENDIENTES, SOLO_SI_CONFIRMADO, type CampoDato, type FotoCandidata, type IdPendiente } from './contenido';
 
 /**
  * Llena las páginas institucionales con los datos de contenido.ts.
@@ -13,13 +13,18 @@ import { DATOS, FOTOS, PENDIENTES, type CampoDato, type FotoCandidata, type IdPe
  *   {{lista:campo}}      <li> por cada elemento de una lista
  *   {{recurso:archivo}}  logo o foto de apps/web/public
  *   {{legal:pagina}}     enlace a una página legal (privacidad, terminos, eliminacion-datos)
- *   {{galeria}}, {{jsonld}}, {{anio}}, {{meta-robots}}, {{aviso-vista-local}}
+ *   {{galeria}}, {{jsonld}}, {{anio}}, {{meta-robots}}, {{aviso-vista-local}}, {{aviso-preliminar}}
  *   <!-- pendiente:ID --> … <!-- /pendiente:ID -->  bloque que depende de un pendiente
  *   <!-- si-hay-fotos --> … <!-- /si-hay-fotos -->  solo aparece si hay fotos que mostrar
  * Un |mayuscula al final de dato o valor pone en mayúscula la primera letra.
  *
- * En `vite` (y en `vite build --mode borrador`) muestra todo con lo pendiente resaltado.
- * En `vite build` normal se detiene si la página usa algo sin confirmar.
+ * Tres formas de compilar:
+ *   `vite` (y `vite build --mode borrador`): revisión local, con todo lo pendiente resaltado
+ *       y las fotos sin autorizar. Nunca se publica: dentro de Cloudflare el borrador se niega a correr.
+ *   `vite build --mode preliminar`: la versión que se puede publicar con pendientes. Sin marcas
+ *       amarillas, con un aviso discreto, `noindex`, «(por confirmar)» donde falta un dato y sin
+ *       las fotos sin autorizar ni lo de SOLO_SI_CONFIRMADO.
+ *   `vite build` normal: la versión definitiva; se detiene si la página usa algo sin confirmar.
  */
 
 /** Páginas legales que enlaza el pie de página. Se redactan en el Numeral 4. */
@@ -32,6 +37,9 @@ const PAGINAS_LEGALES = {
 const AVISO_VISTA_LOCAL =
     '<div class="aviso-vista-local" role="note"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> ' +
     'Vista local: lo resaltado en amarillo está pendiente de confirmar con la dueña. Esta versión no se puede publicar.</div>';
+
+const AVISO_PRELIMINAR =
+    '<div class="aviso-preliminar" role="note">Versión preliminar: la información de este sitio está en revisión y puede cambiar.</div>';
 
 interface Opciones {
     /** Carpeta del sitio institucional (donde están los .html) */
@@ -63,7 +71,7 @@ interface Revision {
 }
 
 /** Informe de una o varias páginas, en el mismo orden que docs/institucional/datos-pendientes.md. */
-function informe(revisiones: Map<string, Revision>): string {
+function informe(revisiones: Map<string, Revision>, preliminar = false): string {
     const todas = [...revisiones.values()];
     const enOrden = (elegir: (r: Revision) => Set<IdPendiente>) =>
         Object.keys(PENDIENTES)
@@ -73,9 +81,14 @@ function informe(revisiones: Map<string, Revision>): string {
     const sinValor = enOrden((r) => r.sinValor);
     const legales = [...new Set(todas.flatMap((r) => [...r.legales]))].map((ruta) => `  · ${ruta}`);
 
-    const lineas = [`La web institucional todavía no se puede publicar (${[...revisiones.keys()].join(', ')}).`];
+    const paginas = [...revisiones.keys()].join(', ');
+    const lineas = [
+        preliminar
+            ? `Versión preliminar: se publica con información pendiente (${paginas}).`
+            : `La web institucional todavía no se puede publicar (${paginas}).`
+    ];
     if (sinConfirmar.length > 0) lineas.push('', 'Sin confirmar (docs/institucional/datos-pendientes.md):', ...sinConfirmar);
-    if (sinValor.length > 0) lineas.push('', 'Datos que faltan:', ...sinValor);
+    if (sinValor.length > 0) lineas.push('', preliminar ? 'Datos que faltan (la página dice «por confirmar»):' : 'Datos que faltan:', ...sinValor);
     if (legales.length > 0) lineas.push('', 'Páginas legales que aún no existen:', ...legales);
     lineas.push('', 'Para verlos resaltados: npm run dev:institucional');
     return lineas.join('\n');
@@ -85,6 +98,7 @@ export function pluginContenido({ raiz, carpetaRecursos }: Opciones): Plugin {
     const carpetaParciales = resolve(raiz, 'parciales');
     let esServidor = true;
     let vistaLocal = true;
+    let preliminar = false;
     let logger: Logger | undefined;
     let avisoMostrado = false;
     /** Pendientes de cada página compilada; el build los informa todos juntos al final. */
@@ -187,6 +201,7 @@ export function pluginContenido({ raiz, carpetaRecursos }: Opciones): Plugin {
 
         // 1. Bloques que dependen de un pendiente. Se repite hasta que no quede ninguno,
         //    porque un bloque puede ir dentro de otro (G5 dentro de la política, PRIV).
+        let ocultos = false;
         let anterior: string;
         do {
             anterior = html;
@@ -194,12 +209,23 @@ export function pluginContenido({ raiz, carpetaRecursos }: Opciones): Plugin {
                 /<!--\s*pendiente:(\w+)\s*-->([\s\S]*?)<!--\s*\/pendiente:\1\s*-->/g,
                 (_coincidencia: string, id: string, contenido: string) => {
                     if (!tieneClave(PENDIENTES, id)) throw new Error(`Pendiente desconocido en el HTML: ${id}`);
+                    // Versión preliminar: lo que la dueña aún no aprobó y es un compromiso legal no se publica
+                    if (preliminar && SOLO_SI_CONFIRMADO.includes(id) && !PENDIENTES[id].confirmado) {
+                        ocultos = true;
+                        return '';
+                    }
                     ids.add(id);
                     if (!pendienteVisible(id)) return contenido;
                     return `<div class="bloque-pendiente" data-pendiente="${id} · ${escapar(PENDIENTES[id].descripcion)}">${contenido}</div>`;
                 }
             );
         } while (html !== anterior);
+
+        // Si se ocultó una sección de un documento legal, las siguientes se vuelven a numerar sin saltos
+        if (ocultos) {
+            let numero = 0;
+            html = html.replace(/(<h2 id="[\w-]+">)\d+\. /g, (_coincidencia: string, abre: string) => `${abre}${++numero}. `);
+        }
 
         // 2. Partes que solo existen si hay fotos que mostrar (sección, enlace del menú y visor)
         html = html.replace(/<!--\s*si-hay-fotos\s*-->([\s\S]*?)<!--\s*\/si-hay-fotos\s*-->/g, (_coincidencia: string, contenido: string) =>
@@ -215,6 +241,7 @@ export function pluginContenido({ raiz, carpetaRecursos }: Opciones): Plugin {
                         const dato = usar(clave);
                         const descripcion = PENDIENTES[dato.id].descripcion;
                         if (dato.valor === null) {
+                            if (preliminar) return '<span class="por-confirmar">(por confirmar)</span>';
                             return vistaLocal ? `<span class="dato-pendiente" title="${dato.id} · falta el dato">Pendiente: ${escapar(descripcion.toLowerCase())}</span>` : '';
                         }
                         const valor = escapar(texto(dato.valor, modificador));
@@ -242,9 +269,11 @@ export function pluginContenido({ raiz, carpetaRecursos }: Opciones): Plugin {
                     case 'anio':
                         return String(new Date().getFullYear());
                     case 'meta-robots':
-                        return vistaLocal ? '<meta name="robots" content="noindex, nofollow">' : '';
+                        return vistaLocal || preliminar ? '<meta name="robots" content="noindex, nofollow">' : '';
                     case 'aviso-vista-local':
                         return vistaLocal ? AVISO_VISTA_LOCAL : '';
+                    case 'aviso-preliminar':
+                        return preliminar ? AVISO_PRELIMINAR : '';
                     default:
                         throw new Error(`Marcador desconocido en el HTML: {{${tipo}}}`);
                 }
@@ -275,16 +304,24 @@ export function pluginContenido({ raiz, carpetaRecursos }: Opciones): Plugin {
         configResolved(config) {
             esServidor = config.command === 'serve';
             vistaLocal = esServidor || config.mode === 'borrador';
+            preliminar = !esServidor && config.mode === 'preliminar';
             logger = config.logger;
+            // El borrador de revisión trae marcas amarillas y fotos sin autorizar: nunca debe salir en Cloudflare
+            if (!esServidor && config.mode === 'borrador' && process.env.CF_PAGES) {
+                throw new Error(
+                    'El borrador de revisión no se publica (trae marcas amarillas y fotos sin autorizar). ' +
+                        'Para publicar la versión preliminar use: npm run build:institucional:preliminar --workspace apps/web'
+                );
+            }
         },
         buildStart() {
             revisiones.clear();
         },
         buildEnd(error) {
-            // Con todas las páginas ya revisadas: un solo informe. En borrador solo avisa.
+            // Con todas las páginas ya revisadas: un solo informe. En borrador y en la versión preliminar solo avisa.
             if (error || revisiones.size === 0) return;
-            const mensaje = informe(revisiones);
-            if (!vistaLocal) throw new Error(mensaje);
+            const mensaje = informe(revisiones, preliminar);
+            if (!vistaLocal && !preliminar) throw new Error(mensaje);
             logger?.warn(`\n${mensaje}\n`);
         },
         configureServer(server) {

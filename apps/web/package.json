@@ -12,6 +12,7 @@
     "dev:institucional": "vite --config vite.config.institucional.ts",
     "build:institucional": "tsc -p institucional/tsconfig.json --noEmit && vite build --config vite.config.institucional.ts",
     "build:institucional:borrador": "tsc -p institucional/tsconfig.json --noEmit && vite build --config vite.config.institucional.ts --mode borrador",
+    "build:institucional:preliminar": "tsc -p institucional/tsconfig.json --noEmit && vite build --config vite.config.institucional.ts --mode preliminar",
     "preview:institucional": "vite preview --config vite.config.institucional.ts",
     "typecheck:institucional": "tsc -p institucional/tsconfig.json --noEmit"
   },

@@ -1,4 +1,4 @@
-# Guía: crear el proyecto en Cloudflare Pages y conectar GitHub
+# Guía: publicar la web institucional en Cloudflare Pages
 
 Guía del Numeral 7, para quien hace la configuración. Claude no tiene acceso a Cloudflare ni a
 GitHub: todo lo haces tú desde tu navegador. Nunca compartas contraseñas, tokens ni códigos de
@@ -8,73 +8,110 @@ build, que no contiene secretos.
 Los nombres de botones y menús pueden variar un poco según la versión del panel. Si una pantalla no
 coincide, detente y envía una captura.
 
-Los valores salen de [configuracion-cloudflare-pages.md](configuracion-cloudflare-pages.md)
-(Numeral 6).
+Los valores salen de [configuracion-cloudflare-pages.md](configuracion-cloudflare-pages.md).
 
-## Parte A. Preparar el repositorio (en tu equipo)
+## Cómo está montado
 
-Hoy ninguna rama de GitHub tiene el sitio institucional. En GitHub solo está la documentación del
-Numeral 2; el Numeral 3 tiene commit sin push y los Numerales 4 a 6 no tienen commit. Además,
-siguen en el índice las tres entradas de submódulo que harían fallar el clonado en Cloudflare.
+- El repositorio **original** es `Rodrix123/Planet_Producciones`. Ahí se trabaja, en la rama
+  `feature/web-institucional-meta`.
+- Cloudflare lee el **fork** `LuisCastillo04/Planet_Producciones_deploy`, rama
+  `produccion-institucional`. Esa rama solo se actualiza cuando se decide publicar.
+- Hoy se publica la **versión preliminar** (`build:institucional:preliminar`): sale en línea
+  aunque falte información de la empresa, con una franja que lo avisa y sin indexar. Cuando la
+  dueña confirme todo, se cambia el comando a la **versión definitiva**
+  (`build:institucional`). Las diferencias están en la configuración.
+- El `borrador` (`build:institucional:borrador`) es solo para revisar en el equipo. No se pone
+  nunca en Cloudflare: allí se niega a correr.
+
+## Parte A. Preparar el repositorio
+
+El sitio ya está en la rama de trabajo del original. Para que Cloudflare pueda construirlo falta
+que el commit incluya dos cosas:
+
+- **La corrección de los submódulos.** Tres entradas de `.claude/worktrees/` estaban registradas
+  como submódulos sin `.gitmodules`, y Cloudflare falla al clonar con
+  `No url found for submodule path`. La corrección es quitarlas del índice de Git (`git rm
+  --cached`); las carpetas locales no se borran, y `.gitignore` ya las ignora.
+- **El comando de la versión preliminar** (`build:institucional:preliminar` en
+  `apps/web/package.json`) y los cambios del sitio que la hacen posible.
 
 ### A1. Decisiones antes de crear nada
 
 - **Correo de la cuenta de Cloudflare.** La cuenta va a alojar el sitio de la empresa, así que
   conviene un correo de la empresa al que la dueña tenga acceso, con la verificación en dos pasos
   activada. Lo decide la dueña.
-- **Repositorio privado.** Se recomendó en el [informe de seguridad](auditoria-seguridad.md).
+- **Repositorios privados.** Se recomendó en el [informe de seguridad](auditoria-seguridad.md).
   Cloudflare funciona igual con repositorios privados, y se puede cambiar antes o después de
   conectar.
-- **Dueño del repositorio.** El repositorio está en la cuenta `Rodrix123`. Instalar la aplicación
-  de Cloudflare en GitHub lo puede hacer quien sea dueño o administrador de esa cuenta. Si no
-  eres tú, esa persona tendrá que aprobar la solicitud (paso B4).
 
-### A2. Commit, push y rama de producción
+### A2. Comprobar el fork antes de publicar
 
-Desde la raíz del repositorio, en la rama `feature/web-institucional-meta`:
+Con el remoto `deploy` configurado (ver [Sincronizar el fork](#sincronizar-el-fork)):
 
 ```
-git rm --cached .claude/worktrees/calendario-retrae-lista .claude/worktrees/inventario-niveles .claude/worktrees/pin-paneles-eventos
-git add .gitignore apps/web/vite.config.institucional.ts apps/web/institucional docs/institucional
-git status
-git commit -m "Web institucional: documentos legales, auditoría y preparación para Cloudflare Pages"
-git push
-git switch -c produccion-institucional
-git push -u origin produccion-institucional
-git switch feature/web-institucional-meta
-```
-
-| Comando | Qué hace |
-|---|---|
-| `git rm --cached …` | Saca del índice las tres entradas de submódulo. Las carpetas de tu equipo no se borran |
-| `git add …` | Prepara solo los archivos de este trabajo |
-| `git status` | Revisa la lista antes del commit: no debe aparecer nada de `apps/server`, ningún `.env` ni ninguna carpeta `dist` |
-| `git commit` y `git push` | Guardan y suben los Numerales 3 a 6 a la rama de trabajo |
-| `git switch -c produccion-institucional` y `git push -u …` | Crean la rama de producción desde la rama de trabajo y la suben a GitHub |
-
-### A3. Comprobar que la rama de producción es segura
-
-```
-git ls-tree -r origin/produccion-institucional | grep "^160000"
-git show origin/produccion-institucional:apps/web/package.json | grep build:institucional
-git show origin/produccion-institucional:apps/web/institucional/publico/_headers | grep Content-Security-Policy
+git fetch deploy
+git ls-tree -r deploy/produccion-institucional | grep "^160000"
+git show deploy/produccion-institucional:apps/web/package.json | grep build:institucional:preliminar
+git show deploy/produccion-institucional:apps/web/institucional/publico/_headers | grep Content-Security-Policy
 ```
 
 - El primero no debe mostrar nada (ya no hay submódulos).
-- El segundo debe mostrar el comando `build:institucional`.
+- El segundo debe mostrar el comando `build:institucional:preliminar`.
 - El tercero debe mostrar la política de seguridad.
 
 Si algo no coincide, no sigas con la parte B.
 
-**Por qué no usar otra rama.**
-- `main`: es la rama por defecto de GitHub, y Cloudflare la va a proponer, pero no tiene el sitio
-  institucional.
-- `Pagina-Principal`: tampoco lo tiene, y aún conserva las entradas de submódulo.
-- `feature/web-institucional-meta`: funcionaría, pero cada push intentaría publicar.
+**Por qué no usar otra rama.** `main` no tiene el sitio institucional y `Pagina-Principal` aún
+conserva las entradas de submódulo. Publicar directamente `feature/web-institucional-meta`
+funcionaría, pero cada push a esa rama publicaría. La rama de producción solo se actualiza cuando
+se decide.
 
-La rama de producción solo se actualiza cuando la dueña aprueba algo.
+## Sincronizar el fork
+
+Cada vez que publiques cambios en el original, llévalos a la rama `produccion-institucional` del
+fork. Desde una copia local del proyecto.
+
+**Una sola vez**, agrega el fork como segundo remoto (el remoto `origin` sigue siendo el
+original):
+
+```
+git remote add deploy https://github.com/LuisCastillo04/Planet_Producciones_deploy.git
+```
+
+**Cada vez que publiques en el original:**
+
+```
+git fetch origin
+git push deploy origin/feature/web-institucional-meta:refs/heads/produccion-institucional
+```
+
+Esto sube al fork exactamente lo que acabas de publicar en el original y lo deja como rama
+`produccion-institucional`. Cloudflare detecta el cambio y compila solo. Con la rama de producción
+sincronizada, el fork no necesita más cambios manuales.
+
+**Si Git responde `rejected … non-fast-forward`**, la rama del fork tiene commits que el original
+no tiene (por ejemplo, un arreglo hecho directamente en el fork). No uses `--force`. Mira qué tiene
+de más, y si hay que conservarlo, mézclalo antes de subir:
+
+```
+git fetch deploy
+git log --oneline origin/feature/web-institucional-meta..deploy/produccion-institucional
+git switch -c sincronizar-deploy deploy/produccion-institucional
+git merge origin/feature/web-institucional-meta
+git push deploy sincronizar-deploy:refs/heads/produccion-institucional
+```
+
+Si el merge muestra conflictos, resuélvelos antes del `push`. Si prefieres hacerlo en la web de
+GitHub: en el fork, abre un Pull request con base `produccion-institucional` y comparación
+`feature/web-institucional-meta`, y combínalo. El botón «Sync fork» solo sirve para ramas que
+también existen en el original, y `produccion-institucional` solo existe en el fork.
+
+**Comprobación después de sincronizar:** repite las tres comprobaciones de A2.
 
 ## Parte B. Cloudflare, pantalla por pantalla
+
+Si el proyecto ya está creado (el primer despliegue ya se intentó), salta a **B6** y revisa los
+valores en **Settings › Builds**.
 
 ### B1. Entrar a Cloudflare
 
@@ -107,17 +144,15 @@ de **Workers**, no de Pages. Vuelve atrás.
 1. Pulsa **Connect GitHub**. Se abre GitHub en otra pestaña; inicia sesión ahí, en github.com,
    nunca dentro de Cloudflare.
 2. GitHub pide instalar la aplicación de Cloudflare («Cloudflare Workers and Pages», antes
-   «Cloudflare Pages»). Elige la cuenta **Rodrix123**.
+   «Cloudflare Pages»). Elige la cuenta **LuisCastillo04**.
 3. En **Repository access**, marca **Only select repositories**, elige
-   `Rodrix123/Planet_Producciones` y pulsa **Install & Authorize** (o «Install»).
-4. Si tu usuario no es dueño de esa cuenta, GitHub mostrará **Request** en lugar de Install. El
-   dueño tendrá que aprobar la solicitud desde su GitHub antes de continuar.
-5. Nunca elijas «All repositories». Si más adelante quieres revisar o quitar el acceso, está en
+   `LuisCastillo04/Planet_Producciones_deploy` y pulsa **Install & Authorize** (o «Install»).
+4. Nunca elijas «All repositories». Si más adelante quieres revisar o quitar el acceso, está en
    GitHub › Settings › Applications › Installed GitHub Apps.
 
 ### B5. Elegir el repositorio
 
-De vuelta en Cloudflare, selecciona `Planet_Producciones` y pulsa **Begin setup**.
+De vuelta en Cloudflare, selecciona `Planet_Producciones_deploy` y pulsa **Begin setup**.
 
 ### B6. «Set up builds and deployments»: qué significa cada campo
 
@@ -126,46 +161,55 @@ De vuelta en Cloudflare, selecciona `Planet_Producciones` y pulsa **Begin setup*
 | Project name | Nombre del proyecto. Define la dirección `<nombre>.pages.dev`, y Cloudflare no permite renombrarlo después | `planet-producciones`. Si ese nombre ya existe, Cloudflare mostrará la dirección final; anótala |
 | Production branch | La rama que Cloudflare publica como sitio oficial | `produccion-institucional`. Cambia `main`, que viene preseleccionada |
 | Framework preset | Plantillas que llenan el comando y la carpeta para frameworks conocidos | **None**. Si aparece «React (Vite)» u otro preset, cámbialo |
-| Build command | Lo que Cloudflare ejecuta para generar el sitio | `npm run build:institucional --workspace apps/web` |
+| Build command | Lo que Cloudflare ejecuta para generar el sitio | **Versión preliminar (hoy):** `npm run build:institucional:preliminar --workspace apps/web` |
 | Build output directory | La carpeta que Cloudflare sube como sitio, al terminar el comando | `apps/web/institucional/dist` |
 | Root directory (advanced) › Path | Carpeta desde la que se instala y se ejecuta todo | Vacío (la raíz del repositorio). No pongas `apps/web` |
 | Environment variables (advanced) | Variables disponibles durante el build | Una sola: nombre `NODE_VERSION`, valor `24.21.0`, de tipo texto (no secreto) |
 
 - Nunca agregues aquí claves de Supabase, Gmail, Meta, n8n ni Gemini: este sitio no las usa.
-- No uses `npm run build`, `npm run build:web` ni `apps/web/dist`: publicarían el aplicativo, con
-  el login, el cotizador y los paneles.
-- Antes de seguir, compara cada valor con esta tabla. Todavía no pulses **Save and Deploy**.
+- **No uses** `npm run build`, `npm run build:web` ni `apps/web/dist`: publicarían el aplicativo,
+  con el login, el cotizador y los paneles.
+- **No uses** `npm run build:institucional:borrador`: es la revisión local, con marcas amarillas y
+  fotos sin autorizar. En Cloudflare se niega a correr y el build falla, a propósito.
+- Antes de seguir, compara cada valor con esta tabla.
 
-### B7. Primer despliegue (cuando lo autorices)
+### B7. Despliegue (cuando lo autorices)
 
-Al pulsar **Save and Deploy**, Cloudflare crea el proyecto y empieza el primer build. El
-registro muestra estas etapas:
+Al pulsar **Save and Deploy** (o **Retry deployment**, si el proyecto ya existe), Cloudflare
+compila. El registro muestra estas etapas:
 
 1. **Initializing build environment**.
 2. **Cloning git repository**: debe terminar bien. Si aparece `No url found for submodule path`,
-   la parte A no se aplicó en la rama de producción.
+   la corrección de los submódulos no llegó a la rama de producción del fork.
 3. **Building application**: instala las dependencias y ejecuta el comando.
 
-Mientras la dueña no confirme los datos, el build **termina en error a propósito**. Lo correcto es
-ver la lista de pendientes:
+Con el comando preliminar, el build **termina bien y publica**. El registro muestra:
 
 ```
-La web institucional todavía no se puede publicar (...)
+Versión preliminar: se publica con información pendiente (…)
 Sin confirmar (docs/institucional/datos-pendientes.md):
   · TXT  Textos de la página revisados y aprobados
   ...
+Datos que faltan (la página dice «por confirmar»):
+  · C1  Domicilio y dirección del responsable
+  ...
+Auditoría de seguridad de la web institucional (versión preliminar para publicar)
+  OK  1. …
+  Sin problemas de seguridad.
 ```
 
-Entonces Cloudflare marca el despliegue como fallido y **no publica nada**. La dirección
-`.pages.dev` queda reservada, pero todavía no muestra el sitio.
+Esa lista es un aviso, no un error: es lo que todavía hay que confirmar con la dueña. El sitio
+queda en `https://<nombre>.pages.dev`.
 
 | Si el registro muestra… | Significa |
 |---|---|
-| La lista de pendientes («todavía no se puede publicar») | Todo bien configurado. Falta lo de la dueña |
-| `Missing script: "build:institucional"` | La rama elegida no es `produccion-institucional`, o no tiene el commit de la parte A |
-| `No url found for submodule path` | Faltó el `git rm --cached` de la parte A en esa rama |
+| «Versión preliminar: se publica con información pendiente» y la auditoría sin problemas | Todo bien. Se publicó la versión preliminar |
+| `El borrador de revisión no se publica` | El comando es `build:institucional:borrador`. Cámbialo por el preliminar (B6) |
+| `La web institucional todavía no se puede publicar` | El comando es el de la versión definitiva y faltan datos. Usa el preliminar hasta que la dueña confirme |
+| `Missing script: "build:institucional:preliminar"` | La rama de producción del fork no tiene el commit de la versión preliminar. Sincroniza el fork |
+| `No url found for submodule path` | La corrección de los submódulos no llegó al fork |
 | Un error de `npm clean-install` | Envía las últimas líneas del registro |
-| «Auditoría de seguridad de la web institucional» con alguna FALLA | El sitio compiló, pero la auditoría encontró un problema. No se publica nada |
+| La auditoría con alguna FALLA | El sitio compiló, pero la auditoría encontró un problema (un dato privado, una foto sin autorizar, una marca de revisión…). No se publica nada |
 
 ### B8. Ajustes después del primer build
 
@@ -174,9 +218,7 @@ En el proyecto, entra a **Settings › Builds** (o «Builds & deployments»):
 1. **Branch control**:
    - **Production branch**: `produccion-institucional`.
    - Despliegues automáticos de producción: activados. Solo se publica cuando esa rama cambia.
-   - **Preview branch**: **None**. Así ninguna otra rama genera direcciones de prueba. Antes de
-     este ajuste, una vista previa de otra rama fallaría igual: las demás ramas no tienen el
-     comando, y la de trabajo tiene la misma auditoría.
+   - **Preview branch**: **None**. Así ninguna otra rama genera direcciones de prueba.
 2. **Build system version**: 3 (la de los proyectos nuevos).
 3. **Build watch paths**: déjalo como viene.
 4. Revisa que la variable `NODE_VERSION` aparezca en **Variables and Secrets** (o «Environment
@@ -188,23 +230,31 @@ Por ahora no hagas nada de esto:
 - No agregues un dominio propio (Numeral 9).
 - No pulses «Retry deployment» varias veces: cada intento gasta un build del mes.
 
-## Parte C. Publicar cuando la dueña confirme
+## Parte C. Actualizar y pasar a la versión definitiva
 
-1. En la rama de trabajo, se confirman los datos en `apps/web/institucional/contenido.ts`. Se
-   comprueba con `npm run build:institucional --workspace apps/web` y se hace el commit.
-2. Para publicar:
+### Actualizar la versión preliminar
 
-   ```
-   git switch produccion-institucional
-   git merge --ff-only feature/web-institucional-meta
-   git push
-   git switch feature/web-institucional-meta
-   ```
+1. Haz el cambio en la rama de trabajo del original y compruébalo en local:
+   `npm run build:institucional:preliminar --workspace apps/web`.
+2. Publica el cambio en el original y sincroniza el fork ([Sincronizar el fork](#sincronizar-el-fork)).
+3. Cloudflare compila solo y actualiza `https://<nombre>.pages.dev`.
 
-3. Cloudflare compila solo, y el sitio aparece en la dirección `.pages.dev`. La revisión de lo
-   publicado es el Numeral 8.
+### Pasar a la versión definitiva
 
-## Qué enviar después del primer build
+1. Con la dueña, confirma lo que muestra la lista del registro y márcalo en
+   `apps/web/institucional/contenido.ts` (`confirmado: true`; los datos en `null` se completan).
+   Cuando se confirma `COND`, aparecen las condiciones generales de contratación; las fotos
+   aparecen al autorizarlas en `FOTOS`.
+2. Comprueba en local: `npm run build:institucional --workspace apps/web`. Si no compila, muestra
+   qué falta.
+3. Publica el cambio y sincroniza el fork.
+4. En Cloudflare, **Settings › Builds**, cambia el comando de compilación a
+   `npm run build:institucional --workspace apps/web` y relanza el despliegue. La franja de
+   «versión preliminar» y el `noindex` desaparecen solos.
+
+La revisión de lo publicado es el Numeral 8.
+
+## Qué enviar después del despliegue
 
 - La dirección `.pages.dev` que asignó Cloudflare.
 - Las últimas 30 líneas del registro del build, o una captura.
@@ -214,11 +264,12 @@ Nunca envíes contraseñas, tokens ni códigos.
 
 ## Lista de comprobación
 
-- [ ] A1: correo de la cuenta decidido con la dueña, y decisión sobre el repositorio privado.
-- [ ] A2: commit y push hechos, y rama `produccion-institucional` creada.
-- [ ] A3: las tres comprobaciones de la rama dan lo esperado.
+- [ ] A1: correo de la cuenta decidido con la dueña, y decisión sobre los repositorios privados.
+- [ ] Commit con la corrección de los submódulos y la versión preliminar, publicado en el original.
+- [ ] Fork sincronizado y las tres comprobaciones de A2 dan lo esperado.
 - [ ] B2: plan Free, sin método de pago.
-- [ ] B4: aplicación de GitHub autorizada solo para `Planet_Producciones`.
-- [ ] B6: valores revisados uno por uno.
-- [ ] B7: primer build ejecutado; se detiene con la lista de pendientes.
+- [ ] B4: aplicación de GitHub autorizada solo para `Planet_Producciones_deploy`.
+- [ ] B6: valores revisados uno por uno (comando preliminar, no el borrador).
+- [ ] B7: despliegue ejecutado; el registro muestra «Versión preliminar» y la auditoría sin problemas.
 - [ ] B8: vista previa en None y rama de producción correcta.
+- [ ] Al confirmar todo: comando definitivo en Cloudflare (Parte C).
