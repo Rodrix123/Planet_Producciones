@@ -17,36 +17,36 @@
  */
 
 export const PENDIENTES = {
-    TXT: { descripcion: 'Textos de la página revisados y aprobados', confirmado: false },
+    TXT: { descripcion: 'Textos de la página revisados y aprobados', confirmado: true }, // La dueña (31/10/2026)
     A1: { descripcion: 'Nombre comercial', confirmado: true }, // La dueña aprobó la sección «Para qué sirve este sitio» de los términos, que lo muestra (31/10/2026)
     A2: { descripcion: 'Razón social o nombre legal', confirmado: true }, // Certificado de la Cámara de Comercio, 12/08/2026
     A4: { descripcion: 'NIT con dígito de verificación', confirmado: true }, // Certificado de la Cámara de Comercio, 12/08/2026
     B1: { descripcion: 'Descripción de la actividad', confirmado: true }, // La dueña aprobó la sección «Para qué sirve este sitio» de los términos, que la muestra (31/10/2026)
-    B3: { descripcion: 'Tipos de evento que atiende', confirmado: false },
+    B3: { descripcion: 'Tipos de evento que atiende', confirmado: true }, // La dueña (31/10/2026)
     C1: { descripcion: 'Domicilio y dirección del responsable', confirmado: true }, // La dueña (31/10/2026) y el certificado de la Cámara de Comercio, 12/08/2026
     C2: { descripcion: 'Ciudad y departamento', confirmado: true }, // Domicilio del certificado de la Cámara de Comercio
-    C3: { descripcion: 'Ciudades de cobertura', confirmado: false },
+    C3: { descripcion: 'Ciudades de cobertura', confirmado: true }, // La dueña (31/10/2026)
     D1: { descripcion: 'Servicios que se anuncian', confirmado: true }, // La dueña aprobó la sección «Nuestros servicios» (31/10/2026)
     E1: { descripcion: 'Teléfono comercial', confirmado: true }, // Teléfono comercial 1 del certificado de la Cámara de Comercio
-    E2: { descripcion: 'WhatsApp en el número comercial', confirmado: false },
+    E2: { descripcion: 'WhatsApp en el número comercial', confirmado: true }, // La dueña (31/10/2026)
     E3: { descripcion: 'Correo de la empresa', confirmado: true }, // La dueña confirmó el correo que publica la página (31/10/2026)
-    E4: { descripcion: 'Instagram oficial', confirmado: false },
+    E4: { descripcion: 'Instagram oficial', confirmado: true }, // La dueña (31/10/2026)
     G2: { descripcion: 'Cargo o área que atiende consultas y reclamos', confirmado: true }, // La dueña: Mariana, asistente, y su teléfono (31/10/2026)
     G3: { descripcion: 'Correo para solicitudes sobre datos personales', confirmado: true }, // Es el mismo correo de E3, que la dueña confirmó (31/10/2026)
-    G4: { descripcion: 'Fecha de entrada en vigencia de los documentos legales', confirmado: false },
-    G5: { descripcion: 'Proveedores tecnológicos que intervienen (lo confirma el equipo)', confirmado: false },
-    PRIV: { descripcion: 'Política de privacidad revisada y aprobada por la dueña', confirmado: false },
-    TERM: { descripcion: 'Términos y condiciones revisados y aprobados por la dueña', confirmado: false },
+    G4: { descripcion: 'Fecha de entrada en vigencia de los documentos legales', confirmado: true }, // La dueña (31/10/2026)
+    G5: { descripcion: 'Proveedores tecnológicos que intervienen (lo confirma el equipo)', confirmado: true }, // El equipo (31/10/2026)
+    PRIV: { descripcion: 'Política de privacidad revisada y aprobada por la dueña', confirmado: true }, // La dueña (31/10/2026)
+    TERM: { descripcion: 'Términos y condiciones revisados y aprobados por la dueña', confirmado: true }, // La dueña (31/10/2026)
     COND: { descripcion: 'Condiciones generales de contratación de los términos (pago, cancelación y responsabilidades) aprobadas por la dueña', confirmado: true }, // La dueña aprobó la parte contractual (31/10/2026)
-    ELIM: { descripcion: 'Procedimiento de eliminación de datos revisado y aprobado por la dueña', confirmado: false }
+    ELIM: { descripcion: 'Procedimiento de eliminación de datos revisado y aprobado por la dueña', confirmado: true } // La dueña (31/10/2026)
 };
 
 export type IdPendiente = keyof typeof PENDIENTES;
 
 /**
  * Bloques que ni siquiera la versión preliminar publica mientras no estén confirmados: son
- * compromisos o afirmaciones legales que la dueña todavía no aprobó (hoy, las condiciones
- * generales de contratación). Al confirmarlos aparecen en todas las versiones.
+ * compromisos o afirmaciones legales que la dueña todavía no aprobó (las condiciones generales
+ * de contratación, aprobadas el 31/10/2026). Al confirmarlos aparecen en todas las versiones.
  */
 export const SOLO_SI_CONFIRMADO: readonly IdPendiente[] = ['COND'];
 
@@ -56,7 +56,7 @@ interface Dato {
     valor: string | readonly string[] | null;
 }
 
-/** Valores que muestra la página. Los que vienen del equipo siguen sin confirmar. */
+/** Valores que muestra la página. Todos confirmados por la dueña, el equipo o el certificado (31/10/2026). */
 export const DATOS = {
     nombreComercial: { id: 'A1', valor: 'Planet Producciones' },
     actividad: { id: 'B1', valor: 'producción técnica para eventos' },
@@ -84,7 +84,7 @@ export const DATOS = {
     telefonoReclamosInternacional: { id: 'G2', valor: '+573106513283' },
     // El mismo correo de E3: los reclamos tienen plazos legales, así que alguien debe revisarlo.
     correoDatos: { id: 'G3', valor: 'planet.producciones@outlook.com' },
-    fechaVigencia: { id: 'G4', valor: null }
+    fechaVigencia: { id: 'G4', valor: '31 de octubre de 2026' }
 } satisfies Record<string, Dato>;
 
 export type CampoDato = keyof typeof DATOS;

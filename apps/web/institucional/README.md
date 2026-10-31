@@ -11,14 +11,13 @@ Reutiliza el diseño de `../src/style.css` y `../src/landing.css` sin modificarl
 |---|---|
 | `npm run dev:institucional` | Vista local en http://localhost:5174 con lo pendiente resaltado en amarillo. |
 | `npm run dev:institucional -- --host` | Igual, y además muestra una dirección de red para abrirla desde el celular (misma red Wi-Fi). |
-| `npm run build:institucional` | Versión **definitiva**, en `institucional/dist/`. **Se detiene** mientras haya datos sin confirmar o páginas legales que no existan. |
-| `npm run build:institucional:preliminar` | Versión **preliminar**, la que hoy se publica en Cloudflare. Compila aunque falten datos: franja de «versión preliminar», `noindex`, «(por confirmar)» donde falta un dato, sin fotos sin autorizar y sin lo que la dueña no ha aprobado (`SOLO_SI_CONFIRMADO` en `contenido.ts`). Pasa la misma auditoría. |
+| `npm run build:institucional` | Versión **definitiva**, la que publica Cloudflare, en `institucional/dist/`. **Se detiene** mientras haya datos sin confirmar o páginas legales que no existan. |
+| `npm run build:institucional:preliminar` | Versión **preliminar**, la que se publicó en Cloudflare del 24 al 31 de octubre de 2026. Compila aunque falten datos: franja de «versión preliminar», `noindex`, «(por confirmar)» donde falta un dato, sin fotos sin autorizar y sin lo que la dueña no ha aprobado (`SOLO_SI_CONFIRMADO` en `contenido.ts`). Pasa la misma auditoría. |
 | `npm run build:institucional:borrador` | Compila con lo pendiente resaltado, solo para revisar en local. Nunca se publica: dentro de Cloudflare se niega a correr. |
 | `npm run preview:institucional` | Sirve la última compilación en http://localhost:4174. |
 | `npm run typecheck:institucional` | Revisa los tipos de esta carpeta. |
 
-Cloudflare Pages compila desde la raíz del repositorio con
-`npm run build:institucional:preliminar --workspace apps/web` y, cuando todo esté confirmado, con
+Cloudflare Pages compila la rama `feature/web-institucional-meta` desde la raíz del repositorio con
 `npm run build:institucional --workspace apps/web`. La configuración y el porqué están en
 `docs/institucional/configuracion-cloudflare-pages.md`, y los pasos en
 `docs/institucional/guia-cloudflare-pages.md`.

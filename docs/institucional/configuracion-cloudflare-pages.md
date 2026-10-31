@@ -13,7 +13,7 @@ Una sola base de código y tres formas de compilarla (`npm run … --workspace a
 | Comando | Para qué sirve | ¿Se publica? |
 |---|---|---|
 | `build:institucional` | Versión **definitiva**. Se detiene mientras haya datos sin confirmar | **Sí: es el comando de producción** desde el 31 de octubre de 2026 |
-| `build:institucional:preliminar` | Versión **preliminar**. Muestra lo que ya tiene valor, aunque no esté confirmado por la dueña | Fue la publicada del 24 al 31 de octubre. Solo como paso transitorio mientras falten confirmaciones (ver «Versión definitiva») |
+| `build:institucional:preliminar` | Versión **preliminar**. Muestra lo que ya tiene valor, aunque no esté confirmado por la dueña | Fue la publicada del 24 al 31 de octubre. Ya no se usa: todo está confirmado |
 | `build:institucional:borrador` | Revisión local, con todo lo pendiente resaltado en amarillo y las fotos sin autorizar | **Nunca.** Dentro de Cloudflare se niega a correr |
 
 La versión preliminar:
@@ -43,24 +43,18 @@ dueña y conserva la auditoría. Datos incorporados en `apps/web/institucional/c
 | A1 y B1 | «Planet Producciones» y «producción técnica para eventos», tal como los muestra la sección «Para qué sirve este sitio» de los términos | Dueña: aprobó la sección sin cambios |
 | D1 | Servicios que se anuncian | Dueña: aprobó «Nuestros servicios» |
 | COND | Condiciones generales de contratación (sección 6 de los términos) | Dueña: aprobó la parte contractual |
+| G4 | Fecha de entrada en vigencia de la política, los términos y el procedimiento de eliminación: 31 de octubre de 2026 | Dueña |
+| TXT, B3, C3, E2, E4 | Textos del inicio, tipos de evento, cobertura, WhatsApp en el número comercial e Instagram, sin cambios | Dueña |
+| PRIV, TERM, ELIM | Política de privacidad, términos y procedimiento de eliminación, sin cambios | Dueña |
+| G5 | Proveedores tecnológicos de la política, sin cambios | Equipo |
 
 El teléfono de Mariana está en la política de privacidad (ficha del responsable y sección 11,
 «Cómo ejercer sus derechos») y en la página de eliminación de datos. El teléfono comercial sigue en
 el inicio, el pie, los términos y la ficha del responsable.
 
-**Todavía no compila.** Al 31 de octubre, `npm run build:institucional --workspace apps/web` se
-detiene con estos pendientes, que la dueña (o el equipo, en `G5`) no ha confirmado:
-
-- Sin confirmar: `TXT` (textos del inicio), `B3` (tipos de evento), `C3` (cobertura), `E2`
-  (WhatsApp en el número comercial), `E4` (Instagram), `G5` (proveedores tecnológicos, lo confirma
-  el equipo), `PRIV`, `TERM` y `ELIM` (aprobación de cada documento legal).
-- Falta el dato: `G4`, la fecha de entrada en vigencia de los documentos legales. No se inventa.
-
-Mientras tanto, si Cloudflare usa el comando definitivo, cada build se detiene con esa lista y no
-publica nada: el sitio sigue mostrando el último despliegue que funcionó (la versión preliminar).
-Si se quiere que lo ya confirmado salga en línea antes, se puede dejar por un tiempo
-`build:institucional:preliminar` en la rama `feature/web-institucional-meta` y cambiar al comando
-definitivo cuando la lista quede vacía.
+**Compila.** Con todo confirmado, `npm run build:institucional --workspace apps/web` termina con
+la auditoría estricta en 11 de 11 y sin lista de pendientes. Ninguna foto está autorizada, así que
+el sitio no tiene galería. Una foto se agrega autorizándola en `FOTOS`.
 
 ## Valores
 
@@ -69,7 +63,7 @@ definitivo cuando la lista quede vacía.
 | Repositorio de GitHub | `LuisCastillo04/Planet_Producciones_deploy` (fork). El original es `Rodrix123/Planet_Producciones` | Cloudflare lee el fork; los cambios llegan del original con los pasos de la [guía](guia-cloudflare-pages.md#sincronizar-el-fork) |
 | Rama de producción | `feature/web-institucional-meta` | La única rama de desarrollo y despliegue, con el mismo nombre en el original y en el fork. Antes era `produccion-institucional`, que ya no se usa |
 | Framework preset | `None` | El sitio usa su propia configuración de Vite, no un framework con preset |
-| Comando de compilación | `npm run build:institucional --workspace apps/web` | Versión definitiva, script de `apps/web/package.json`. Mientras haya pendientes se detiene sin publicar (ver «Versión definitiva»). **No es** `build:institucional:borrador`: ese es de revisión local y publicaría marcas amarillas y fotos sin autorizar |
+| Comando de compilación | `npm run build:institucional --workspace apps/web` | Versión definitiva, script de `apps/web/package.json`. Si en el futuro algo queda sin confirmar, se detiene sin publicar. **No es** `build:institucional:borrador`: ese es de revisión local y publicaría marcas amarillas y fotos sin autorizar |
 | Directorio de salida | `apps/web/institucional/dist` | `build.outDir` de `apps/web/vite.config.institucional.ts` |
 | Directorio raíz (avanzado) | Vacío o `/`, es decir, la raíz del repositorio | Ver «Por qué la raíz del repositorio» |
 | Variables de entorno | Solo `NODE_VERSION` = `24.21.0` | Versión con la que se compila en el equipo y en la simulación |
@@ -133,7 +127,7 @@ will begin from this location»
 1. Confirmar con la dueña los pendientes de la lista y marcarlos en
    `apps/web/institucional/contenido.ts` (`confirmado: true`; los datos en `null` se completan).
    Ver «Cómo se publica un dato» en el [README del sitio](../../apps/web/institucional/README.md).
-   **Hecho en parte el 31 de octubre**; lo que falta está en «Versión definitiva».
+   **Hecho el 31 de octubre** (ver «Versión definitiva»).
 2. Comprobar en local que la definitiva compila:
    `npm run build:institucional --workspace apps/web`. Si no compila, muestra qué falta.
 3. En el proyecto existente `planet-producciones-deploy`, **Settings › Builds**: rama de producción
@@ -254,18 +248,17 @@ despliegue remoto, y no se hizo ningún despliegue):
 | Prueba | Resultado |
 |---|---|
 | `typecheck:institucional` | Sin errores |
-| `build:institucional` (definitiva, también con `CF_PAGES=1 CI=true`) | Se detiene, como debe, con los pendientes de «Versión definitiva» (9 sin confirmar y la fecha de vigencia) |
-| Definitiva simulada: la misma configuración con esos pendientes marcados solo en memoria y una fecha ficticia, con salida fuera del repositorio | Compila. 11 de 11 controles en modo estricto. 5 páginas, `_headers`, CSS, JS y logo. Ninguna franja, `noindex`, «(por confirmar)», «Pendiente» ni marca de borrador |
-| `build:institucional:preliminar` | Compila, 11 de 11 controles. Muestra la dirección, a Mariana y su teléfono, y la sección 6 de los términos; solo la fecha de vigencia dice «(por confirmar)» |
+| `build:institucional` antes de las últimas confirmaciones | Se detenía, como debe, con 9 pendientes sin confirmar y la fecha de vigencia |
+| `build:institucional` con todo confirmado (con `CF_PAGES=1 CI=true` y Node 24.21.0) | Compila. 11 de 11 controles en modo estricto. 5 páginas, `_headers`, CSS, JS y logo. Ninguna franja, `noindex`, «(por confirmar)», «Pendiente» ni marca de borrador. «Vigente desde: 31 de octubre de 2026» en las 3 páginas legales |
+| `build:institucional:preliminar` (antes de las últimas confirmaciones) | Compilaba, 11 de 11 controles, con la dirección, Mariana y su teléfono y la sección 6 de los términos |
 | `build:institucional:borrador` | Compila con sus avisos de siempre. Con `CF_PAGES=1` se sigue negando |
 | Pruebas negativas de la auditoría | 40 de 40 detectadas, con la lista de teléfonos ya ampliada (un teléfono no autorizado sigue bloqueando) |
-| Edge sin ventana sobre la definitiva simulada, servida como Pages (rutas sin `.html`, 404 y `_headers`) | Inicio, privacidad, términos y eliminación responden 200; `/no-existe`, rutas anidadas, `/cotizador.html` y `/login` responden 404 con la página propia. Sin violaciones de la CSP, Font Awesome carga, sin desbordes a 360 px. Un solo correo en todo el sitio; enlaces `tel:` al comercial y al de reclamos según la sección |
+| Edge sin ventana sobre la definitiva, servida como Pages (rutas sin `.html`, 404 y `_headers`) | Inicio, privacidad, términos y eliminación responden 200; `/no-existe`, rutas anidadas, `/cotizador.html` y `/login` responden 404 con la página propia. Sin violaciones de la CSP, Font Awesome carga, sin desbordes a 360 px. Un solo correo en todo el sitio; enlaces `tel:` al comercial y al de reclamos según la sección |
 | Aplicativo, servidor y paquetes | Ningún archivo suyo cambió. `typecheck` de `apps/web` y `apps/server` y `check-types` de `packages/api` sin errores; `vite build` del aplicativo bien; pruebas del servidor (migración de WhatsApp) 30 de 30. `check-types` de `packages/db` ya fallaba antes, por una variable sin usar en `packages/db/src/eventos.ts` (commit `cfe7617`) |
 
 ## Pendiente para otros numerales
 
 - **Numeral 7**:
-  - confirmar con la dueña los pendientes de «Versión definitiva», incluida la fecha de vigencia;
   - commit y push de la versión definitiva en `feature/web-institucional-meta` y sincronización de
     esa misma rama en el fork;
   - en el proyecto existente, rama de producción `feature/web-institucional-meta` y comando

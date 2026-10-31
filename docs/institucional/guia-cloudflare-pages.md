@@ -264,10 +264,9 @@ dirección `https://planet-producciones-deploy.pages.dev`.
 
 1. Con la dueña, confirma lo que muestra la lista del build definitivo y márcalo en
    `apps/web/institucional/contenido.ts` (`confirmado: true`; los datos en `null` se completan).
-   El 31 de octubre se incorporaron la dirección, Mariana y su teléfono, el correo, los servicios
-   y las condiciones de contratación. Lo que falta está en
-   [configuracion-cloudflare-pages.md, «Versión definitiva»](configuracion-cloudflare-pages.md#versión-definitiva-31-de-octubre-de-2026),
-   incluida la fecha de vigencia.
+   **Hecho el 31 de octubre:** la dueña y el equipo confirmaron todo, incluida la fecha de
+   vigencia (detalle en
+   [configuracion-cloudflare-pages.md, «Versión definitiva»](configuracion-cloudflare-pages.md#versión-definitiva-31-de-octubre-de-2026)).
 2. Comprueba en local: `npm run build:institucional --workspace apps/web`. Debe terminar con
    «Sin problemas de seguridad». Si no compila, muestra qué falta.
 3. Haz commit y push en `feature/web-institucional-meta` del original.
@@ -307,11 +306,8 @@ cambio en esa rama del fork.
 3. Revisa el registro (B7) y el sitio. La franja de «versión preliminar» y el `noindex`
    desaparecen.
 
-Mientras la lista de pendientes no esté vacía, el build definitivo se detiene y Cloudflare sigue
-mostrando el último despliegue que funcionó (la versión preliminar). Si quieres que lo ya
-confirmado salga en línea mientras tanto, en C2 deja por un tiempo el comando
-`npm run build:institucional:preliminar --workspace apps/web` con la nueva rama, y cámbialo al
-definitivo cuando todo esté confirmado.
+Si en el futuro algo vuelve a quedar sin confirmar, el build definitivo se detiene y Cloudflare
+sigue mostrando el último despliegue que funcionó.
 
 ### Actualizar el sitio después
 
@@ -340,8 +336,8 @@ Nunca envíes contraseñas, tokens ni códigos.
 - [ ] B6: valores revisados uno por uno (comando preliminar, no el borrador).
 - [ ] B7: despliegue ejecutado; el registro muestra «Versión preliminar» y la auditoría sin problemas.
 - [ ] B8: vista previa en None y rama de producción correcta.
-- [ ] C1: pendientes confirmados con la dueña (incluida la fecha de vigencia) y build definitivo
-  sin problemas en local.
+- [x] C1: pendientes confirmados con la dueña y el equipo (incluida la fecha de vigencia) y build
+  definitivo sin problemas en local (31 de octubre).
 - [ ] C2: en `planet-producciones-deploy`, rama de producción `feature/web-institucional-meta` y
   comando `npm run build:institucional --workspace apps/web`.
 - [ ] C3: misma rama sincronizada en el fork; el registro muestra «(versión para publicar)» y «Sin
