@@ -6,9 +6,19 @@ on:
   pull_request:
     branches: [main]
 
+# Cancela la ejecución anterior de la misma rama si llega un push nuevo.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# El CI solo necesita leer el repositorio.
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -17,11 +27,33 @@ jobs:
           node-version: 20
           cache: "npm"
 
+      # npm ci respeta exactamente package-lock.json (más rápido y reproducible).
       - name: Instalar dependencias
-        run: npm install
+        run: npm ci
 
-      - name: Typecheck
+      - name: Verificar que no se suban archivos .env
+        run: |
+          if git ls-files | grep -E '(^|/)\.env(\.local)?$'; then
+            echo "::error::Hay archivos .env versionados. Quitalos del repositorio."
+            exit 1
+          fi
+
+      - name: Typecheck (server y web)
         run: npm run typecheck
+
+      - name: Typecheck (packages/api)
+        run: npm run check-types --workspace packages/api
+
+      - name: Tests del servidor
+        run: npm test --workspace apps/server
+
+      - name: Tests de packages/api
+        run: npm test --workspace packages/api
 
       - name: Build
         run: npm run build
+
+      # Informativo: no bloquea el CI, solo deja el reporte en el log.
+      - name: Auditoría de dependencias
+        run: npm audit --audit-level=high
+        continue-on-error: true
