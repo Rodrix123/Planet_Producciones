@@ -34,7 +34,7 @@ export default defineConfig({
             paginas: PAGINAS,
             paginasLegales: PAGINAS_LEGALES,
             correos: valores('correo', 'correoDatos'),
-            telefonos: valores('telefonoInternacional', 'whatsappNumero').map((telefono) => telefono.replace(/\D/g, '')),
+            telefonos: valores('telefonoInternacional', 'whatsappNumero', 'telefonoReclamosInternacional').map((telefono) => telefono.replace(/\D/g, '')),
             numerosPermitidos: valores('nit'),
             dominiosEnlaces: ['www.instagram.com', 'wa.me', 'www.sic.gov.co'],
             dominiosEstilos: ['cdnjs.cloudflare.com'],

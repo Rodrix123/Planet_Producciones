@@ -18,26 +18,26 @@
 
 export const PENDIENTES = {
     TXT: { descripcion: 'Textos de la página revisados y aprobados', confirmado: false },
-    A1: { descripcion: 'Nombre comercial', confirmado: false },
+    A1: { descripcion: 'Nombre comercial', confirmado: true }, // La dueña aprobó la sección «Para qué sirve este sitio» de los términos, que lo muestra (31/10/2026)
     A2: { descripcion: 'Razón social o nombre legal', confirmado: true }, // Certificado de la Cámara de Comercio, 12/08/2026
     A4: { descripcion: 'NIT con dígito de verificación', confirmado: true }, // Certificado de la Cámara de Comercio, 12/08/2026
-    B1: { descripcion: 'Descripción de la actividad', confirmado: false },
+    B1: { descripcion: 'Descripción de la actividad', confirmado: true }, // La dueña aprobó la sección «Para qué sirve este sitio» de los términos, que la muestra (31/10/2026)
     B3: { descripcion: 'Tipos de evento que atiende', confirmado: false },
-    C1: { descripcion: 'Domicilio y dirección del responsable', confirmado: false },
+    C1: { descripcion: 'Domicilio y dirección del responsable', confirmado: true }, // La dueña (31/10/2026) y el certificado de la Cámara de Comercio, 12/08/2026
     C2: { descripcion: 'Ciudad y departamento', confirmado: true }, // Domicilio del certificado de la Cámara de Comercio
     C3: { descripcion: 'Ciudades de cobertura', confirmado: false },
-    D1: { descripcion: 'Servicios que se anuncian', confirmado: false },
+    D1: { descripcion: 'Servicios que se anuncian', confirmado: true }, // La dueña aprobó la sección «Nuestros servicios» (31/10/2026)
     E1: { descripcion: 'Teléfono comercial', confirmado: true }, // Teléfono comercial 1 del certificado de la Cámara de Comercio
     E2: { descripcion: 'WhatsApp en el número comercial', confirmado: false },
-    E3: { descripcion: 'Correo de la empresa', confirmado: false },
+    E3: { descripcion: 'Correo de la empresa', confirmado: true }, // La dueña confirmó el correo que publica la página (31/10/2026)
     E4: { descripcion: 'Instagram oficial', confirmado: false },
-    G2: { descripcion: 'Cargo o área que atiende consultas y reclamos', confirmado: false },
-    G3: { descripcion: 'Correo para solicitudes sobre datos personales', confirmado: false },
+    G2: { descripcion: 'Cargo o área que atiende consultas y reclamos', confirmado: true }, // La dueña: Mariana, asistente, y su teléfono (31/10/2026)
+    G3: { descripcion: 'Correo para solicitudes sobre datos personales', confirmado: true }, // Es el mismo correo de E3, que la dueña confirmó (31/10/2026)
     G4: { descripcion: 'Fecha de entrada en vigencia de los documentos legales', confirmado: false },
     G5: { descripcion: 'Proveedores tecnológicos que intervienen (lo confirma el equipo)', confirmado: false },
     PRIV: { descripcion: 'Política de privacidad revisada y aprobada por la dueña', confirmado: false },
     TERM: { descripcion: 'Términos y condiciones revisados y aprobados por la dueña', confirmado: false },
-    COND: { descripcion: 'Condiciones generales de contratación de los términos (pago, cancelación y responsabilidades) aprobadas por la dueña', confirmado: false },
+    COND: { descripcion: 'Condiciones generales de contratación de los términos (pago, cancelación y responsabilidades) aprobadas por la dueña', confirmado: true }, // La dueña aprobó la parte contractual (31/10/2026)
     ELIM: { descripcion: 'Procedimiento de eliminación de datos revisado y aprobado por la dueña', confirmado: false }
 };
 
@@ -68,7 +68,7 @@ export const DATOS = {
     telefono: { id: 'E1', valor: '+57 312 781 70 72' },
     telefonoInternacional: { id: 'E1', valor: '+573127817072' },
     whatsappNumero: { id: 'E2', valor: '573127817072' },
-    // Correo comercial que figura en el certificado de la Cámara de Comercio. La dueña debe confirmar que es el que se publica.
+    // Correo comercial que figura en el certificado de la Cámara de Comercio; la dueña confirmó que es el que se publica.
     correo: { id: 'E3', valor: 'planet.producciones@outlook.com' },
     instagramEnlace: { id: 'E4', valor: 'https://www.instagram.com/planet.producciones/' },
     instagramUsuario: { id: 'E4', valor: '@planet.producciones' },
@@ -76,11 +76,13 @@ export const DATOS = {
     // confirme la dueña o compruebe el certificado de la Cámara de Comercio (12/08/2026).
     razonSocial: { id: 'A2', valor: 'PLANETT PRODUCCIONES S.A.S.' }, // con doble T, como está registrada
     nit: { id: 'A4', valor: '901.668.571-1' }, // con puntos, como figura en el contrato; la auditoría solo deja publicar este texto exacto
-    // Domicilio: sigue en null a propósito. La dirección del certificado parece una vivienda y el repositorio es
-    // público; la dueña decide si se publica completa o solo la ciudad (pregunta 5 de la solicitud).
-    domicilio: { id: 'C1', valor: null },
-    areaResponsable: { id: 'G2', valor: null },
-    // Propuesta: el mismo correo de E3. La dueña debe aprobarlo y comprometerse a revisarlo (los reclamos tienen plazos legales).
+    // «Dirección del domicilio principal» del certificado, escrita igual; la dueña decidió publicarla completa.
+    domicilio: { id: 'C1', valor: 'CR 17 4 33 AP 301' },
+    // Atención de consultas y reclamos (Decreto 1377 de 2013, art. 13). La dueña no le asignó otras funciones.
+    areaResponsable: { id: 'G2', valor: 'Mariana, asistente de Planet Producciones' },
+    telefonoReclamos: { id: 'G2', valor: '+57 310 651 3283' },
+    telefonoReclamosInternacional: { id: 'G2', valor: '+573106513283' },
+    // El mismo correo de E3: los reclamos tienen plazos legales, así que alguien debe revisarlo.
     correoDatos: { id: 'G3', valor: 'planet.producciones@outlook.com' },
     fechaVigencia: { id: 'G4', valor: null }
 } satisfies Record<string, Dato>;

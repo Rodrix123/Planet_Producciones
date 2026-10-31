@@ -1,9 +1,10 @@
 # Configuración de Cloudflare Pages
 
 Valores para conectar la web institucional a Cloudflare Pages Free (Numeral 6, 15 de octubre de
-2026; actualizados el 24 de octubre con la versión preliminar). Salen de los archivos del proyecto y
-se comprobaron con una compilación en Linux y con el emulador oficial de Cloudflare. Las pruebas
-hechas son locales: que el despliegue en Cloudflare funcione solo se sabe viendo su registro.
+2026; actualizados el 24 de octubre con la versión preliminar y el 31 de octubre con la versión
+definitiva y la rama única). Salen de los archivos del proyecto y se comprobaron con una compilación
+en Linux y con el emulador oficial de Cloudflare. Las pruebas hechas son locales: que el despliegue
+en Cloudflare funcione solo se sabe viendo su registro.
 
 ## Tres versiones del sitio
 
@@ -11,48 +12,85 @@ Una sola base de código y tres formas de compilarla (`npm run … --workspace a
 
 | Comando | Para qué sirve | ¿Se publica? |
 |---|---|---|
-| `build:institucional:preliminar` | Versión **preliminar**. Muestra lo que ya tiene valor, aunque no esté confirmado por la dueña | **Sí, es la que usa Cloudflare por ahora** |
-| `build:institucional` | Versión **definitiva**. Se detiene mientras haya datos sin confirmar | Sí, cuando todo esté confirmado |
+| `build:institucional` | Versión **definitiva**. Se detiene mientras haya datos sin confirmar | **Sí: es el comando de producción** desde el 31 de octubre de 2026 |
+| `build:institucional:preliminar` | Versión **preliminar**. Muestra lo que ya tiene valor, aunque no esté confirmado por la dueña | Fue la publicada del 24 al 31 de octubre. Solo como paso transitorio mientras falten confirmaciones (ver «Versión definitiva») |
 | `build:institucional:borrador` | Revisión local, con todo lo pendiente resaltado en amarillo y las fotos sin autorizar | **Nunca.** Dentro de Cloudflare se niega a correr |
 
 La versión preliminar:
 - lleva en todas las páginas, arriba, una franja discreta: «Versión preliminar: la información de
   este sitio está en revisión y puede cambiar»;
 - lleva `noindex`, para que los buscadores no guarden información sin confirmar;
-- escribe «(por confirmar)» donde falta un dato (hoy: dirección, área que atiende reclamos y fecha
-  de vigencia), en vez de inventarlo;
+- escribe «(por confirmar)» donde falta un dato (al 31 de octubre, solo la fecha de vigencia), en
+  vez de inventarlo;
 - **no incluye las fotos sin autorizar** (hoy ninguna está autorizada, así que no hay galería);
-- **no incluye las condiciones generales de contratación** (sección 6 de los términos), porque son
-  compromisos que la dueña todavía no aprobó. Aparecen cuando se confirma `COND`;
+- no incluía las condiciones generales de contratación (sección 6 de los términos) mientras la
+  dueña no las aprobara. `COND` se confirmó el 31 de octubre y ya aparecen en todas las versiones;
 - sigue pasando los 11 controles de la auditoría. Una marca de revisión, una foto sin autorizar o
   un dato privado hacen fallar el build igual que en la definitiva.
+
+La versión definitiva no lleva la franja ni `noindex`, y la auditoría falla si alguno aparece.
+
+## Versión definitiva (31 de octubre de 2026)
+
+La versión definitiva está preparada: el comando es el correcto, usa los datos aprobados por la
+dueña y conserva la auditoría. Datos incorporados en `apps/web/institucional/contenido.ts`:
+
+| ID | Dato | Respaldo |
+|---|---|---|
+| C1 | Dirección: `CR 17 4 33 AP 301` («Dirección del domicilio principal») | Dueña y certificado de la Cámara de Comercio (12/08/2026), con el texto exacto |
+| G2 | Atiende consultas y reclamos: Mariana, asistente de Planet Producciones. Teléfono +57 310 651 3283 | Dueña |
+| E3 y G3 | Correo `planet.producciones@outlook.com`, sin cambios | Dueña: el correo publicado es correcto |
+| A1 y B1 | «Planet Producciones» y «producción técnica para eventos», tal como los muestra la sección «Para qué sirve este sitio» de los términos | Dueña: aprobó la sección sin cambios |
+| D1 | Servicios que se anuncian | Dueña: aprobó «Nuestros servicios» |
+| COND | Condiciones generales de contratación (sección 6 de los términos) | Dueña: aprobó la parte contractual |
+
+El teléfono de Mariana está en la política de privacidad (ficha del responsable y sección 11,
+«Cómo ejercer sus derechos») y en la página de eliminación de datos. El teléfono comercial sigue en
+el inicio, el pie, los términos y la ficha del responsable.
+
+**Todavía no compila.** Al 31 de octubre, `npm run build:institucional --workspace apps/web` se
+detiene con estos pendientes, que la dueña (o el equipo, en `G5`) no ha confirmado:
+
+- Sin confirmar: `TXT` (textos del inicio), `B3` (tipos de evento), `C3` (cobertura), `E2`
+  (WhatsApp en el número comercial), `E4` (Instagram), `G5` (proveedores tecnológicos, lo confirma
+  el equipo), `PRIV`, `TERM` y `ELIM` (aprobación de cada documento legal).
+- Falta el dato: `G4`, la fecha de entrada en vigencia de los documentos legales. No se inventa.
+
+Mientras tanto, si Cloudflare usa el comando definitivo, cada build se detiene con esa lista y no
+publica nada: el sitio sigue mostrando el último despliegue que funcionó (la versión preliminar).
+Si se quiere que lo ya confirmado salga en línea antes, se puede dejar por un tiempo
+`build:institucional:preliminar` en la rama `feature/web-institucional-meta` y cambiar al comando
+definitivo cuando la lista quede vacía.
 
 ## Valores
 
 | Campo en Cloudflare | Valor | De dónde sale |
 |---|---|---|
 | Repositorio de GitHub | `LuisCastillo04/Planet_Producciones_deploy` (fork). El original es `Rodrix123/Planet_Producciones` | Cloudflare lee el fork; los cambios llegan del original con los pasos de la [guía](guia-cloudflare-pages.md#sincronizar-el-fork) |
-| Rama de producción | `produccion-institucional` | Rama exclusiva del fork para publicar |
+| Rama de producción | `feature/web-institucional-meta` | La única rama de desarrollo y despliegue, con el mismo nombre en el original y en el fork. Antes era `produccion-institucional`, que ya no se usa |
 | Framework preset | `None` | El sitio usa su propia configuración de Vite, no un framework con preset |
-| Comando de compilación | `npm run build:institucional:preliminar --workspace apps/web` | Script de `apps/web/package.json`. **No es** `build:institucional:borrador`: ese es de revisión local y publicaría marcas amarillas y fotos sin autorizar |
+| Comando de compilación | `npm run build:institucional --workspace apps/web` | Versión definitiva, script de `apps/web/package.json`. Mientras haya pendientes se detiene sin publicar (ver «Versión definitiva»). **No es** `build:institucional:borrador`: ese es de revisión local y publicaría marcas amarillas y fotos sin autorizar |
 | Directorio de salida | `apps/web/institucional/dist` | `build.outDir` de `apps/web/vite.config.institucional.ts` |
-| Directorio raíz (avanzado) | Vacío, es decir, la raíz del repositorio | Ver «Por qué la raíz del repositorio» |
+| Directorio raíz (avanzado) | Vacío o `/`, es decir, la raíz del repositorio | Ver «Por qué la raíz del repositorio» |
 | Variables de entorno | Solo `NODE_VERSION` = `24.21.0` | Versión con la que se compila en el equipo y en la simulación |
 | Despliegues de vista previa (preview) | Ninguno (`None`) | Así ninguna otra rama (bot de WhatsApp, cotizador, paneles) genera direcciones públicas de prueba |
-| Rutas de compilación (build watch paths) | Las que trae por defecto | La rama de producción es solo para este sitio |
-| Nombre del proyecto | Sugerido: `planet-producciones` | Define la dirección `<nombre>.pages.dev`; si está libre se ve al crearlo, en el Numeral 7 |
+| Rutas de compilación (build watch paths) | Las que trae por defecto | Cada push a la rama del fork compila; con el plan gratuito (500 builds al mes) alcanza |
+| Nombre del proyecto | `planet-producciones-deploy`, ya creado: `https://planet-producciones-deploy.pages.dev` | Se publica actualizando este proyecto. No se crea otro ni se cambia la dirección |
 
 **Variables de entorno.** El sitio no lee ninguna. Nunca se agregan claves de Supabase, Gmail,
 Meta, n8n ni Gemini: este build no las usa, y una variable `VITE_` podría terminar dentro del
 JavaScript publicado. `NODE_VERSION` fija la versión de Node para que el build no cambie cuando
 Cloudflare actualice la suya, que hoy es la 22.16.0. El build también se probó con esa versión.
 
-**Rama de producción.** Se recomienda una rama exclusiva, que solo se actualiza cuando la dueña
-aprueba un cambio. Así publicar es un paso deliberado, y los avances en otras ramas no gastan
-compilaciones (el plan gratuito permite 500 al mes). Vive en el fork, y se actualiza desde el
-original con los pasos de la [guía](guia-cloudflare-pages.md#sincronizar-el-fork). También se
-podría publicar directamente `feature/web-institucional-meta`, pero cada push a esa rama
-publicaría.
+**Rama de producción.** Desde el 31 de octubre se desarrolla, se verifica y se publica desde una
+sola rama, `feature/web-institucional-meta`. No se usan ramas adicionales ni se fusionan ramas.
+Publicar sigue siendo un paso deliberado: el equipo trabaja en esa rama del original, y Cloudflare
+solo compila cuando esa misma rama del fork se sincroniza con los pasos de la
+[guía](guia-cloudflare-pages.md#sincronizar-el-fork). Además, la versión definitiva se detiene sola
+si algo no está confirmado.
+
+Del 24 al 31 de octubre se publicó la rama `produccion-institucional` del fork con la versión
+preliminar. Esa rama ya no se actualiza ni se usa para publicar.
 
 ## Por qué la raíz del repositorio
 
@@ -73,31 +111,37 @@ will begin from this location»
   el cotizador y los paneles no se compilan ni se publican.
 - Nunca se debe usar `npm run build`, `npm run build:web` ni `apps/web/dist`: generan el aplicativo
   completo, con el inicio de sesión, el cotizador y los paneles.
-- Si el comando es el correcto, el registro del build en Cloudflare muestra «Versión preliminar: se
-  publica con información pendiente» con la lista de lo que falta, y después «Auditoría de
-  seguridad de la web institucional (versión preliminar para publicar)».
+- Con el comando definitivo y todo confirmado, el registro del build en Cloudflare muestra
+  «Auditoría de seguridad de la web institucional (versión para publicar)» y «Sin problemas de
+  seguridad». Si falta algo, muestra «La web institucional todavía no se puede publicar» con la
+  lista. Con el comando preliminar mostraba «Versión preliminar: se publica con información
+  pendiente» y «(versión preliminar para publicar)».
 - El registro de instalación muestra avisos de `npm audit` sobre dependencias de desarrollo del
   monorepo. No llegan al sitio, que solo publica archivos estáticos.
 
 ## Qué pasa en cada build
 
-- **Preliminar** (la de hoy): compila y publica aunque falten datos. El registro de Cloudflare
-  muestra la lista de pendientes como aviso. Esa lista es la tarea pendiente con la dueña.
-- **Definitiva**: mientras falten datos o aprobaciones, se detiene con la misma lista y Cloudflare
-  no publica nada. Es la protección para no dar por definitivo algo sin confirmar.
-- Un build que falla no publica nada nuevo.
+- **Definitiva** (el comando de producción): mientras falten datos o aprobaciones, se detiene con
+  la lista y Cloudflare no publica nada. Es la protección para no dar por definitivo algo sin
+  confirmar. Con todo confirmado, publica sin franja ni `noindex`.
+- **Preliminar** (la publicada hasta el 31 de octubre): compila y publica aunque falten datos. El
+  registro de Cloudflare muestra la lista de pendientes como aviso.
+- Un build que falla no publica nada nuevo: queda en línea el último despliegue que funcionó.
 
 ### Pasar de la preliminar a la definitiva
 
 1. Confirmar con la dueña los pendientes de la lista y marcarlos en
    `apps/web/institucional/contenido.ts` (`confirmado: true`; los datos en `null` se completan).
    Ver «Cómo se publica un dato» en el [README del sitio](../../apps/web/institucional/README.md).
+   **Hecho en parte el 31 de octubre**; lo que falta está en «Versión definitiva».
 2. Comprobar en local que la definitiva compila:
    `npm run build:institucional --workspace apps/web`. Si no compila, muestra qué falta.
-3. Publicar el cambio en la rama de producción del fork (ver la guía).
-4. En Cloudflare, **Settings › Builds**, cambiar el comando de compilación a
-   `npm run build:institucional --workspace apps/web` y relanzar el despliegue. La franja de
-   «versión preliminar» y el `noindex` desaparecen solos.
+3. En el proyecto existente `planet-producciones-deploy`, **Settings › Builds**: rama de producción
+   `feature/web-institucional-meta` y comando `npm run build:institucional --workspace apps/web`
+   (pasos en la [guía, parte C](guia-cloudflare-pages.md#parte-c-pasar-a-la-versión-definitiva)).
+4. Hacer commit y push en `feature/web-institucional-meta` del original y sincronizar esa misma rama
+   en el fork. Cloudflare compila solo. La franja de «versión preliminar» y el `noindex`
+   desaparecen.
 
 ## Submódulos sin `.gitmodules` (resuelto en el índice)
 
@@ -125,9 +169,10 @@ Eso fue lo que ocurrió en el primer despliegue: el build falló al clonar, ante
 **Arreglo**: sacar las tres entradas del índice con `git rm --cached`. Las carpetas del equipo
 no se borran, y `.gitignore` ya ignora `.claude/worktrees/` para que no se vuelvan a subir. El
 24 de octubre se aplicó en el índice de `feature/web-institucional-meta`: `git ls-files --stage`
-ya no muestra ninguna entrada de modo 160000 y `git submodule status` ya no da error. **Queda
-pendiente el commit y su llegada al fork.** Conviene hacer lo mismo en `Pagina-Principal`, pero
-solo la rama que se publica afecta a Cloudflare.
+ya no muestra ninguna entrada de modo 160000 y `git submodule status` ya no da error. El arreglo
+quedó en el commit `6b69ad3` de `feature/web-institucional-meta` y llega al fork al sincronizar esa
+rama. Conviene hacer lo mismo en `Pagina-Principal`, pero solo la rama que se publica afecta a
+Cloudflare.
 
 ## Rutas
 
@@ -203,11 +248,28 @@ despliegue remoto):
 | Edge sobre `vite preview` | Franja visible de 30 px (46 px en celular), `noindex`, «(por confirmar)» en cursiva gris, sin desbordes ni errores |
 | Aplicativo (cotizador, login, paneles) | No se modificó ningún archivo suyo; `typecheck` y `vite build` completos siguen bien |
 
+Verificación de la versión definitiva (31 de octubre, en el equipo; no es una prueba del
+despliegue remoto, y no se hizo ningún despliegue):
+
+| Prueba | Resultado |
+|---|---|
+| `typecheck:institucional` | Sin errores |
+| `build:institucional` (definitiva, también con `CF_PAGES=1 CI=true`) | Se detiene, como debe, con los pendientes de «Versión definitiva» (9 sin confirmar y la fecha de vigencia) |
+| Definitiva simulada: la misma configuración con esos pendientes marcados solo en memoria y una fecha ficticia, con salida fuera del repositorio | Compila. 11 de 11 controles en modo estricto. 5 páginas, `_headers`, CSS, JS y logo. Ninguna franja, `noindex`, «(por confirmar)», «Pendiente» ni marca de borrador |
+| `build:institucional:preliminar` | Compila, 11 de 11 controles. Muestra la dirección, a Mariana y su teléfono, y la sección 6 de los términos; solo la fecha de vigencia dice «(por confirmar)» |
+| `build:institucional:borrador` | Compila con sus avisos de siempre. Con `CF_PAGES=1` se sigue negando |
+| Pruebas negativas de la auditoría | 40 de 40 detectadas, con la lista de teléfonos ya ampliada (un teléfono no autorizado sigue bloqueando) |
+| Edge sin ventana sobre la definitiva simulada, servida como Pages (rutas sin `.html`, 404 y `_headers`) | Inicio, privacidad, términos y eliminación responden 200; `/no-existe`, rutas anidadas, `/cotizador.html` y `/login` responden 404 con la página propia. Sin violaciones de la CSP, Font Awesome carga, sin desbordes a 360 px. Un solo correo en todo el sitio; enlaces `tel:` al comercial y al de reclamos según la sección |
+| Aplicativo, servidor y paquetes | Ningún archivo suyo cambió. `typecheck` de `apps/web` y `apps/server` y `check-types` de `packages/api` sin errores; `vite build` del aplicativo bien; pruebas del servidor (migración de WhatsApp) 30 de 30. `check-types` de `packages/db` ya fallaba antes, por una variable sin usar en `packages/db/src/eventos.ts` (commit `cfe7617`) |
+
 ## Pendiente para otros numerales
 
 - **Numeral 7**:
-  - commit del arreglo de los submódulos y de la versión preliminar, y su llegada al fork;
-  - cambiar el comando de compilación en Cloudflare y comprobar el primer despliegue real;
+  - confirmar con la dueña los pendientes de «Versión definitiva», incluida la fecha de vigencia;
+  - commit y push de la versión definitiva en `feature/web-institucional-meta` y sincronización de
+    esa misma rama en el fork;
+  - en el proyecto existente, rama de producción `feature/web-institucional-meta` y comando
+    definitivo, y comprobar el primer despliegue real;
   - la vista previa de otras ramas, en `None`.
   - Pages también funciona con repositorios privados, como se recomendó en el
     [informe de seguridad](auditoria-seguridad.md).
