@@ -1,3 +1,6 @@
+// Eventos de la administradora: calendario mensual y lista de eventos vigentes con filtros (estado y
+// rango de fechas) y un panel de detalle. Todo se filtra en el navegador a partir de /api/eventos.
+
 import './style.css';
 import './panel.css';
 import './eventos.css';
@@ -5,6 +8,7 @@ import { api } from './api';
 import { exigirSesion, rutaPanelPorRol, type SesionActual } from './shared/api';
 import { initPanelLayout } from './shared/layout';
 
+// Un evento tal como lo devuelve /api/eventos.
 interface Evento {
     id: number;
     fecha: string | null; // YYYY-MM-DD; nulo si el evento aún no tiene fecha
@@ -24,10 +28,12 @@ interface Evento {
     transporte: string | null;
 }
 
+// Los tres estados por los que se puede filtrar.
 type ClaveToggle = 'confirmado' | 'pagoInicial' | 'firmado';
 /** Cada filtro de estado busca los que sí cumplen, los que no, o todos (sin filtrar). */
 type ValorFiltro = 'todos' | 'si' | 'no';
 
+// Eventos que se muestran en una casilla del calendario antes de pasar a "ver más", y duración (ms) del fundido del detalle.
 const MAX_VISIBLES = 4;
 const FADE_MS = 180;
 
@@ -50,6 +56,7 @@ const fHasta = $<HTMLInputElement>('fHasta');
 const fLimpiar = $('fLimpiar');
 const segmentos = document.querySelectorAll<HTMLButtonElement>('.segmento');
 
+// Estado de la pantalla: eventos cargados, evento elegido, día con el cuadro "ver más" abierto y filtros de estado.
 let eventos: Evento[] = [];
 let seleccionadoId: number | null = null;
 let popoverFecha: string | null = null;
@@ -208,12 +215,14 @@ function renderLista(visibles: Evento[]): void {
 }
 
 // ---------- Calendario ----------
+// Etiqueta de un evento dentro de una casilla del calendario.
 function pildora(e: Evento, conHora = false): string {
     const hora = conHora ? `<span class="pop-hora">${esc(e.hora ? formatearHora(e.hora) : '—')}</span>` : '';
     return `<button type="button" class="cal-evt" data-evento="${e.id}" data-confirmado="${e.confirmado}"
         title="${esc(nombreTipo(e))} · ${esc(lugarTexto(e))}">${hora}${esc(nombreTipo(e))}</button>`;
 }
 
+// Dibuja el mes (la semana empieza el lunes) con los eventos que pasan los filtros.
 function renderCalendario(visibles: Evento[]): void {
     cerrarPopover();
     calTitulo.textContent = capitalizar(mes.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' }));
@@ -302,14 +311,17 @@ function marcarSeleccion(): void {
     });
 }
 
+// Sección con título del panel de detalle.
 function bloque(titulo: string, contenido: string): string {
     return `<div class="detalle-bloque"><h3>${titulo}</h3>${contenido}</div>`;
 }
 
+// Etiqueta de sí/no (confirmado, pago inicial, firmado).
 function badge(activo: boolean, icono: string, texto: string): string {
     return `<span class="badge ${activo ? 'on' : ''}"><i class="fa-solid ${icono}"></i> ${texto}</span>`;
 }
 
+// Contenido del panel de detalle de un evento: cliente, fecha y lugar, pagos, personal y logística.
 function htmlDetalle(e: Evento): string {
     const saldo = e.total === null ? null : Math.max(0, e.total - e.totalPagado);
     const cliente = e.cliente
@@ -364,6 +376,7 @@ function mostrarDetalle(id: number | null, inmediato = false): void {
     }, FADE_MS);
 }
 
+// Elige un evento (tocarlo otra vez lo deselecciona) y lo muestra en el detalle.
 function seleccionar(id: number): void {
     seleccionadoId = seleccionadoId === id ? null : id;
     marcarSeleccion();
@@ -400,6 +413,7 @@ function render(): void {
 }
 
 // ---------- Carga ----------
+// Trae los eventos vigentes y pinta la pantalla.
 async function cargar(): Promise<void> {
     try {
         const json = await api<{ eventos: Evento[] }>('GET', '/api/eventos');
@@ -507,6 +521,7 @@ document.addEventListener('keydown', ev => {
 // ventana: reubicar el cuadro abierto.
 new ResizeObserver(() => posicionarPopover()).observe(calGrid);
 
+// Arranque: solo la administradora entra a esta pantalla; los demás roles van a su panel.
 document.addEventListener('DOMContentLoaded', async () => {
     const sesion = (await exigirSesion()) as SesionActual;
     if (sesion.rol !== 'administrador') {

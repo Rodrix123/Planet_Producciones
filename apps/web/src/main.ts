@@ -1,3 +1,8 @@
+// Cotizador público (cotizador.html): calcula el presupuesto en vivo con el catálogo, guarda la cotización
+// en la base de datos para que la administradora la revise y entrega al cliente su propuesta en PDF.
+// Si la persona viene de crear un evento (eventos.html), el botón "Crear evento" guarda evento y cotización juntos.
+// La parte visual por pasos vive en cotizador-pasos.ts; este archivo no decide qué paso se ve.
+
 import './style.css';
 import { apiFetch, apiUrl } from './shared/api';
 import { borrarBorrador, leerBorrador } from './borrador-evento';
@@ -15,6 +20,7 @@ declare const Swal: any;
 declare const html2pdf: any;
 declare const XLSX: any;
 
+// Datos de contacto y del evento que escribe el cliente; se imprimen en el PDF y se guardan con la cotización.
 interface DatosCliente {
     nombre: string;
     correo: string;
@@ -26,6 +32,7 @@ interface DatosCliente {
     fechaEvento: string;
 }
 
+// Valor de la opción "Otro" del selector de lugar: el cliente escribe el nombre y la dirección a mano.
 const OTRO_VALUE = 'otro';
 
 /** Ítem listo para mostrarse en el PDF/Excel (precio ya multiplicado por la cantidad,
@@ -37,6 +44,7 @@ interface ItemParaMostrar {
     precio: number;
 }
 
+// Convierte los servicios elegidos en filas listas para el PDF/Excel.
 function formatearItemsParaMostrar(formatterCOP: Intl.NumberFormat, items: ItemSeleccionado[]): ItemParaMostrar[] {
     return items.map((item) => ({
         tag: item.tag,
@@ -79,6 +87,36 @@ async function guardarCotizacionReal(
     }
 }
 
+/** Las librerías de PDF y Excel se cargan en segundo plano para no retrasar la página; si alguien genera
+ *  la propuesta antes de que terminen de bajar (conexión lenta), se espera a que estén listas (máx. 30 s). */
+function esperarLibrerias(): Promise<void> {
+    return new Promise((resolve) => {
+        const inicio = Date.now();
+        const revisar = () => {
+            const listas = typeof html2pdf !== 'undefined' && typeof XLSX !== 'undefined';
+            if (listas || Date.now() - inicio > 30000) return resolve();
+            setTimeout(revisar, 100);
+        };
+        revisar();
+    });
+}
+
+/** Evita que un doble clic (o un clic impaciente) ejecute la misma acción dos veces a la vez:
+ *  cada ejecución guardaría una cotización nueva. */
+function unaVezACadaVez(accion: () => Promise<void>): () => Promise<void> {
+    let ocupado = false;
+    return async () => {
+        if (ocupado) return;
+        ocupado = true;
+        try {
+            await accion();
+        } finally {
+            ocupado = false;
+        }
+    };
+}
+
+// Arranque: descarga el catálogo, dibuja el formulario y deja conectados el cálculo en vivo, el guardado y el PDF.
 document.addEventListener('DOMContentLoaded', async () => {
     const form = document.getElementById('quoteForm') as HTMLFormElement;
     const precioTotalEl = document.getElementById('precioTotal') as HTMLElement;
@@ -98,11 +136,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         minimumFractionDigits: 0
     });
 
+    // Si el catálogo no carga no tiene sentido seguir: se avisa al cliente y se detiene el resto.
     let catalogo: Catalogo;
     try {
         catalogo = await obtenerCatalogo();
     } catch {
-        catalogoDinamicoEl.innerHTML = '<p style="color:#b42318;">No se pudo cargar el catálogo de precios. Recarga la página.</p>';
+        catalogoDinamicoEl.innerHTML = '<p style="color:#b42318;">No pudimos cargar los servicios en este momento. Recarga la página o escríbenos por WhatsApp.</p>';
         return;
     }
 
@@ -114,7 +153,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const ciudades = Array.from(new Set([
         ...catalogo.venues.map((v) => v.city).filter((c): c is string => !!c),
         ...catalogo.transportation.map((t) => t.city)
-    ]));
+    ])).sort((a, b) => a.localeCompare(b, 'es'));
     ciudades.forEach((ciudad) => {
         const opt = document.createElement('option');
         opt.value = ciudad;
@@ -136,7 +175,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             lugarSelect.disabled = true;
             const opt = document.createElement('option');
             opt.value = '';
-            opt.textContent = '-- Primero selecciona una ciudad --';
+            opt.textContent = 'Primero selecciona una ciudad';
             opt.selected = true;
             lugarSelect.appendChild(opt);
             lugarOtroWrap.style.display = 'none';
@@ -147,11 +186,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         lugarSelect.disabled = false;
         const optVacio = document.createElement('option');
         optVacio.value = '';
-        optVacio.textContent = '-- Selecciona Sede --';
+        optVacio.textContent = 'Selecciona la sede';
         optVacio.selected = true;
         lugarSelect.appendChild(optVacio);
 
-        catalogo.venues.filter((v) => v.city === ciudad).forEach((v) => {
+        catalogo.venues.filter((v) => v.city === ciudad).sort((a, b) => a.name.localeCompare(b.name, 'es')).forEach((v) => {
             const opt = document.createElement('option');
             opt.value = String(v.id);
             opt.textContent = v.name;
@@ -168,7 +207,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const transporte = transportePorCiudad();
         transporteHintEl.textContent = transporte
             ? `Transporte incluido (${transporte.city}): ${formatterCOP.format(transporte.price)}`
-            : 'Esta ciudad no tiene costo de transporte registrado.';
+            : 'El transporte a esta ciudad te lo confirmamos al enviar tu propuesta.';
     }
 
     ciudadSelect.addEventListener('change', actualizarLugaresPorCiudad);
@@ -222,7 +261,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         if (itemsParaMostrar.length === 0) {
-            listaResumenEl.innerHTML = '<li><em>Selecciona tus opciones en el formulario para calcular el costo.</em></li>';
+            listaResumenEl.innerHTML = '<li><em>Aún no has elegido servicios. Tu presupuesto aparecerá aquí.</em></li>';
         } else {
             itemsParaMostrar.forEach((item) => {
                 const li = document.createElement('li');
@@ -234,6 +273,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return { total, itemsSeleccionados };
     }
 
+    // Cada cambio en el formulario recalcula el total.
     form.addEventListener('input', calcularCotizacion);
     form.addEventListener('change', calcularCotizacion);
 
@@ -444,6 +484,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Evento en creación (viene de eventos.html): esta cotización se guarda junto con el
     // evento, que se crea al guardarla. Si se entra al cotizador directamente, no hay borrador
     // y la página funciona como siempre (guardar cotización, PDF y Excel).
+    // Si hay borrador, se muestra el aviso y el botón de crear evento, y "Descargar PDF" pasa a ser secundario.
     const borrador = leerBorrador();
     const btnCrearEvento = document.getElementById('btnCrearEvento') as HTMLButtonElement;
     if (borrador) {
@@ -452,14 +493,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         btnSubmit.classList.add('submit-btn-secundario');
     }
 
-    btnCrearEvento.addEventListener('click', async () => {
+    // Crear evento: manda al servidor los datos del borrador junto con los servicios y vuelve a la página de eventos.
+    btnCrearEvento.addEventListener('click', unaVezACadaVez(async () => {
         if (!borrador) return;
         const resultado = calcularCotizacion();
         if (resultado.itemsSeleccionados.length === 0) {
             Swal.fire({
                 icon: 'info',
-                title: 'Selección Vacía',
-                text: 'Selecciona al menos un servicio o montaje para cotizar.',
+                title: 'Aún no has elegido servicios',
+                text: 'Elige al menos un servicio para armar tu propuesta.',
                 confirmButtonColor: '#f97316'
             });
             return;
@@ -502,9 +544,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
             if (respuesta.isConfirmed) window.location.href = 'eventos.html?nuevo=1';
         }
-    });
+    }));
 
-    btnSubmit.addEventListener('click', async () => {
+    // Generar la propuesta: valida los datos, guarda la cotización, arma el PDF y ofrece "otra cotización" o "volver al inicio".
+    btnSubmit.addEventListener('click', unaVezACadaVez(async () => {
         const nombre = (document.getElementById('nombre') as HTMLInputElement).value.trim();
         const correo = (document.getElementById('correo') as HTMLInputElement).value.trim();
         const telefono = (document.getElementById('telefono') as HTMLInputElement).value.trim();
@@ -522,11 +565,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             : (lugarOpt?.textContent?.trim() || '');
         const transportationId = transportePorCiudad()?.id ?? null;
 
+        // Datos mínimos de contacto; sin ellos la administradora no podría responder.
         if (!nombre || !correo || !telefono) {
             Swal.fire({
                 icon: 'warning',
-                title: 'Campos Incompletos',
-                text: 'Por favor ingresa Nombre, Correo y WhatsApp del cliente.',
+                title: 'Faltan datos de contacto',
+                text: 'Completa el nombre, el correo y el WhatsApp de contacto.',
                 confirmButtonColor: '#f97316'
             });
             return;
@@ -548,15 +592,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             Swal.fire({
                 icon: 'info',
                 title: 'Selección Vacía',
-                text: 'Selecciona al menos un servicio o montaje para cotizar.',
+                text: 'Elige al menos un servicio para armar tu propuesta.',
                 confirmButtonColor: '#f97316'
             });
             return;
         }
 
         Swal.fire({
-            title: 'Procesando Cotización...',
-            text: 'Generando PDF HD con marca de agua y Excel',
+            title: 'Preparando tu propuesta…',
+            text: 'Estamos armando tu propuesta en PDF.',
             allowOutsideClick: false,
             didOpen: () => { Swal.showLoading(); }
         });
@@ -564,6 +608,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         let elementoHTML: HTMLDivElement | null = null;
 
         try {
+            await esperarLibrerias();
             const datosCliente: DatosCliente = { nombre, correo, telefono, documento, tipoEvento, ciudad: ciudadSelect.value, lugar: lugarNombre, fechaEvento };
             const fechaHoy = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
@@ -602,6 +647,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
             });
 
+            // Opciones de html2pdf: carta, escala 2 para que el texto salga nítido y sin cortar filas entre páginas.
             const opt = {
                 margin:       [0.2, 0.2, 0.2, 0.2],
                 filename:     `Cotizacion_Planet_${nombre.replace(/\s+/g, '_')}.pdf`,
@@ -625,26 +671,39 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Exportación Excel Profesional
             generarExcelEjecutivo(datosCliente, itemsParaMostrar, resultado.total, refNum, fechaHoy);
 
-            Swal.fire({
+            // Aviso final con dos salidas: otra cotización (recarga desde el paso 1) o volver al inicio.
+            const respuesta = await Swal.fire({
                 icon: 'success',
-                title: '¡Cotización Generada!',
-                text: 'PDF HD con Marca de Agua y Reporte de Excel descargados exitosamente.',
-                confirmButtonColor: '#f97316'
+                title: '¡Tu propuesta está lista!',
+                text: 'Tu propuesta en PDF ya se descargó. Gracias por cotizar con nosotros.',
+                showDenyButton: true,
+                confirmButtonText: 'Hacer otra cotización',
+                denyButtonText: 'Volver al inicio',
+                confirmButtonColor: '#f97316',
+                denyButtonColor: '#1c1410'
             });
 
+            // Otra cotización: se recarga el cotizador desde cero (paso 1, todo vacío).
+            if (respuesta.isConfirmed) {
+                window.location.assign('cotizador.html');
+            } else if (respuesta.isDenied) {
+                window.location.assign('index.html');
+            }
+
         } catch (error) {
+            // Cualquier falla al generar el PDF: se limpia el HTML temporal y se avisa sin mostrar detalles técnicos.
             console.error(error);
             if (elementoHTML && elementoHTML.parentNode) {
                 document.body.removeChild(elementoHTML);
             }
             Swal.fire({
                 icon: 'error',
-                title: 'Error de Procesamiento',
-                text: 'Ocurrió un error generando los archivos. Revisa la consola.',
+                title: 'No pudimos generar tu propuesta',
+                text: 'Inténtalo de nuevo en unos minutos o escríbenos por WhatsApp.',
                 confirmButtonColor: '#f97316'
             });
         }
-    });
+    }));
 
     calcularCotizacion();
 });

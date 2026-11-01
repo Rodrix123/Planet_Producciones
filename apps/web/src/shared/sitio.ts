@@ -8,8 +8,10 @@ import '@fontsource-variable/hanken-grotesk/wght.css';
 import '../style.css';
 import '../sitio.css';
 
+// Páginas públicas; la actual se marca en el menú.
 type Pagina = 'inicio' | 'servicios' | 'nosotros' | 'galeria' | 'ayuda' | 'contacto' | 'acceso' | 'cotizador';
 
+// Enlaces del menú, en el orden en que aparecen.
 const ENLACES: { clave: Pagina; href: string; texto: string }[] = [
     { clave: 'inicio', href: 'index.html', texto: 'Inicio' },
     { clave: 'servicios', href: 'servicios.html', texto: 'Servicios' },
@@ -19,9 +21,11 @@ const ENLACES: { clave: Pagina; href: string; texto: string }[] = [
     { clave: 'contacto', href: 'contacto.html', texto: 'Contacto' }
 ];
 
+// Contacto: Instagram y WhatsApp con un mensaje inicial ya escrito.
 const INSTAGRAM = 'https://www.instagram.com/planet.producciones/';
 const WHATSAPP = 'https://wa.me/573127817072?text=' + encodeURIComponent('Hola, quiero cotizar un evento con Planet Producciones.');
 
+// HTML del menú cápsula, con la página actual resaltada.
 function htmlHeader(pagina: Pagina): string {
     const enlaces = ENLACES.map(e =>
         `<a href="${e.href}" class="sitio-enlace"${e.clave === pagina ? ' aria-current="page"' : ''}>${e.texto}</a>`
@@ -50,6 +54,7 @@ function htmlHeader(pagina: Pagina): string {
     </header>`;
 }
 
+// HTML del pie de página (enlaces, contacto y acceso del equipo).
 function htmlFooter(): string {
     const enlaces = ENLACES.map(e => `<a href="${e.href}">${e.texto}</a>`).join('');
 
@@ -92,6 +97,7 @@ function htmlFooter(): string {
     </footer>`;
 }
 
+// Comportamiento del menú: compactarse al bajar y abrirse/cerrarse en móvil.
 function activarMenu(): void {
     const nav = document.getElementById('sitioNav');
     const burger = document.getElementById('sitioBurger');
@@ -165,6 +171,7 @@ function activarContadores(): void {
     items.forEach(el => observador.observe(el));
 }
 
+// Botón flotante de WhatsApp; no se muestra en el acceso ni en el cotizador para no distraer.
 function montarWhatsApp(pagina: Pagina): void {
     if (pagina === 'acceso' || pagina === 'cotizador') return;
     const a = document.createElement('a');
@@ -177,10 +184,15 @@ function montarWhatsApp(pagina: Pagina): void {
     document.body.appendChild(a);
 }
 
+/**
+ * Punto de entrada: inserta menú y pie, y activa menú, apariciones, contadores y WhatsApp.
+ */
 export function montarSitio(): void {
     const pagina = (document.body.dataset.pagina || 'inicio') as Pagina;
     const header = document.getElementById('sitio-header');
     const footer = document.getElementById('sitio-footer');
+    document.querySelector('main')?.setAttribute('id', 'contenido');
+    document.body.insertAdjacentHTML('afterbegin', '<a href="#contenido" class="sitio-salto">Saltar al contenido</a>');
     if (header) header.outerHTML = htmlHeader(pagina);
     if (footer) footer.outerHTML = htmlFooter();
     activarMenu();

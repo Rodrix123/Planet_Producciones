@@ -1,3 +1,5 @@
+// Llamadas a la API para las pantallas del panel: devuelven el JSON o lanzan un Error con un mensaje claro.
+
 import { apiFetch } from './shared/api';
 
 // Un 404 sin mensaje de la API (la API siempre responde JSON con "message") significa que quien

@@ -1,3 +1,8 @@
+// Cotizaciones de la administradora (Maritza): lista de las que llegan del cotizador, y para cada una
+// su revisión: corregir datos del cliente y del evento, editar los servicios (desde el catálogo o con
+// ítems manuales), comentar y, al final, finalizarla (se convierte en evento en proceso).
+
+import { esc } from './shared/panelShell';
 import './style.css';
 import './shared/panelRail.css';
 import { apiFetch, apiUrl, conManejoDeErrores, exigirSesion } from './shared/api';
@@ -13,6 +18,7 @@ import {
 
 declare const Swal: any;
 
+// Una cotización tal como la devuelve /api/cotizaciones.
 interface Cotizacion {
     id: string;
     numeroReferencia: string;
@@ -33,6 +39,7 @@ interface Cotizacion {
     creadaEn: string;
 }
 
+// Una entrada del historial: comentario, edición de servicios o cambio de estado.
 interface HistorialEntry {
     id: string;
     tipo: 'comentario' | 'edicion' | 'cambio_estado';
@@ -45,6 +52,7 @@ interface HistorialEntry {
 
 const formatterCOP = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
 
+// Cómo se nombra cada estado en pantalla.
 const ESTADO_LABEL: Record<string, string> = {
     recibida: 'Recibida',
     en_revision: 'En revisión',
@@ -54,6 +62,8 @@ const ESTADO_LABEL: Record<string, string> = {
     cancelada: 'Cancelada'
 };
 
+// Estado de la edición: servicios que se están editando (todavía sin guardar), la cotización abierta,
+// los ítems manuales que el editor del catálogo debe conservar y el catálogo ya descargado.
 let itemsEnEdicion: ItemSeleccionado[] = [];
 let cotizacionActualId: string | null = null;
 let itemsManualesPendientes: ItemSeleccionado[] = [];
@@ -69,6 +79,7 @@ const transporteHintEl = document.getElementById('inpTransporteHint') as HTMLEle
 const lugarOtroWrap = document.getElementById('inpLugarOtroWrap') as HTMLElement;
 const lugarOtroNombreInput = document.getElementById('inpLugarOtroNombre') as HTMLInputElement;
 const lugarOtroDireccionInput = document.getElementById('inpLugarOtroDireccion') as HTMLInputElement;
+// Valor de la opción "Otro (no está en la lista)" del selector de sede.
 const OTRO_VALUE = 'otro';
 
 /** Rellena el select de Lugar con las sedes de `ciudad` + la opción "Otro". Si
@@ -117,6 +128,7 @@ function transportePorCiudad(): { id: number; city: string; price: number } | un
     return catalogo?.transportation.find((t) => t.city === ciudadSelect.value);
 }
 
+// Muestra el costo de transporte de la ciudad elegida (o avisa que no tiene).
 function actualizarTransporteHint() {
     const transporte = transportePorCiudad();
     transporteHintEl.textContent = !ciudadSelect.value
@@ -126,16 +138,19 @@ function actualizarTransporteHint() {
             : 'Esta ciudad no tiene costo de transporte registrado.';
 }
 
+// Nombre con la cantidad por delante cuando es más de una unidad: "4 x Parlante".
 function nombreItem(item: ItemSeleccionado): string {
     return item.cantidad > 1 ? `${item.cantidad} x ${item.nombre}` : item.nombre;
 }
 
+// Trae las cotizaciones por revisar (recibidas y en revisión).
 async function cargarLista() {
     const res = await apiFetch('/api/cotizaciones?estado=recibida,en_revision');
     const cotizaciones = (await res.json()) as Cotizacion[];
     renderLista(cotizaciones);
 }
 
+// Dibuja la lista; cada tarjeta abre el detalle de su cotización.
 function renderLista(cotizaciones: Cotizacion[]) {
     listaCotizacionesEl.innerHTML = '';
 
@@ -149,8 +164,8 @@ function renderLista(cotizaciones: Cotizacion[]) {
         card.className = 'item-card';
         card.innerHTML = `
             <div class="item-card-main">
-                <h3>${c.clienteNombre} <span class="badge">${ESTADO_LABEL[c.estado] || c.estado}</span></h3>
-                <p>Ref: ${c.numeroReferencia} · ${c.tipoEvento || 'Tipo de evento sin definir'} · ${c.fechaEvento ? new Date(c.fechaEvento + 'T00:00:00').toLocaleDateString('es-CO') : 'Sin fecha definida'}</p>
+                <h3>${esc(c.clienteNombre)} <span class="badge">${ESTADO_LABEL[c.estado] || c.estado}</span></h3>
+                <p>Ref: ${esc(c.numeroReferencia)} · ${esc(c.tipoEvento || 'Tipo de evento sin definir')} · ${c.fechaEvento ? new Date(c.fechaEvento + 'T00:00:00').toLocaleDateString('es-CO') : 'Sin fecha definida'}</p>
             </div>
             <div class="item-card-side">
                 <div class="item-card-total">${formatterCOP.format(c.total)}</div>
@@ -162,6 +177,8 @@ function renderLista(cotizaciones: Cotizacion[]) {
     });
 }
 
+// Abre una cotización: datos, servicios editables e historial. Los servicios se copian a
+// `itemsEnEdicion` y solo se guardan al pulsar "Guardar cambios".
 async function abrirDetalle(id: string) {
     const [resCotizacion, resHistorial] = await Promise.all([
         apiFetch(`/api/cotizaciones/${id}`),
@@ -213,6 +230,7 @@ async function abrirDetalle(id: string) {
     detalleEl.classList.remove('hidden');
 }
 
+// Dibuja los servicios en edición, cada uno con su cantidad y su botón para quitarlo.
 function renderItemsDetalle() {
     const cont = document.getElementById('listaItemsDetalle') as HTMLElement;
     cont.innerHTML = '';
@@ -226,9 +244,9 @@ function renderItemsDetalle() {
         row.className = 'detail-row';
         row.innerHTML = `
             <div>
-                <div class="detail-row-main"><strong>${nombreItem(item)}</strong></div>
-                <div class="detail-row-sub">${item.tag}${item.descripcion ? ' · Incluye: ' + item.descripcion : ''}</div>
-                ${item.nota ? `<div class="detail-row-sub" style="color:var(--orange-main); margin-top:0.3rem;"><i class="fa-solid fa-note-sticky"></i> ${item.nota}</div>` : ''}
+                <div class="detail-row-main"><strong>${esc(nombreItem(item))}</strong></div>
+                <div class="detail-row-sub">${esc(item.tag + (item.descripcion ? ' · Incluye: ' + item.descripcion : ''))}</div>
+                ${item.nota ? `<div class="detail-row-sub" style="color:var(--orange-main); margin-top:0.3rem;"><i class="fa-solid fa-note-sticky"></i> ${esc(item.nota)}</div>` : ''}
             </div>
             <div style="display:flex; align-items:center; gap:0.6rem;">
                 <div class="detail-row-price">${formatterCOP.format(item.precioUnit * item.cantidad)}</div>
@@ -266,6 +284,7 @@ function renderItemsDetalle() {
     (document.getElementById('totalDetalle') as HTMLElement).textContent = formatterCOP.format(total);
 }
 
+// Dibuja el historial de la cotización (del más antiguo al más nuevo).
 function renderHistorial(historial: HistorialEntry[]) {
     const cont = document.getElementById('listaHistorial') as HTMLElement;
     cont.innerHTML = '';
@@ -285,13 +304,14 @@ function renderHistorial(historial: HistorialEntry[]) {
         const div = document.createElement('div');
         div.className = 'comment-item';
         div.innerHTML = `
-            <div class="comment-meta">${h.usuarioNombre || 'Sistema'} · ${fecha}</div>
-            <div>${texto}</div>
+            <div class="comment-meta">${esc(h.usuarioNombre || 'Sistema')} · ${fecha}</div>
+            <div>${esc(texto)}</div>
         `;
         cont.appendChild(div);
     });
 }
 
+// Vuelve del detalle a la lista y la recarga.
 function volverALista() {
     cotizacionActualId = null;
     detalleEl.classList.add('hidden');
@@ -299,11 +319,13 @@ function volverALista() {
     cargarLista();
 }
 
+// Recalcula el total mientras se eligen servicios en el editor del catálogo.
 function actualizarTotalCatalogo() {
     const { total } = calcularDesdeCatalogo(catalogoContenedorEl);
     (document.getElementById('catalogoTotal') as HTMLElement).textContent = formatterCOP.format(total);
 }
 
+// Abre el editor del catálogo (el mismo formulario del cotizador) con lo ya elegido premarcado.
 async function abrirEditorCatalogo() {
     if (!catalogo) catalogo = await obtenerCatalogo();
     renderCatalogoEnContenedor(catalogoContenedorEl, catalogo);
@@ -320,16 +342,20 @@ async function abrirEditorCatalogo() {
     editorCatalogoEl.classList.remove('hidden');
 }
 
+// Cierra el editor del catálogo y vuelve a mostrar el resto del detalle.
 function cerrarEditorCatalogo() {
     editorCatalogoEl.classList.add('hidden');
     otrasSeccionesDetalle().forEach((el) => el.classList.remove('hidden'));
 }
 
+// Secciones del detalle que se ocultan mientras el editor del catálogo está abierto.
 function otrasSeccionesDetalle(): HTMLElement[] {
     return Array.from(detalleEl.querySelectorAll<HTMLElement>(':scope > .detail-section'))
         .filter((el) => el !== editorCatalogoEl);
 }
 
+// Arranque: exige sesión de administradora, carga el catálogo (para las sedes y el transporte) y conecta
+// cada botón del detalle.
 document.addEventListener('DOMContentLoaded', async () => {
     const sesion = await exigirSesion('administrador');
     initPanelLayout(sesion);
@@ -358,6 +384,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('btnVolverLista')?.addEventListener('click', conManejoDeErrores(async () => volverALista()));
 
+    // Guarda los datos del cliente y del evento: nombre, contacto, tipo, sede, ciudad y fecha.
     document.getElementById('btnGuardarDatos')?.addEventListener('click', conManejoDeErrores(async () => {
         if (!cotizacionActualId) return;
         const esLugarManual = lugarSelect.value === OTRO_VALUE;
@@ -384,6 +411,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }));
 
+    // Guarda los servicios editados; el total lo recalcula el servidor.
     document.getElementById('btnGuardarItems')?.addEventListener('click', conManejoDeErrores(async () => {
         if (!cotizacionActualId) return;
         const res = await apiFetch(`/api/cotizaciones/${cotizacionActualId}/items`, {
@@ -398,6 +426,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }));
 
+    // Agrega un servicio que no está en el catálogo (categoría, nombre, descripción y precio); queda oculto del cotizador público.
     document.getElementById('btnAgregarManual')?.addEventListener('click', conManejoDeErrores(async () => {
         const { value: datos } = await Swal.fire({
             title: 'Agregar servicio manual',
@@ -445,6 +474,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('btnCancelarCatalogo')?.addEventListener('click', cerrarEditorCatalogo);
 
+    // Pasa lo elegido en el editor del catálogo a la lista de servicios en edición (sin guardar todavía).
     document.getElementById('btnAplicarCatalogo')?.addEventListener('click', conManejoDeErrores(async () => {
         const { itemsSeleccionados } = calcularDesdeCatalogo(catalogoContenedorEl);
         itemsEnEdicion = [...itemsSeleccionados, ...itemsManualesPendientes];
@@ -453,6 +483,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         Swal.fire({ icon: 'info', title: 'Cambios aplicados', text: 'Recuerda hacer clic en "Guardar cambios" para confirmarlos.', confirmButtonColor: '#f97316', timer: 2200, showConfirmButton: false });
     }));
 
+    // Agrega un comentario interno al historial.
     document.getElementById('btnAgregarComentario')?.addEventListener('click', conManejoDeErrores(async () => {
         if (!cotizacionActualId) return;
         const input = document.getElementById('inpComentario') as HTMLInputElement;
@@ -473,6 +504,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }));
 
+    // Finaliza la cotización tras pedir confirmación: se crea el evento y deja de poder editarse desde aquí.
     document.getElementById('btnFinalizar')?.addEventListener('click', conManejoDeErrores(async () => {
         if (!cotizacionActualId) return;
 

@@ -1,7 +1,12 @@
+// Lista de carga en PDF para el jefe de logística: los equipos de un evento agrupados por tipo,
+// con una casilla para marcar cada uno al cargarlo en el camión. Nunca incluye precios.
+
 import PDFDocument from 'pdfkit';
 import path from 'path';
 import fs from 'fs';
+import { CARPETA_ASSETS } from '../rutas';
 
+// Un equipo a cargar y cuántas unidades.
 export interface EquipoListaCarga {
     tag: string;
     nombre: string;
@@ -9,6 +14,7 @@ export interface EquipoListaCarga {
     cantidad: number;
 }
 
+// Datos que necesita la lista; el módulo no consulta la base de datos.
 export interface ListaCargaParaPdf {
     numeroReferencia: string;
     clienteNombre: string;
@@ -20,6 +26,7 @@ export interface ListaCargaParaPdf {
     equipos: EquipoListaCarga[];
 }
 
+// AAAA-MM-DD -> DD/MM/AAAA (o "Sin fecha").
 const formatearFecha = (fecha: string | null) => {
     if (!fecha) return 'Sin fecha';
     const [anio, mes, dia] = fecha.split('-');
@@ -36,12 +43,13 @@ export function generarListaCargaPdfBuffer(lista: ListaCargaParaPdf): Promise<Bu
             doc.on('data', buffers.push.bind(buffers));
             doc.on('end', () => resolve(Buffer.concat(buffers)));
 
-            const logoPath = path.join(__dirname, '..', '..', 'assets', 'logo.png');
+            const logoPath = path.join(CARPETA_ASSETS, 'logo.png');
             const tieneLogo = fs.existsSync(logoPath);
             const ANCHO = doc.page.width;
             const MARGEN = 40;
             const LIMITE_INFERIOR = doc.page.height - 60;
 
+            // Franja naranja, logo y referencia; se repite en cada página.
             function encabezado() {
                 doc.rect(0, 0, ANCHO, 6).fill('#f97316');
 
@@ -60,6 +68,7 @@ export function generarListaCargaPdfBuffer(lista: ListaCargaParaPdf): Promise<Bu
                 doc.moveTo(MARGEN, 64).lineTo(ANCHO - MARGEN, 64).strokeColor('#cbd5e1').lineWidth(0.8).stroke();
             }
 
+            // Si lo que sigue no cabe en la página, abre una nueva (con su encabezado) y devuelve dónde seguir.
             function asegurarEspacio(alturaNecesaria: number, yActual: number): number {
                 if (yActual + alturaNecesaria > LIMITE_INFERIOR) {
                     doc.addPage();

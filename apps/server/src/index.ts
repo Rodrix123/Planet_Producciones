@@ -1,8 +1,12 @@
+// Punto de entrada del servidor: configura Express, monta las rutas de cada módulo y arranca.
+// Rutas públicas (sin sesión): /api/catalogo, POST /api/cotizaciones y POST /api/pqrs, que usa la
+// página para clientes. El resto exige sesión y un rol (ver auth.ts).
+
 import 'dotenv/config';
 import express, { NextFunction, Request, Response } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-import path from 'path';
+import compression from 'compression';
 import { authRouter } from './routes/auth.routes';
 import { cotizacionesRouter } from './routes/cotizaciones.routes';
 import { empleadosRouter } from './routes/empleados.routes';
@@ -14,6 +18,8 @@ import { inventarioRouter } from './routes/inventario.routes';
 import { cuentasAccesoRouter } from './routes/cuentasAcceso.routes';
 import { panelRouter } from './routes/panel.routes';
 import { eventosRouter } from './routes/eventos.routes';
+import { manejadorErrores } from './manejadorErrores';
+import { CARPETA_ASSETS, CARPETA_WEB } from './rutas';
 
 // Red de seguridad: en Node 18+ un rechazo de promesa no manejado (fuera de una ruta
 // Express, p.ej. en un .then()/.catch() que se nos escapó) termina el proceso completo
@@ -26,14 +32,20 @@ process.on('uncaughtException', (err) => {
     console.error('Excepción no capturada:', err);
 });
 
+// Configuración general. CORS solo deja pasar al frontend (WEB_ORIGIN) y permite la cookie de sesión.
 const app = express();
 app.use(cors({ origin: process.env.WEB_ORIGIN || 'http://localhost:5173', credentials: true }));
+// Respuestas JSON y archivos estáticos comprimidos: el catálogo, por ejemplo, baja de ~18 KB a ~3 KB.
+app.use(compression());
 app.use(express.json());
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, '..', 'assets')));
+// Archivos públicos del servidor (logo).
+app.use(express.static(CARPETA_ASSETS));
 // Sirve el frontend compilado (apps/web/dist) para abrir la app en http://localhost:PORT
-app.use(express.static(path.join(__dirname, '..', '..', 'web', 'dist')));
+// Sirve el frontend compilado (apps/web/dist) para abrir la app completa desde el servidor.
+app.use(express.static(CARPETA_WEB));
 
+// Cada módulo de la aplicación tiene su archivo en routes/.
 app.use('/api/auth', authRouter);
 app.use('/api/catalogo', catalogoRouter);
 app.use('/api/cotizaciones', cotizacionesRouter);
@@ -46,21 +58,10 @@ app.use('/api/cuentas-acceso', cuentasAccesoRouter);
 app.use('/api/panel', panelRouter);
 app.use('/api/eventos', eventosRouter);
 
-// Manejador de errores central: toda ruta async usa asyncHandler() (ver src/asyncHandler.ts),
-// que reenvía acá cualquier error en vez de dejarlo crashear el proceso.
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-    // P0001 = RAISE EXCEPTION desde un trigger de Postgres (ej. validaciones de negocio
-    // como límites de fecha en `events`): el mensaje ya está pensado para el usuario final,
-    // no es un bug — se muestra tal cual en vez del 500 genérico.
-    if ((err as NodeJS.ErrnoException & { code?: string }).code === 'P0001') {
-        return res.status(400).json({ status: 'error', message: err.message });
-    }
+// Siempre al final: recoge los errores de todas las rutas anteriores.
+app.use(manejadorErrores);
 
-    console.error('Error no controlado en una ruta:', err);
-    if (res.headersSent) return;
-    res.status(500).json({ status: 'error', message: 'Ocurrió un error inesperado en el servidor. Intenta de nuevo.' });
-});
-
+// Arranque del servidor.
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Servidor iniciado en http://localhost:${PORT}`);

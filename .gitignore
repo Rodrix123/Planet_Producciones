@@ -9,3 +9,6 @@ apps/**/dist/
 apps/**/node_modules/
 apps/server/uploads/
 supabase/.temp/
+
+# carpetas temporales de la prueba de arranque
+apps/server/.prueba-arranque-*/

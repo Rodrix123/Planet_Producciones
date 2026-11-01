@@ -603,3 +603,9 @@ footer {
 .swal2-popup {
     color: var(--ink);
 }
+
+.swal2-deny {
+    background-color: var(--ink) !important;
+    color: var(--paper) !important;
+    font-weight: 700 !important;
+}

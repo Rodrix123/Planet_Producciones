@@ -1,3 +1,6 @@
+// PQRS (peticiones, quejas, reclamos y sugerencias) de la página principal (/api/pqrs).
+// Cualquier visitante puede enviar uno; solo la secretaria los lista y responde.
+
 import { Router } from 'express';
 import { pool } from '../db';
 import { requireAuth, requireRole } from '../auth';
@@ -23,6 +26,8 @@ pqrsRouter.post('/', asyncHandler(async (req, res) => {
         [nombre, correo, body.telefono?.trim() || null, mensaje]
     );
 
+    // Aviso a la secretaria (si está configurado). Se envía sin esperar la respuesta: un fallo del
+    // correo se registra pero no afecta a quien escribió el PQRS.
     if (process.env.EMAIL_SECRETARIA) {
         enviarCorreo({
             from: `"Planet Producciones" <${process.env.EMAIL_USER}>`,
@@ -35,8 +40,10 @@ pqrsRouter.post('/', asyncHandler(async (req, res) => {
     res.status(201).json({ status: 'ok', id: rows[0].id });
 }));
 
+// De aquí en adelante, solo la secretaria (Mariana).
 pqrsRouter.use(requireAuth, requireRole('secretaria'));
 
+// Lista: primero los pendientes de respuesta y luego los respondidos, del más nuevo al más viejo.
 pqrsRouter.get('/', asyncHandler(async (_req, res) => {
     const { rows } = await pool.query(
         `select id, nombre, correo, telefono, mensaje, respuesta, respondido_en, creado_en
@@ -55,6 +62,8 @@ pqrsRouter.get('/', asyncHandler(async (_req, res) => {
     })));
 }));
 
+// Responde por correo al cliente y SOLO si el correo salió marca el PQRS como respondido; si el
+// correo falla (502), queda pendiente para reintentar.
 pqrsRouter.post('/:id/responder', asyncHandler(async (req, res) => {
     const { respuesta } = req.body as { respuesta?: string };
     if (!respuesta?.trim()) {

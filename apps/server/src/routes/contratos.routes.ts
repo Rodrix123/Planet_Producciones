@@ -1,3 +1,6 @@
+// Contratos (/api/contratos): generar el contrato en PDF, enviarlo por correo al cliente (Mariana)
+// y guardar el contrato firmado que devuelve el cliente (Maritza).
+
 import { Router } from 'express';
 import multer from 'multer';
 import path from 'path';
@@ -7,19 +10,42 @@ import { requireAuth, requireRole } from '../auth';
 import { asyncHandler } from '../asyncHandler';
 import { enviarCorreo } from '../mailer';
 import { generarContratoPdfBuffer, type ItemContratoPdf } from '../pdf/contratoPdf';
+import { numeroReferencia } from '../referencia';
+import { CARPETA_SUBIDAS } from '../rutas';
 
-const UPLOAD_DIR = path.join(__dirname, '..', '..', 'uploads', 'contratos-firmados');
+// Carpeta de los contratos firmados. UPLOADS_DIR permite apuntarla a un disco persistente
+// (en un contenedor, una carpeta sin volumen se pierde al volver a desplegar).
+const UPLOAD_DIR = path.join(CARPETA_SUBIDAS, 'contratos-firmados');
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 const upload = multer({
     storage: multer.diskStorage({
         destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
-        filename: (req, file, cb) => cb(null, `${req.params.cotizacionId}-${Date.now()}${path.extname(file.originalname) || '.pdf'}`)
+        // Solo dígitos del id y siempre .pdf: ni el id de la URL ni el nombre original del archivo
+        // pueden sacar el archivo de la carpeta ni cambiar su tipo.
+        filename: (req, _file, cb) => cb(null, `${String(req.params.cotizacionId).replace(/\D/g, '')}-${Date.now()}.pdf`)
     }),
     limits: { fileSize: 10 * 1024 * 1024 },
     fileFilter: (_req, file, cb) => cb(null, file.mimetype === 'application/pdf')
 });
 
+/** Un PDF de verdad empieza por "%PDF-"; el tipo que declara el navegador no es de fiar. */
+function esPdf(ruta: string): boolean {
+    const fd = fs.openSync(ruta, 'r');
+    try {
+        const cabecera = Buffer.alloc(5);
+        fs.readSync(fd, cabecera, 0, 5, 0);
+        return cabecera.toString('latin1') === '%PDF-';
+    } finally {
+        fs.closeSync(fd);
+    }
+}
+
+function borrarArchivo(nombre: string | null | undefined): void {
+    if (nombre) fs.unlink(path.join(UPLOAD_DIR, path.basename(nombre)), () => undefined);
+}
+
+// Datos de la cotización y del evento que necesita el contrato.
 interface FilaContrato {
     id: number;
     created_at: string;
@@ -37,13 +63,16 @@ interface FilaContrato {
     contrato_firmado_subido_en: string | null;
 }
 
+/**
+ * Cotización + evento + cliente de un id, o null si no existe.
+ */
 async function obtenerFila(id: string): Promise<FilaContrato | null> {
     const { rows } = await pool.query<FilaContrato>(
         `select
             q.id, q.created_at, q.total, q.estado as quote_estado,
             coalesce(e.event_type, q.event_type) as event_type,
             coalesce(e.date, q.date) as fecha_evento,
-            u.name as cliente_nombre, u.email as cliente_correo, u.documento as cliente_documento,
+            coalesce(q.cliente_nombre, u.name) as cliente_nombre, u.email as cliente_correo, coalesce(q.cliente_documento, u.documento) as cliente_documento,
             v.name as venue_nombre,
             e.id as event_id, e.contrato_enviado_en, e.contrato_firmado_nombre, e.contrato_firmado_subido_en
          from quote q
@@ -56,6 +85,9 @@ async function obtenerFila(id: string): Promise<FilaContrato | null> {
     return rows[0] || null;
 }
 
+/**
+ * Servicios del contrato: solo cantidad y nombre (el contrato no muestra precios por ítem).
+ */
 async function obtenerItemsContrato(quoteId: number): Promise<ItemContratoPdf[]> {
     const { rows } = await pool.query<{ quantity: number; simple_description: string }>(
         `select qi.quantity, iv.simple_description
@@ -68,14 +100,16 @@ async function obtenerItemsContrato(quoteId: number): Promise<ItemContratoPdf[]>
     return rows.map((r) => ({ cantidad: r.quantity, nombre: r.simple_description }));
 }
 
-function numeroReferencia(id: number, creadaEn: string): string {
-    const anio = new Date(creadaEn).getFullYear();
-    return `PL-${anio}-${String(id).padStart(4, '0')}`;
-}
-
 export const contratosRouter = Router();
+// Un id que no es un número es una cotización que no existe (antes: error 500 al convertirlo).
+contratosRouter.param('cotizacionId', (_req, res, next, valor) => {
+    if (/^[0-9]{1,15}$/.test(String(valor))) return next();
+    res.status(404).json({ status: 'error', message: 'Cotización no encontrada' });
+});
+
 contratosRouter.use(requireAuth);
 
+// Estado del contrato: cuándo se envió, cuándo se subió el firmado y si ya hay archivo.
 contratosRouter.get('/:cotizacionId', requireRole('administrador', 'secretaria'), asyncHandler(async (req, res) => {
     const fila = await obtenerFila(req.params.cotizacionId);
     if (!fila) return res.status(404).json({ status: 'error', message: 'Cotización no encontrada' });
@@ -87,6 +121,7 @@ contratosRouter.get('/:cotizacionId', requireRole('administrador', 'secretaria')
     });
 }));
 
+// Vista previa del contrato en PDF. Exige documento del cliente y fecha del evento.
 contratosRouter.get('/:cotizacionId/pdf', requireRole('administrador', 'secretaria'), asyncHandler(async (req, res) => {
     const fila = await obtenerFila(req.params.cotizacionId);
     if (!fila) return res.status(404).json({ status: 'error', message: 'Cotización no encontrada' });
@@ -153,6 +188,18 @@ contratosRouter.post('/:cotizacionId/generar-y-enviar', requireRole('secretaria'
         correoAdmin = adminRows[0]?.correo;
     }
 
+    // Se "reserva" el envío ANTES de mandar el correo, con una sola actualización condicional: si
+    // dos clics (o dos personas) lo piden a la vez, solo uno lo consigue y el cliente no recibe el
+    // contrato repetido (el correo tarda segundos, y antes el contrato se marcaba como enviado
+    // recién al terminar). Si el correo falla, la reserva se libera para poder reintentar.
+    const reservado = await pool.query(
+        'update events set contrato_enviado_en = now(), contrato_enviado_por = $1, updated_at = now() where id = $2 and contrato_enviado_en is null',
+        [req.usuario!.id, fila.event_id]
+    );
+    if (!reservado.rowCount) {
+        return res.status(400).json({ status: 'error', message: 'Esta cotización no está lista para generar el contrato (ya tiene uno enviado o aún no fue finalizada)' });
+    }
+
     try {
         await enviarCorreo({
             from: `"Planet Producciones" <${process.env.EMAIL_USER}>`,
@@ -164,13 +211,12 @@ contratosRouter.post('/:cotizacionId/generar-y-enviar', requireRole('secretaria'
         });
     } catch (err) {
         console.error('Error enviando contrato por correo:', (err as Error).message);
+        await pool.query(
+            'update events set contrato_enviado_en = null, contrato_enviado_por = null, updated_at = now() where id = $1',
+            [fila.event_id]
+        );
         return res.status(502).json({ status: 'error', message: 'No se pudo enviar el correo con el contrato. Revisa la configuración de correo (EMAIL_USER/EMAIL_PASS) e intenta de nuevo.' });
     }
-
-    await pool.query(
-        'update events set contrato_enviado_en = now(), contrato_enviado_por = $1, updated_at = now() where id = $2',
-        [req.usuario!.id, fila.event_id]
-    );
 
     await pool.query(
         `insert into quote_historial (quote_id, profile_id, profile_nombre, tipo, estado_antes, estado_despues)
@@ -190,20 +236,39 @@ contratosRouter.post(
             return res.status(400).json({ status: 'error', message: 'Sube un archivo PDF del contrato firmado' });
         }
 
+        // Si algo de lo siguiente no se cumple, el archivo recién subido se descarta: no deben
+        // quedar archivos sueltos en el disco.
+        if (!esPdf(req.file.path)) {
+            borrarArchivo(req.file.filename);
+            return res.status(400).json({ status: 'error', message: 'El archivo no es un PDF válido' });
+        }
+
         const fila = await obtenerFila(req.params.cotizacionId);
         if (!fila?.event_id) {
+            borrarArchivo(req.file.filename);
             return res.status(400).json({ status: 'error', message: 'Esta cotización todavía no es un evento en proceso' });
         }
 
-        await pool.query(
-            'update events set contrato_firmado_nombre = $1, contrato_firmado_subido_en = now(), contrato_firmado_subido_por = $2, updated_at = now() where id = $3',
-            [req.file.filename, req.usuario!.id, fila.event_id]
-        );
+        try {
+            await pool.query(
+                'update events set contrato_firmado_nombre = $1, contrato_firmado_subido_en = now(), contrato_firmado_subido_por = $2, updated_at = now() where id = $3',
+                [req.file.filename, req.usuario!.id, fila.event_id]
+            );
+        } catch (error) {
+            borrarArchivo(req.file.filename);
+            throw error;
+        }
+
+        // La versión anterior ya no se necesita: no se acumulan archivos en el disco.
+        if (fila.contrato_firmado_nombre && fila.contrato_firmado_nombre !== req.file.filename) {
+            borrarArchivo(fila.contrato_firmado_nombre);
+        }
 
         res.json({ status: 'ok' });
     })
 );
 
+// Descarga el contrato firmado que se subió.
 contratosRouter.get('/:cotizacionId/firmado', requireRole('administrador', 'secretaria'), asyncHandler(async (req, res) => {
     const fila = await obtenerFila(req.params.cotizacionId);
     if (!fila?.contrato_firmado_nombre) {

@@ -1,3 +1,5 @@
+// Inventario en solo lectura (/api/inventario), para la administradora y el jefe de logística.
+
 import { Router } from 'express';
 import { pool } from '../db';
 import { requireAuth, requireRole } from '../auth';
@@ -9,6 +11,7 @@ export const inventarioRouter = Router();
 // (tipo -> elemento -> variante -> unidad física) a partir de inventory,
 // inventory_variants y stock. No se crea/edita nada acá.
 inventarioRouter.get('/', requireAuth, requireRole('administrador', 'jefe_logistica'), asyncHandler(async (_req, res) => {
+    // Cuatro consultas independientes: van en paralelo para esperar una sola vez a la base.
     const [elementos, variantes, unidades, tramosBase] = await Promise.all([
         pool.query<{ id: number; name: string; type: string }>('select id, name, type from inventory order by id'),
         pool.query<{ id: number; inventory_id: number; simple_description: string | null; detailed_description: string | null }>(
@@ -22,6 +25,7 @@ inventarioRouter.get('/', requireAuth, requireRole('administrador', 'jefe_logist
         pool.query<{ id_variant: number; price: string }>('select id_variant, price from "PriceVariants" where quantity = 1')
     ]);
 
+    // Se indexa por id para armar el árbol sin volver a consultar ni recorrer listas en cada vuelta.
     const precioBasePorVariante = new Map<number, number>();
     for (const t of tramosBase.rows) precioBasePorVariante.set(t.id_variant, Number(t.price));
 
@@ -37,6 +41,7 @@ inventarioRouter.get('/', requireAuth, requireRole('administrador', 'jefe_logist
         variantesPorElemento.get(v.inventory_id)!.push(v);
     }
 
+    // Árbol final: tipo -> elementos -> variantes -> unidades físicas.
     const tipos = new Map<string, { id: number; nombre: string; variantes: unknown[] }[]>();
     for (const e of elementos.rows) {
         const elemento = {
@@ -61,6 +66,7 @@ inventarioRouter.get('/', requireAuth, requireRole('administrador', 'jefe_logist
         tipos.get(e.type)!.push(elemento);
     }
 
+    // Orden alfabético en español (respeta tildes y eñes).
     const porNombre = (a: string, b: string) => a.localeCompare(b, 'es');
     const respuesta = {
         tipos: [...tipos.entries()]

@@ -26,6 +26,9 @@ export function abrirDrawer(html: string): void {
     overlay.classList.add('open');
 }
 
+/**
+ * Cierra el panel deslizante lateral.
+ */
 export function cerrarDrawer(): void {
     document.getElementById('drawer')?.classList.remove('open');
     document.getElementById('drawerOverlay')?.classList.remove('open');
@@ -41,6 +44,9 @@ export function abrirModal(html: string, ancho = false): void {
     modal.classList.add('open');
 }
 
+/**
+ * Cierra la ventana emergente.
+ */
 export function cerrarModal(): void {
     document.getElementById('modal')?.classList.remove('open');
 }
@@ -59,8 +65,12 @@ export function initPanelShellGlobal(): void {
     });
 }
 
+/**
+ * Escapa un texto para insertarlo en HTML sin que se interprete como código (evita que un nombre
+ * como <b>x</b> o un script se ejecute en la página).
+ */
 export function esc(texto: string): string {
     const d = document.createElement('div');
     d.textContent = texto;
-    return d.innerHTML;
+    return d.innerHTML.split('"').join('&quot;');
 }

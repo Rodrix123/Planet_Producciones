@@ -1,11 +1,17 @@
+// Nómina del personal operativo (/api/empleados): nombre, documento, salario, cuenta bancaria y
+// tipo de contrato. Solo la administradora la ve.
+// No confundir con las cuentas de acceso al sistema (ver cuentasAcceso.routes.ts).
+
 import { Router } from 'express';
 import { pool } from '../db';
 import { requireAuth, requireRole } from '../auth';
 import { asyncHandler } from '../asyncHandler';
 
+// Tipos de contrato que maneja la empresa; la base solo acepta estos tres valores.
 type TipoContrato = 'con_contrato' | 'freelance_fijo' | 'freelance_no_fijo';
 const TIPOS_CONTRATO_VALIDOS: readonly string[] = ['con_contrato', 'freelance_fijo', 'freelance_no_fijo'];
 
+// Fila de la tabla empleados tal como llega de la base (nombres en snake_case, salario como texto).
 interface EmpleadoRow {
     id: string;
     nombre: string;
@@ -18,6 +24,7 @@ interface EmpleadoRow {
     activo: boolean;
 }
 
+// Convierte la fila de la base al formato que usa el frontend (camelCase y salario como número).
 function mapEmpleado(row: EmpleadoRow) {
     return {
         id: row.id,
@@ -34,8 +41,10 @@ function mapEmpleado(row: EmpleadoRow) {
 
 export const empleadosRouter = Router();
 
+// Toda la nómina es solo para la administradora.
 empleadosRouter.use(requireAuth, requireRole('administrador'));
 
+// Lista solo los empleados activos (el borrado es lógico), en orden alfabético.
 empleadosRouter.get('/', asyncHandler(async (_req, res) => {
     const { rows } = await pool.query<EmpleadoRow>(
         'select * from empleados where activo = true order by nombre asc'
@@ -43,6 +52,7 @@ empleadosRouter.get('/', asyncHandler(async (_req, res) => {
     res.json(rows.map(mapEmpleado));
 }));
 
+// Crea un empleado. El nombre y el tipo de contrato son obligatorios.
 empleadosRouter.post('/', asyncHandler(async (req, res) => {
     const body = req.body as {
         nombre?: string;
@@ -79,6 +89,7 @@ empleadosRouter.post('/', asyncHandler(async (req, res) => {
     res.status(201).json(mapEmpleado(rows[0]));
 }));
 
+// Edita campos sueltos: lo que no se envía queda como estaba (coalesce en la consulta).
 empleadosRouter.put('/:id', asyncHandler(async (req, res) => {
     const body = req.body as {
         nombre?: string;
@@ -122,6 +133,8 @@ empleadosRouter.put('/:id', asyncHandler(async (req, res) => {
     res.json(mapEmpleado(rows[0]));
 }));
 
+// Borrado lógico: el empleado queda inactivo y deja de aparecer en la lista, pero no se pierde
+// su información.
 empleadosRouter.delete('/:id', asyncHandler(async (req, res) => {
     const { rowCount } = await pool.query('update empleados set activo = false, actualizado_en = now() where id = $1', [req.params.id]);
     if (!rowCount) return res.status(404).json({ status: 'error', message: 'Empleado no encontrado' });

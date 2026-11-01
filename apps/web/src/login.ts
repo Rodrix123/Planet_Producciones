@@ -1,3 +1,6 @@
+// Pantalla de inicio de sesión del equipo. Envía correo y contraseña a /api/auth/login y lleva a la
+// persona a su panel según el rol (o a cambiar la contraseña si es obligatorio).
+
 import { montarSitio } from './shared/sitio';
 import './landing.css';
 import { apiFetch, rutaPanelPorRol, type SesionActual } from './shared/api';
@@ -13,17 +16,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusText = document.getElementById('loginStatusText') as HTMLElement;
     const forgotLink = document.getElementById('loginForgotLink') as HTMLAnchorElement;
 
+    // Muestra un aviso bajo el formulario (en rojo si es un error).
     function mostrarMensaje(texto: string, esError: boolean) {
         statusText.textContent = texto;
         statusMsg.classList.toggle('error', esError);
         statusMsg.classList.add('visible');
     }
 
+    // No hay recuperación automática de contraseña: se indica a quién acudir.
     forgotLink.addEventListener('click', (e) => {
         e.preventDefault();
-        mostrarMensaje('Contacta al desarrollador para restablecer tu acceso.', false);
+        mostrarMensaje('Para restablecer tu acceso, comunícate con la administración de Planet Producciones.', false);
     });
 
+    // Envía el formulario. Mientras espera la respuesta el botón queda deshabilitado para evitar un doble envío.
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
@@ -50,12 +56,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            // Si la cuenta debe cambiar su contraseña (primer ingreso o reseteo) va primero a esa pantalla.
             const sesion = datos as Pick<SesionActual, 'rol' | 'debeCambiarPassword'>;
             window.location.href = sesion.debeCambiarPassword
                 ? 'cambiar-password.html'
                 : rutaPanelPorRol(sesion.rol);
         } catch {
-            mostrarMensaje('No se pudo conectar con el servidor. Intenta nuevamente.', true);
+            mostrarMensaje('No pudimos conectarnos. Revisa tu internet e inténtalo de nuevo.', true);
         } finally {
             btnLogin.disabled = false;
             btnLogin.style.opacity = '1';

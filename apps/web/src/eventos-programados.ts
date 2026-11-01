@@ -1,8 +1,14 @@
+// Eventos definitivos (con contrato firmado) de la administradora, en un calendario mensual y en una
+// lista. Al tocar un día con eventos la lista se filtra a ese día; al abrir uno se ve su detalle y sus
+// enlaces al PDF de la cotización y al contrato firmado.
+
+import { esc } from './shared/panelShell';
 import './style.css';
 import './shared/panelRail.css';
 import { apiFetch, apiUrl, conManejoDeErrores, exigirSesion } from './shared/api';
 import { initPanelLayout } from './shared/layout';
 
+// Un servicio de la cotización.
 interface ItemSeleccionado {
     variantId: number;
     cantidad: number;
@@ -13,6 +19,7 @@ interface ItemSeleccionado {
     nota?: string | null;
 }
 
+// Una cotización tal como la devuelve /api/cotizaciones.
 interface Cotizacion {
     id: string;
     numeroReferencia: string;
@@ -27,9 +34,11 @@ interface Cotizacion {
 }
 
 const formatterCOP = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
+// Textos del calendario.
 const NOMBRES_MES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const DIAS_SEMANA = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
+// Estado de la pantalla: eventos cargados, mes que se ve en el calendario y día elegido (null = todos).
 let eventos: Cotizacion[] = [];
 let mesActual = new Date().getMonth();
 let anioActual = new Date().getFullYear();
@@ -38,6 +47,7 @@ let filtroFecha: string | null = null;
 const listaEl = document.getElementById('listaEventos') as HTMLElement;
 const detalleEl = document.getElementById('detalleEvento') as HTMLElement;
 
+// Trae los eventos definitivos (estado programada) y pinta calendario y lista.
 async function cargarEventos() {
     const res = await apiFetch('/api/cotizaciones?estado=programada');
     eventos = (await res.json()) as Cotizacion[];
@@ -45,6 +55,7 @@ async function cargarEventos() {
     renderLista();
 }
 
+// Dibuja el mes: marca con un punto los días que tienen eventos y, al tocarlos, filtra la lista.
 function renderCalendario() {
     const titulo = document.getElementById('tituloMes')!;
     titulo.textContent = `${NOMBRES_MES[mesActual]} ${anioActual}`;
@@ -94,6 +105,7 @@ function renderCalendario() {
     }
 }
 
+// Dibuja la lista de eventos (todos o solo los del día elegido).
 function renderLista() {
     listaEl.innerHTML = '';
 
@@ -121,8 +133,8 @@ function renderLista() {
         card.className = 'item-card';
         card.innerHTML = `
             <div class="item-card-main">
-                <h3>${c.clienteNombre}</h3>
-                <p>Ref: ${c.numeroReferencia} · ${c.tipoEvento || 'N/A'} · ${c.fechaEvento ? new Date(c.fechaEvento + 'T00:00:00').toLocaleDateString('es-CO') : 'Sin fecha'}</p>
+                <h3>${esc(c.clienteNombre)}</h3>
+                <p>Ref: ${esc(c.numeroReferencia)} · ${esc(c.tipoEvento || 'N/A')} · ${c.fechaEvento ? new Date(c.fechaEvento + 'T00:00:00').toLocaleDateString('es-CO') : 'Sin fecha'}</p>
             </div>
             <div class="item-card-side">
                 <div class="item-card-total">${formatterCOP.format(c.total)}</div>
@@ -134,20 +146,21 @@ function renderLista() {
     });
 }
 
+// Muestra el detalle de un evento: cliente, servicios, total y enlaces a los PDF.
 async function abrirDetalle(c: Cotizacion) {
     document.getElementById('resumenCliente')!.innerHTML = `
-        <div class="detail-row"><div class="detail-row-main"><strong>Cliente:</strong> ${c.clienteNombre}</div></div>
-        <div class="detail-row"><div class="detail-row-main"><strong>Correo:</strong> ${c.clienteCorreo} &nbsp;·&nbsp; <strong>Teléfono:</strong> ${c.clienteTelefono}</div></div>
-        <div class="detail-row"><div class="detail-row-main"><strong>Evento:</strong> ${c.tipoEvento || 'N/A'} · ${c.lugar || 'N/A'}</div></div>
+        <div class="detail-row"><div class="detail-row-main"><strong>Cliente:</strong> ${esc(c.clienteNombre)}</div></div>
+        <div class="detail-row"><div class="detail-row-main"><strong>Correo:</strong> ${esc(c.clienteCorreo)} &nbsp;·&nbsp; <strong>Teléfono:</strong> ${esc(c.clienteTelefono)}</div></div>
+        <div class="detail-row"><div class="detail-row-main"><strong>Evento:</strong> ${esc(c.tipoEvento || 'N/A')} · ${esc(c.lugar || 'N/A')}</div></div>
         <div class="detail-row"><div class="detail-row-main"><strong>Fecha del evento:</strong> ${c.fechaEvento ? new Date(c.fechaEvento + 'T00:00:00').toLocaleDateString('es-CO') : 'Sin definir'}</div></div>
     `;
 
     document.getElementById('listaItemsDetalle')!.innerHTML = c.items.map((item) => `
         <div class="detail-row">
             <div>
-                <div class="detail-row-main"><strong>${item.cantidad > 1 ? `${item.cantidad} x ${item.nombre}` : item.nombre}</strong></div>
-                <div class="detail-row-sub">${item.tag}${item.descripcion ? ' · Incluye: ' + item.descripcion : ''}</div>
-                ${item.nota ? `<div class="detail-row-sub" style="color:var(--orange-main); margin-top:0.3rem;"><i class="fa-solid fa-note-sticky"></i> ${item.nota}</div>` : ''}
+                <div class="detail-row-main"><strong>${esc(item.cantidad > 1 ? `${item.cantidad} x ${item.nombre}` : item.nombre)}</strong></div>
+                <div class="detail-row-sub">${esc(item.tag + (item.descripcion ? ' · Incluye: ' + item.descripcion : ''))}</div>
+                ${item.nota ? `<div class="detail-row-sub" style="color:var(--orange-main); margin-top:0.3rem;"><i class="fa-solid fa-note-sticky"></i> ${esc(item.nota)}</div>` : ''}
             </div>
             <div class="detail-row-price">${formatterCOP.format(item.precioUnit * item.cantidad)}</div>
         </div>
@@ -161,6 +174,7 @@ async function abrirDetalle(c: Cotizacion) {
     detalleEl.classList.remove('hidden');
 }
 
+// Vuelve del detalle al calendario y la lista.
 function volverALista() {
     detalleEl.classList.add('hidden');
     listaEl.classList.remove('hidden');

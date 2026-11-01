@@ -63,6 +63,21 @@ npm start
 Tras el build, el servidor sirve también el frontend compilado en
 http://localhost:3000.
 
+El servidor se compila en **un solo archivo** (`apps/server/dist/index.js`, con esbuild; ver
+`apps/server/scripts/build.mjs`) que ya incluye el paquete `@my-app/db` del monorepo. Antes se usaba
+solo `tsc` y el servidor compilado se caía al arrancar porque Node no puede cargar ese paquete (es
+TypeScript sin compilar). `npm run test:arranque --workspace apps/server` compila el servidor y lo
+arranca de verdad para comprobarlo.
+
+### Pruebas
+
+```bash
+npm test --workspace apps/server
+```
+
+Usan un PostgreSQL embebido (PGlite) con el esquema de producción: no tocan la base real ni mandan
+correos.
+
 ### Live Server (VS Code)
 
 `.vscode/settings.json` apunta Live Server a `apps/web/dist`. Ejecuta
@@ -73,6 +88,11 @@ http://localhost:3000.
 Copia `apps/server/.env.example` a `apps/server/.env` y completa los valores
 reales (usuario/clave SMTP, correo de destino, puerto).
 
+- `UPLOADS_DIR`: carpeta de los **contratos firmados**. En producción debe ser un disco persistente.
+- `EMAIL_CA_FILE` / `EMAIL_TLS_INSECURE`: el certificado de Gmail se verifica siempre. Si tu red lo
+  intercepta (error `self-signed certificate in certificate chain`), usa `EMAIL_CA_FILE` con el
+  certificado raíz del antivirus/proxy, o `EMAIL_TLS_INSECURE=true` solo en desarrollo.
+
 ## Docker
 
 ```bash
@@ -80,6 +100,15 @@ docker compose up --build
 ```
 
 Levanta el backend en `:3000` y el frontend (servido por Nginx) en `:8080`.
+
+Los contratos firmados se guardan en el volumen `contratos_firmados` (montado en `/app/uploads`), así
+que **sobreviven a volver a desplegar**. Haz copia de seguridad de ese volumen:
+
+```bash
+docker run --rm -v planet_contratos_firmados:/datos -v "$PWD":/copia alpine tar czf /copia/contratos-firmados.tgz -C /datos .
+```
+
+(el prefijo del nombre del volumen es el de la carpeta del proyecto; verifícalo con `docker volume ls`).
 
 ## Funcionalidad
 

@@ -5,6 +5,12 @@ services:
       dockerfile: apps/server/Dockerfile
     env_file:
       - ./apps/server/.env
+    environment:
+      # Contratos firmados: viven en un volumen, no en el disco del contenedor (que se borra al
+      # volver a desplegar). Haz copia de seguridad de este volumen.
+      UPLOADS_DIR: /app/uploads
+    volumes:
+      - contratos_firmados:/app/uploads
     ports:
       - "3000:3000"
     restart: unless-stopped
@@ -18,3 +24,6 @@ services:
     depends_on:
       - server
     restart: unless-stopped
+
+volumes:
+  contratos_firmados:

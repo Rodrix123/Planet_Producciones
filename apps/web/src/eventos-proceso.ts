@@ -1,3 +1,9 @@
+// Eventos en proceso de la administradora (Maritza): cotizaciones ya finalizadas que esperan el
+// contrato firmado. Desde aquí completa el documento y la fecha, comenta, sube el contrato firmado y,
+// cuando está listo, oficializa el evento (pasa a "Eventos programados" y a logística).
+// El contrato lo genera y envía Mariana desde su propio panel; aquí solo se ve su estado.
+
+import { esc } from './shared/panelShell';
 import './style.css';
 import './shared/panelRail.css';
 import { apiFetch, apiUrl, conManejoDeErrores, exigirSesion } from './shared/api';
@@ -5,6 +11,7 @@ import { initPanelLayout } from './shared/layout';
 
 declare const Swal: any;
 
+// Un servicio de la cotización.
 interface ItemSeleccionado {
     variantId: number;
     cantidad: number;
@@ -15,6 +22,7 @@ interface ItemSeleccionado {
     nota?: string | null;
 }
 
+// Una cotización tal como la devuelve /api/cotizaciones.
 interface Cotizacion {
     id: string;
     numeroReferencia: string;
@@ -30,6 +38,7 @@ interface Cotizacion {
     estado: string;
 }
 
+// Una entrada del historial: comentario, edición de servicios o cambio de estado.
 interface HistorialEntry {
     id: string;
     tipo: 'comentario' | 'edicion' | 'cambio_estado';
@@ -40,6 +49,7 @@ interface HistorialEntry {
     creadoEn: string;
 }
 
+// Estado del contrato que devuelve /api/contratos/:id.
 interface ContratoInfo {
     enviadoEn: string | null;
     firmadoSubidoEn: string | null;
@@ -48,17 +58,20 @@ interface ContratoInfo {
 
 const formatterCOP = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
 
+// La cotización abierta en el detalle (null cuando se ve la lista).
 let cotizacionActual: Cotizacion | null = null;
 
 const listaEl = document.getElementById('listaEventos') as HTMLElement;
 const detalleEl = document.getElementById('detalleEvento') as HTMLElement;
 
+// Trae las cotizaciones finalizadas o con contrato enviado (las que aún no son definitivas).
 async function cargarLista() {
     const res = await apiFetch('/api/cotizaciones?estado=finalizada,contrato_enviado');
     const cotizaciones = (await res.json()) as Cotizacion[];
     renderLista(cotizaciones);
 }
 
+// Dibuja la lista; cada tarjeta indica si falta enviar el contrato o si ya se envió.
 function renderLista(cotizaciones: Cotizacion[]) {
     listaEl.innerHTML = '';
     if (cotizaciones.length === 0) {
@@ -71,8 +84,8 @@ function renderLista(cotizaciones: Cotizacion[]) {
         card.className = 'item-card';
         card.innerHTML = `
             <div class="item-card-main">
-                <h3>${c.clienteNombre} <span class="badge">${c.estado === 'finalizada' ? 'Sin contrato enviado' : 'Contrato enviado'}</span></h3>
-                <p>Ref: ${c.numeroReferencia} · ${c.tipoEvento || 'Tipo de evento sin definir'} · ${c.fechaEvento ? new Date(c.fechaEvento + 'T00:00:00').toLocaleDateString('es-CO') : 'Sin fecha'}</p>
+                <h3>${esc(c.clienteNombre)} <span class="badge">${c.estado === 'finalizada' ? 'Sin contrato enviado' : 'Contrato enviado'}</span></h3>
+                <p>Ref: ${esc(c.numeroReferencia)} · ${esc(c.tipoEvento || 'Tipo de evento sin definir')} · ${c.fechaEvento ? new Date(c.fechaEvento + 'T00:00:00').toLocaleDateString('es-CO') : 'Sin fecha'}</p>
             </div>
             <div class="item-card-side">
                 <div class="item-card-total">${formatterCOP.format(c.total)}</div>
@@ -84,6 +97,7 @@ function renderLista(cotizaciones: Cotizacion[]) {
     });
 }
 
+// Abre una cotización: datos, servicios, estado del contrato e historial.
 async function abrirDetalle(id: string) {
     const [resCot, resHist, resContrato] = await Promise.all([
         apiFetch(`/api/cotizaciones/${id}`),
@@ -97,9 +111,9 @@ async function abrirDetalle(id: string) {
     cotizacionActual = cotizacion;
 
     document.getElementById('resumenCliente')!.innerHTML = `
-        <div class="detail-row"><div class="detail-row-main"><strong>Cliente:</strong> ${cotizacion.clienteNombre} ${cotizacion.clienteDocumento ? '(CC ' + cotizacion.clienteDocumento + ')' : ''}</div></div>
-        <div class="detail-row"><div class="detail-row-main"><strong>Correo:</strong> ${cotizacion.clienteCorreo} &nbsp;·&nbsp; <strong>Teléfono:</strong> ${cotizacion.clienteTelefono}</div></div>
-        <div class="detail-row"><div class="detail-row-main"><strong>Evento:</strong> ${cotizacion.tipoEvento || 'N/A'} · ${cotizacion.lugar || 'N/A'}</div></div>
+        <div class="detail-row"><div class="detail-row-main"><strong>Cliente:</strong> ${esc(cotizacion.clienteNombre)} ${cotizacion.clienteDocumento ? esc('(CC ' + cotizacion.clienteDocumento + ')') : ''}</div></div>
+        <div class="detail-row"><div class="detail-row-main"><strong>Correo:</strong> ${esc(cotizacion.clienteCorreo)} &nbsp;·&nbsp; <strong>Teléfono:</strong> ${esc(cotizacion.clienteTelefono)}</div></div>
+        <div class="detail-row"><div class="detail-row-main"><strong>Evento:</strong> ${esc(cotizacion.tipoEvento || 'N/A')} · ${esc(cotizacion.lugar || 'N/A')}</div></div>
         <div class="detail-row"><div class="detail-row-main"><strong>Fecha del evento:</strong> ${cotizacion.fechaEvento ? new Date(cotizacion.fechaEvento + 'T00:00:00').toLocaleDateString('es-CO') : 'Sin definir'}</div></div>
     `;
     (document.getElementById('inpClienteDocumento') as HTMLInputElement).value = cotizacion.clienteDocumento || '';
@@ -109,9 +123,9 @@ async function abrirDetalle(id: string) {
     itemsCont.innerHTML = cotizacion.items.map((item) => `
         <div class="detail-row">
             <div>
-                <div class="detail-row-main"><strong>${item.cantidad > 1 ? `${item.cantidad} x ${item.nombre}` : item.nombre}</strong></div>
-                <div class="detail-row-sub">${item.tag}${item.descripcion ? ' · Incluye: ' + item.descripcion : ''}</div>
-                ${item.nota ? `<div class="detail-row-sub" style="color:var(--orange-main); margin-top:0.3rem;"><i class="fa-solid fa-note-sticky"></i> ${item.nota}</div>` : ''}
+                <div class="detail-row-main"><strong>${esc(item.cantidad > 1 ? `${item.cantidad} x ${item.nombre}` : item.nombre)}</strong></div>
+                <div class="detail-row-sub">${esc(item.tag + (item.descripcion ? ' · Incluye: ' + item.descripcion : ''))}</div>
+                ${item.nota ? `<div class="detail-row-sub" style="color:var(--orange-main); margin-top:0.3rem;"><i class="fa-solid fa-note-sticky"></i> ${esc(item.nota)}</div>` : ''}
             </div>
             <div class="detail-row-price">${formatterCOP.format(item.precioUnit * item.cantidad)}</div>
         </div>
@@ -126,6 +140,8 @@ async function abrirDetalle(id: string) {
     detalleEl.classList.remove('hidden');
 }
 
+// Pinta el estado del contrato y muestra solo lo que corresponde: aviso si falta enviarlo, subir el
+// firmado si ya se envió, y el botón de oficializar cuando el firmado ya está subido.
 function renderContrato(cotizacion: Cotizacion, contrato: ContratoInfo) {
     const estadoEl = document.getElementById('estadoContrato')!;
     const bloqueSubir = document.getElementById('bloqueSubirFirmado')!;
@@ -160,6 +176,7 @@ function renderContrato(cotizacion: Cotizacion, contrato: ContratoInfo) {
     }
 }
 
+// Dibuja el historial de la cotización (del más antiguo al más nuevo).
 function renderHistorial(historial: HistorialEntry[]) {
     const ESTADO_LABEL: Record<string, string> = {
         recibida: 'Recibida', en_revision: 'En revisión', finalizada: 'Finalizada',
@@ -179,11 +196,12 @@ function renderHistorial(historial: HistorialEntry[]) {
         else texto = `Cambio de estado: ${ESTADO_LABEL[h.estadoAntes || ''] || h.estadoAntes} → ${ESTADO_LABEL[h.estadoDespues || ''] || h.estadoDespues}`;
         const div = document.createElement('div');
         div.className = 'comment-item';
-        div.innerHTML = `<div class="comment-meta">${h.usuarioNombre || 'Sistema'} · ${fecha}</div><div>${texto}</div>`;
+        div.innerHTML = `<div class="comment-meta">${esc(h.usuarioNombre || 'Sistema')} · ${fecha}</div><div>${esc(texto)}</div>`;
         cont.appendChild(div);
     });
 }
 
+// Vuelve del detalle a la lista y la recarga.
 function volverALista() {
     cotizacionActual = null;
     detalleEl.classList.add('hidden');
@@ -197,6 +215,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('btnVolverLista')?.addEventListener('click', conManejoDeErrores(async () => volverALista()));
 
+    // Guarda el documento del cliente y la fecha del evento, que se necesitan para generar el contrato.
     document.getElementById('btnGuardarDatos')?.addEventListener('click', conManejoDeErrores(async () => {
         if (!cotizacionActual) return;
         const res = await apiFetch(`/api/cotizaciones/${cotizacionActual.id}/datos`, {
@@ -215,6 +234,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         await abrirDetalle(cotizacionActual.id);
     }));
 
+    // Sube el contrato firmado (PDF); el servidor verifica que sea un PDF y de hasta 10 MB.
     document.getElementById('btnSubirFirmado')?.addEventListener('click', conManejoDeErrores(async () => {
         if (!cotizacionActual) return;
         const input = document.getElementById('inputArchivoFirmado') as HTMLInputElement;
@@ -238,6 +258,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         await abrirDetalle(cotizacionActual.id);
     }));
 
+    // Agrega un comentario interno al historial.
     document.getElementById('btnAgregarComentario')?.addEventListener('click', conManejoDeErrores(async () => {
         if (!cotizacionActual) return;
         const input = document.getElementById('inpComentario') as HTMLInputElement;
@@ -255,6 +276,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }));
 
+    // Oficializa el evento tras pedir confirmación. Solo se ofrece cuando el contrato firmado ya está subido.
     document.getElementById('btnMarcarDefinitivo')?.addEventListener('click', conManejoDeErrores(async () => {
         if (!cotizacionActual) return;
         const confirmacion = await Swal.fire({

@@ -4,11 +4,13 @@
 // como en el editor de servicios del panel de Maritza.
 import { apiUrl } from './api';
 
+// Un precio según la cantidad pedida.
 export interface TramoPrecio {
     cantidad: number;
     precio: number;
 }
 
+// Una opción concreta de un servicio, con su precio y su descripción.
 export interface VarianteCatalogo {
     id: number;
     simpleDescription: string;
@@ -19,6 +21,7 @@ export interface VarianteCatalogo {
     tramos: TramoPrecio[];
 }
 
+// Un servicio del catálogo y cómo se elige en el formulario (lista, casilla o cantidad).
 export interface InventoryCatalogo {
     id: number;
     name: string;
@@ -27,12 +30,14 @@ export interface InventoryCatalogo {
     variants: VarianteCatalogo[];
 }
 
+// Lo que devuelve /api/catalogo: sedes, transporte por ciudad y servicios.
 export interface Catalogo {
     venues: { id: number; name: string; city: string | null }[];
     transportation: { id: number; city: string; price: number }[];
     inventory: InventoryCatalogo[];
 }
 
+// Un servicio elegido por el cliente, con el precio unitario que se le aplicó.
 export interface ItemSeleccionado {
     variantId: number;
     cantidad: number;
@@ -43,13 +48,16 @@ export interface ItemSeleccionado {
     nota?: string;
 }
 
+// Resultado del cálculo: total y servicios elegidos.
 export interface ResultadoCatalogo {
     total: number;
     itemsSeleccionados: ItemSeleccionado[];
 }
 
+// Pesos colombianos sin decimales.
 const formatterCOP = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
 
+// "EQUIPOS DE SONIDO" -> "Equipos de Sonido" (las palabras cortas como "de" quedan en minúscula).
 function tituloLegible(tipo: string): string {
     return tipo
         .toLowerCase()
@@ -58,8 +66,12 @@ function tituloLegible(tipo: string): string {
         .join(' ');
 }
 
+// El catálogo se descarga una sola vez por carga de página.
 let catalogoCache: Catalogo | null = null;
 
+/**
+ * Devuelve el catálogo, usando la copia en memoria si ya se descargó.
+ */
 export async function obtenerCatalogo(): Promise<Catalogo> {
     if (catalogoCache) return catalogoCache;
     const res = await fetch(apiUrl('/api/catalogo'));
@@ -70,23 +82,29 @@ export async function obtenerCatalogo(): Promise<Catalogo> {
 /** Dibuja los controles del catálogo (selects / checkboxes / cantidades) dentro de `contenedor`. */
 export function renderCatalogoEnContenedor(contenedor: HTMLElement, catalogo: Catalogo): void {
     const selects = catalogo.inventory.filter((i) => i.controlType === 'select');
-    const checkboxes = catalogo.inventory.filter((i) => i.controlType === 'checkbox');
-    const qtys = catalogo.inventory.filter((i) => i.controlType === 'qty');
+    // Dentro de cada lista, lo más económico primero (a igual precio, por nombre).
+    const precioDe = (i: InventoryCatalogo) => i.variants[0]?.price ?? 0;
+    const porPrecio = (a: InventoryCatalogo, b: InventoryCatalogo) => precioDe(a) - precioDe(b)
+        || (a.name || '').localeCompare(b.name || '', 'es', { numeric: true });
+    const checkboxes = catalogo.inventory.filter((i) => i.controlType === 'checkbox').sort(porPrecio);
+    const qtys = catalogo.inventory.filter((i) => i.controlType === 'qty').sort(porPrecio);
 
     const htmlSelects = selects.map((inv) => `
         <div>
             <label for="inv-${inv.id}">${inv.name || tituloLegible(inv.type)}</label>
             <select id="inv-${inv.id}" class="precio-select" data-tag="${inv.type}">
-                <option value="" data-precio="0" data-variant-id="" selected>-- No incluir --</option>
+                <option value="" data-precio="0" data-variant-id="" selected>No incluir</option>
                 ${inv.variants.flatMap((v) => {
                     const tramos = v.tramos.length > 0 ? v.tramos : [{ cantidad: 1, precio: v.price }];
                     const variasOpciones = tramos.length > 1;
-                    return tramos.map((t) => `
+                    return tramos.map((t) => ({ v, t, variasOpciones }));
+                }).sort((a, b) => a.t.precio - b.t.precio
+                    || a.v.simpleDescription.localeCompare(b.v.simpleDescription, 'es', { numeric: true })
+                ).map(({ v, t, variasOpciones }) => `
                         <option value="${v.id}_${t.cantidad}" data-variant-id="${v.id}" data-cantidad="${t.cantidad}" data-precio="${t.precio}" data-incluye="${(v.detailedDescription || '').replace(/"/g, '&quot;')}">
                             ${v.simpleDescription}${variasOpciones ? ` (x${t.cantidad})` : ''} — ${formatterCOP.format(t.precio)}
                         </option>
-                    `);
-                }).join('')}
+                    `).join('')}
             </select>
             <small class="field-hint" id="inv-${inv.id}-hint"></small>
         </div>
@@ -136,6 +154,7 @@ export function renderCatalogoEnContenedor(contenedor: HTMLElement, catalogo: Ca
     `;
 }
 
+// Lo que incluye un paquete, guardado en el atributo data-incluye del control.
 function obtenerIncluye(el: Element): string {
     return el.getAttribute('data-incluye') || '';
 }

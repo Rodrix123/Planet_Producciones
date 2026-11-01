@@ -4,3 +4,6 @@
 .git
 **/.env
 **/*.log
+# Contratos firmados de desarrollo: nunca deben entrar a una imagen
+apps/server/uploads
+**/.prueba-arranque-*

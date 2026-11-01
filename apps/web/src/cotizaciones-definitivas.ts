@@ -1,3 +1,8 @@
+// Panel de la secretaria (Mariana): cotizaciones ya finalizadas por la administradora. Desde aquí
+// revisa los datos, ve la vista previa del contrato y lo genera y envía por correo al cliente.
+// No puede editar la cotización: si falta un dato (documento, fecha) se lo pide a la administradora.
+
+import { esc } from './shared/panelShell';
 import './style.css';
 import './landing.css';
 import './shared/panel.css';
@@ -6,6 +11,7 @@ import { initPanelLayout } from './shared/layout';
 
 declare const Swal: any;
 
+// Un servicio de la cotización.
 interface ItemSeleccionado {
     variantId: number;
     cantidad: number;
@@ -16,6 +22,7 @@ interface ItemSeleccionado {
     nota?: string | null;
 }
 
+// Una cotización tal como la devuelve /api/cotizaciones.
 interface Cotizacion {
     id: string;
     numeroReferencia: string;
@@ -31,6 +38,7 @@ interface Cotizacion {
     estado: string;
 }
 
+// Estado del contrato que devuelve /api/contratos/:id.
 interface ContratoInfo {
     enviadoEn: string | null;
     firmadoSubidoEn: string | null;
@@ -38,21 +46,25 @@ interface ContratoInfo {
 }
 
 const formatterCOP = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
+// Cómo se nombra cada estado en pantalla.
 const ESTADO_LABEL: Record<string, string> = {
     finalizada: 'Lista para contrato', contrato_enviado: 'Contrato enviado', programada: 'Evento definitivo'
 };
 
+// La cotización abierta en el detalle (null cuando se ve la lista).
 let cotizacionActual: Cotizacion | null = null;
 
 const listaEl = document.getElementById('listaCotizaciones') as HTMLElement;
 const detalleEl = document.getElementById('detalleCotizacion') as HTMLElement;
 
+// Trae las cotizaciones que la secretaria puede ver (de "finalizada" en adelante).
 async function cargarLista() {
     const res = await apiFetch('/api/cotizaciones?estado=finalizada,contrato_enviado,programada');
     const cotizaciones = (await res.json()) as Cotizacion[];
     renderLista(cotizaciones);
 }
 
+// Dibuja la lista de cotizaciones (o el aviso de que no hay).
 function renderLista(cotizaciones: Cotizacion[]) {
     listaEl.innerHTML = '';
     if (cotizaciones.length === 0) {
@@ -65,8 +77,8 @@ function renderLista(cotizaciones: Cotizacion[]) {
         card.className = 'item-card';
         card.innerHTML = `
             <div class="item-card-main">
-                <h3>${c.clienteNombre} <span class="badge">${ESTADO_LABEL[c.estado] || c.estado}</span></h3>
-                <p>Ref: ${c.numeroReferencia} · ${c.tipoEvento || 'N/A'} · ${c.fechaEvento ? new Date(c.fechaEvento + 'T00:00:00').toLocaleDateString('es-CO') : 'Sin fecha'}</p>
+                <h3>${esc(c.clienteNombre)} <span class="badge">${ESTADO_LABEL[c.estado] || c.estado}</span></h3>
+                <p>Ref: ${esc(c.numeroReferencia)} · ${esc(c.tipoEvento || 'N/A')} · ${c.fechaEvento ? new Date(c.fechaEvento + 'T00:00:00').toLocaleDateString('es-CO') : 'Sin fecha'}</p>
             </div>
             <div class="item-card-side">
                 <div class="item-card-total">${formatterCOP.format(c.total)}</div>
@@ -78,6 +90,8 @@ function renderLista(cotizaciones: Cotizacion[]) {
     });
 }
 
+// Abre una cotización: sus datos y el estado del contrato. Solo ofrece "generar y enviar" si el
+// contrato aún no se envió y no faltan el documento del cliente ni la fecha del evento.
 async function abrirDetalle(id: string) {
     const [resCot, resContrato] = await Promise.all([
         apiFetch(`/api/cotizaciones/${id}`),
@@ -88,18 +102,18 @@ async function abrirDetalle(id: string) {
     cotizacionActual = cotizacion;
 
     document.getElementById('resumenCliente')!.innerHTML = `
-        <div class="detail-row"><div class="detail-row-main"><strong>Cliente:</strong> ${cotizacion.clienteNombre} ${cotizacion.clienteDocumento ? '(CC ' + cotizacion.clienteDocumento + ')' : ''}</div></div>
-        <div class="detail-row"><div class="detail-row-main"><strong>Correo:</strong> ${cotizacion.clienteCorreo} &nbsp;·&nbsp; <strong>Teléfono:</strong> ${cotizacion.clienteTelefono}</div></div>
-        <div class="detail-row"><div class="detail-row-main"><strong>Evento:</strong> ${cotizacion.tipoEvento || 'N/A'} · ${cotizacion.lugar || 'N/A'}</div></div>
+        <div class="detail-row"><div class="detail-row-main"><strong>Cliente:</strong> ${esc(cotizacion.clienteNombre)} ${cotizacion.clienteDocumento ? esc('(CC ' + cotizacion.clienteDocumento + ')') : ''}</div></div>
+        <div class="detail-row"><div class="detail-row-main"><strong>Correo:</strong> ${esc(cotizacion.clienteCorreo)} &nbsp;·&nbsp; <strong>Teléfono:</strong> ${esc(cotizacion.clienteTelefono)}</div></div>
+        <div class="detail-row"><div class="detail-row-main"><strong>Evento:</strong> ${esc(cotizacion.tipoEvento || 'N/A')} · ${esc(cotizacion.lugar || 'N/A')}</div></div>
         <div class="detail-row"><div class="detail-row-main"><strong>Fecha del evento:</strong> ${cotizacion.fechaEvento ? new Date(cotizacion.fechaEvento + 'T00:00:00').toLocaleDateString('es-CO') : 'Sin definir'}</div></div>
     `;
 
     document.getElementById('listaItemsDetalle')!.innerHTML = cotizacion.items.map((item) => `
         <div class="detail-row">
             <div>
-                <div class="detail-row-main"><strong>${item.cantidad > 1 ? `${item.cantidad} x ${item.nombre}` : item.nombre}</strong></div>
-                <div class="detail-row-sub">${item.tag}${item.descripcion ? ' · Incluye: ' + item.descripcion : ''}</div>
-                ${item.nota ? `<div class="detail-row-sub" style="color:var(--orange-main); margin-top:0.3rem;"><i class="fa-solid fa-note-sticky"></i> ${item.nota}</div>` : ''}
+                <div class="detail-row-main"><strong>${esc(item.cantidad > 1 ? `${item.cantidad} x ${item.nombre}` : item.nombre)}</strong></div>
+                <div class="detail-row-sub">${esc(item.tag + (item.descripcion ? ' · Incluye: ' + item.descripcion : ''))}</div>
+                ${item.nota ? `<div class="detail-row-sub" style="color:var(--orange-main); margin-top:0.3rem;"><i class="fa-solid fa-note-sticky"></i> ${esc(item.nota)}</div>` : ''}
             </div>
             <div class="detail-row-price">${formatterCOP.format(item.precioUnit * item.cantidad)}</div>
         </div>
@@ -135,6 +149,7 @@ async function abrirDetalle(id: string) {
     detalleEl.classList.remove('hidden');
 }
 
+// Vuelve del detalle a la lista y la recarga (por si cambió algún estado).
 function volverALista() {
     cotizacionActual = null;
     detalleEl.classList.add('hidden');

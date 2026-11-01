@@ -10,8 +10,10 @@ import { supabaseAdmin } from '../supabaseAdmin';
 export const cuentasAccesoRouter = Router();
 cuentasAccesoRouter.use(requireAuth, requireRole('administrador'));
 
+// Tamaño de página al recorrer los usuarios de Supabase Auth.
 const POR_PAGINA = 200;
 
+// Fila de la tabla profiles (datos del perfil de cada cuenta).
 interface FilaPerfil {
     id: string;
     role_id: number | null;
@@ -20,6 +22,10 @@ interface FilaPerfil {
     debe_cambiar_password: boolean;
 }
 
+/**
+ * Todos los usuarios de Supabase Auth indexados por id (teléfono, fecha de creación y último
+ * acceso), recorriendo las páginas de la API de administración.
+ */
 async function listarUsuariosAuthPorId(): Promise<Map<string, { phone: string | null; createdAt: string; ultimoAcceso: string | null }>> {
     const mapa = new Map<string, { phone: string | null; createdAt: string; ultimoAcceso: string | null }>();
     for (let page = 1; ; page++) {
@@ -37,6 +43,8 @@ async function listarUsuariosAuthPorId(): Promise<Map<string, { phone: string | 
     return mapa;
 }
 
+// Lista las cuentas con su rol, sus días no disponibles y sus datos de acceso. Las consultas son
+// independientes, por eso van en paralelo.
 cuentasAccesoRouter.get('/', asyncHandler(async (_req, res) => {
     const [roles, perfiles, dias, usuariosAuth] = await Promise.all([
         pool.query<{ id: number; name: string; description: string | null }>('select id, name, description from role order by id'),
@@ -67,6 +75,8 @@ cuentasAccesoRouter.get('/', asyncHandler(async (_req, res) => {
     });
 }));
 
+// Crea la cuenta en Supabase Auth y su perfil. Queda con debe_cambiar_password = true: la persona
+// define su propia contraseña en el primer ingreso.
 cuentasAccesoRouter.post('/', asyncHandler(async (req, res) => {
     const body = req.body as { nombre?: string; correo?: string; password?: string; telefono?: string; rolId?: number };
     const nombre = body.nombre?.trim();
@@ -82,6 +92,7 @@ cuentasAccesoRouter.post('/', asyncHandler(async (req, res) => {
     const rol = await pool.query('select id from role where id = $1', [body.rolId]);
     if (!rol.rows[0]) return res.status(400).json({ status: 'error', message: 'El rol no existe' });
 
+    // El teléfono se guarda sin espacios, paréntesis, guiones ni el signo + (formato de Supabase).
     const telefono = body.telefono?.replace(/[\s()-]/g, '').replace(/^\+/, '') || undefined;
 
     const { data, error } = await supabaseAdmin.auth.admin.createUser({
@@ -103,6 +114,8 @@ cuentasAccesoRouter.post('/', asyncHandler(async (req, res) => {
     res.status(201).json({ status: 'ok', id: data.user.id });
 }));
 
+// Edita nombre, correo, teléfono y rol. Correo y teléfono viven en Supabase Auth; nombre y rol, en
+// profiles.
 cuentasAccesoRouter.put('/:id', asyncHandler(async (req, res) => {
     const body = req.body as { nombre?: string; correo?: string; telefono?: string; rolId?: number };
     const { rows } = await pool.query('select id from profiles where id = $1', [req.params.id]);
@@ -139,6 +152,7 @@ cuentasAccesoRouter.put('/:id', asyncHandler(async (req, res) => {
     res.json({ status: 'ok' });
 }));
 
+// Elimina la cuenta. No se permite borrar la propia para no quedarse sin acceso al sistema.
 cuentasAccesoRouter.delete('/:id', asyncHandler(async (req, res) => {
     if (req.params.id === req.usuario!.id) {
         return res.status(400).json({ status: 'error', message: 'No puedes eliminar tu propia cuenta' });
@@ -152,6 +166,7 @@ cuentasAccesoRouter.delete('/:id', asyncHandler(async (req, res) => {
     res.json({ status: 'ok' });
 }));
 
+// Marca un día como no disponible para esta persona (sin duplicar el registro si ya estaba).
 cuentasAccesoRouter.post('/:id/no-disponible', asyncHandler(async (req, res) => {
     const { fecha } = req.body as { fecha?: string };
     if (!fecha) return res.status(400).json({ status: 'error', message: 'Falta la fecha' });
@@ -166,6 +181,7 @@ cuentasAccesoRouter.post('/:id/no-disponible', asyncHandler(async (req, res) => 
     res.status(201).json({ status: 'ok' });
 }));
 
+// Quita un día no disponible.
 cuentasAccesoRouter.delete('/:id/no-disponible/:fecha', asyncHandler(async (req, res) => {
     await pool.query('delete from unavailability_users where id_user = $1 and date = $2', [req.params.id, req.params.fecha]);
     res.json({ status: 'ok' });

@@ -5,25 +5,31 @@
 
 import { montarSitio } from './shared/sitio';
 
+// Menú y pie de página comunes de la web pública.
 montarSitio();
 
+// Formulario del cotizador y contenedor donde main.ts dibuja el catálogo.
 const form = document.getElementById('quoteForm') as HTMLFormElement | null;
 const catalogo = document.getElementById('catalogoDinamico') as HTMLElement | null;
 
+// Un paso del formulario: su título y el panel que se muestra.
 interface Paso {
     titulo: string;
     panel: HTMLElement;
 }
 
+// Quita la numeración ("2. ") y los espacios sobrantes del título de una sección.
 function limpiarTitulo(texto: string): string {
     return texto.replace(/^\s*\d+\.\s*/, '').replace(/\s+/g, ' ').trim();
 }
 
+// Título del paso tomado de la sección; si no tiene, se usa el de respaldo.
 function tituloDe(panel: HTMLElement, respaldo: string): string {
     const t = panel.querySelector('.form-section-title');
     return t ? limpiarTitulo(t.textContent || '') || respaldo : respaldo;
 }
 
+// Divide el formulario en pasos (barra de progreso, botones Anterior/Siguiente) sin cambiar sus campos.
 function construirPasos(): void {
     if (!form || !catalogo) return;
 
@@ -202,6 +208,23 @@ function construirPasos(): void {
     document.getElementById('btnSubmit')?.addEventListener('click', revisarTodo, true);
     document.getElementById('btnCrearEvento')?.addEventListener('click', revisarTodo, true);
 
+    // Enter en un campo de texto avanza al siguiente paso (en vez de no hacer nada).
+    form.addEventListener('keydown', (e) => {
+        const el = e.target as HTMLElement;
+        if (e.key !== 'Enter' || el.tagName !== 'INPUT' || (el as HTMLInputElement).type === 'checkbox') return;
+        e.preventDefault();
+        if (!siguiente.hidden) siguiente.click();
+    });
+
+    // La fecha del evento no puede ser anterior a hoy.
+    const fecha = document.getElementById('fechaEvento') as HTMLInputElement | null;
+    if (fecha) {
+        const hoy = new Date();
+        const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+        const dd = String(hoy.getDate()).padStart(2, '0');
+        fecha.min = `${hoy.getFullYear()}-${mm}-${dd}`;
+    }
+
     mostrar(0, false);
 }
 
@@ -210,11 +233,14 @@ function construirPasos(): void {
 function esperarCatalogo(): void {
     if (!catalogo) return;
     let listo = false;
+    // El catálogo "llegó" (bien o con un aviso de error) cuando su contenido deja de ser el del
+    // mensaje de carga con el que nace la página; así no depende del texto de ningún mensaje.
+    const contenidoInicial = catalogo.innerHTML;
     const revisar = () => {
         if (listo) return;
         const hayGrupos = catalogo.querySelector(':scope > .form-group');
-        const fallo = /No se pudo cargar/i.test(catalogo.textContent || '');
-        if (!hayGrupos && !fallo) return;
+        const cambio = catalogo.innerHTML !== contenidoInicial;
+        if (!hayGrupos && !cambio) return;
         listo = true;
         observador.disconnect();
         construirPasos();
@@ -245,5 +271,6 @@ function barraTotal(): void {
     });
 }
 
+// Arranque: pasos cuando el catálogo esté listo y barra del total para móvil.
 esperarCatalogo();
 barraTotal();

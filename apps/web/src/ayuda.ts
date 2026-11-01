@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 confirmButtonColor: COLOR_CONFIRMAR
             });
         } catch {
-            Swal.fire({ icon: 'error', title: 'Sin conexión', text: 'No se pudo conectar con el servidor. Intenta de nuevo.', confirmButtonColor: COLOR_CONFIRMAR });
+            Swal.fire({ icon: 'error', title: 'Sin conexión', text: 'No pudimos conectarnos. Revisa tu internet e inténtalo de nuevo.', confirmButtonColor: COLOR_CONFIRMAR });
         } finally {
             btn.disabled = false;
         }

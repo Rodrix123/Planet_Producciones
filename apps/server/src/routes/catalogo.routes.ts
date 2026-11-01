@@ -1,3 +1,6 @@
+// Catálogo de servicios y precios (/api/catalogo). Lo consume el cotizador para armar el
+// formulario en vivo desde la base, así los precios nunca quedan desactualizados en la página.
+
 import { Router } from 'express';
 import { pool } from '../db';
 import { requireAuth, requireRole } from '../auth';
@@ -32,12 +35,15 @@ catalogoRouter.get('/', asyncHandler(async (_req, res) => {
         )
     ]);
 
+    // Se agrupan los datos por id para armar la respuesta sin consultar de nuevo.
     const variantsPorInventory = new Map<number, typeof variants.rows>();
     for (const v of variants.rows) {
         if (!variantsPorInventory.has(v.inventory_id)) variantsPorInventory.set(v.inventory_id, []);
         variantsPorInventory.get(v.inventory_id)!.push(v);
     }
 
+    // Tramos de precio de cada variante: [{ cantidad, precio }]. El precio de un tramo es el TOTAL de esa
+    // cantidad (ej. 8 unidades = $600.000), no un precio por unidad.
     const tramosPorVariante = new Map<number, { cantidad: number; precio: number }[]>();
     for (const t of tramos.rows) {
         if (!tramosPorVariante.has(t.id_variant)) tramosPorVariante.set(t.id_variant, []);
@@ -54,6 +60,7 @@ catalogoRouter.get('/', asyncHandler(async (_req, res) => {
             controlType: inv.control_type,
             variants: (variantsPorInventory.get(inv.id) || []).map((v) => {
                 const tramosVariante = tramosPorVariante.get(v.id) || [];
+                // Precio de referencia de la variante: el tramo de 1 unidad (o el primero si no existe).
                 const base = tramosVariante.find((t) => t.cantidad === 1) || tramosVariante[0];
                 return {
                     id: v.id,

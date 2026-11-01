@@ -6,17 +6,18 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc --noEmit -p tsconfig.json && node scripts/build.mjs",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "seed:usuarios": "tsx src/scripts/seed-usuarios.ts",
     "reset:password": "tsx src/scripts/reset-password.ts",
     "seed:catalogo": "tsx src/scripts/seed-catalogo.ts",
-    "test": "node --import tsx --test test/modelo-convocatorias.test.ts"
+    "test": "node --import tsx --test test/cotizacion-entrada.test.ts test/cotizaciones-cliente.test.ts test/flujo-entre-perfiles.test.ts test/correo-tls.test.ts test/arranque.test.ts test/modelo-convocatorias.test.ts",
+    "test:arranque": "node --import tsx --test test/arranque.test.ts"
   },
   "dependencies": {
-    "@my-app/db": "*",
     "@supabase/supabase-js": "^2.116.0",
+    "compression": "^1.8.2",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -29,6 +30,8 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.9",
+    "@my-app/db": "*",
+    "@types/compression": "^1.8.1",
     "@types/cookie-parser": "^1.4.7",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
@@ -38,6 +41,7 @@
     "@types/nodemailer": "^6.4.15",
     "@types/pdfkit": "^0.13.4",
     "@types/pg": "^8.11.6",
+    "esbuild": "^0.28.2",
     "tsx": "^4.15.0",
     "typescript": "^5.5.0"
   }

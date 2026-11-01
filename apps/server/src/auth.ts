@@ -1,3 +1,6 @@
+// Sesión de los usuarios internos: cookie httpOnly con un token firmado (JWT) y los filtros
+// (middlewares) que exigen sesión y rol en cada ruta.
+
 import jwt from 'jsonwebtoken';
 import type { NextFunction, Request, Response } from 'express';
 
@@ -7,6 +10,7 @@ import type { NextFunction, Request, Response } from 'express';
 // el control de acceso por rol lo hace esta app, igual que antes).
 export type UsuarioRol = 'administrador' | 'secretaria' | 'jefe_logistica';
 
+// Lo que se guarda dentro del token de sesión.
 export interface UsuarioSesion {
     id: string;
     rol: UsuarioRol;
@@ -15,6 +19,7 @@ export interface UsuarioSesion {
     debeCambiarPassword: boolean;
 }
 
+// Agrega `usuario` al objeto Request de Express para que las rutas lean la sesión con tipos.
 declare global {
     namespace Express {
         interface Request {
@@ -23,18 +28,28 @@ declare global {
     }
 }
 
+// Secreto con el que se firma el token. Sin él el servidor no arranca (mejor fallar al iniciar que
+// firmar sesiones con un valor vacío).
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
     throw new Error('Falta configurar JWT_SECRET en apps/server/.env');
 }
 
+// Nombre de la cookie de sesión y duración (8 horas: una jornada de trabajo).
 export const COOKIE_NAME = 'pp_session';
 const SESSION_DURATION = '8h';
 
+/**
+ * Crea el token firmado que se guarda en la cookie.
+ */
 export function signSessionToken(usuario: UsuarioSesion): string {
     return jwt.sign(usuario, JWT_SECRET as string, { expiresIn: SESSION_DURATION });
 }
 
+/**
+ * Opciones de la cookie: httpOnly (el JavaScript de la página no puede leerla), sameSite lax (no
+ * viaja en peticiones de otros sitios) y secure solo en producción (exige HTTPS).
+ */
 export function cookieOptions() {
     return {
         httpOnly: true as const,
@@ -44,6 +59,9 @@ export function cookieOptions() {
     };
 }
 
+/**
+ * Filtro: exige una sesión válida. Deja el usuario en req.usuario o responde 401.
+ */
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
     const token = req.cookies?.[COOKIE_NAME];
     if (!token) {
@@ -58,6 +76,9 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
     }
 }
 
+/**
+ * Filtro: exige que el usuario tenga uno de los roles indicados (403 si no). Va después de requireAuth.
+ */
 export function requireRole(...roles: UsuarioRol[]) {
     return (req: Request, res: Response, next: NextFunction) => {
         if (!req.usuario) {

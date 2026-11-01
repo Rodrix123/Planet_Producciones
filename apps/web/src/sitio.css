@@ -2093,3 +2093,23 @@
     min-height: 44px;
     padding-block: 0.6rem 0.15rem;
 }
+
+/* Enlace para saltar el menú: solo se ve al navegar con el teclado. */
+.sitio-salto {
+    position: fixed;
+    top: 0.75rem;
+    left: 0.75rem;
+    z-index: 200;
+    padding: 0.7rem 1.1rem;
+    border-radius: 999px;
+    background: var(--ink);
+    color: var(--paper);
+    font-weight: 700;
+    text-decoration: none;
+    transform: translateY(-200%);
+    transition: transform 0.25s var(--ease);
+}
+
+.sitio-salto:focus {
+    transform: none;
+}

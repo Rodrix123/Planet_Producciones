@@ -1,3 +1,6 @@
+// Pantalla para cambiar la contraseña: obligatoria en el primer ingreso y disponible después cuando
+// la persona quiera. Valida en el navegador y el servidor vuelve a validar (ver auth.routes.ts).
+
 import './style.css';
 import './landing.css';
 import { apiFetch, exigirSesion, rutaPanelPorRol } from './shared/api';
@@ -19,18 +22,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     const statusText = document.getElementById('cambiarPasswordStatusText') as HTMLElement;
     const linkCerrarSesion = document.getElementById('linkCerrarSesion') as HTMLAnchorElement;
 
+    // Muestra un aviso bajo el formulario (en rojo si es un error).
     function mostrarMensaje(texto: string, esError: boolean) {
         statusText.textContent = texto;
         statusMsg.classList.toggle('error', esError);
         statusMsg.classList.add('visible');
     }
 
+    // Permite salir sin cambiar la contraseña.
     linkCerrarSesion.addEventListener('click', async (e) => {
         e.preventDefault();
         await apiFetch('/api/auth/logout', { method: 'POST' });
         window.location.href = 'login.html';
     });
 
+    // Revisa que la confirmación coincida y que la nueva tenga al menos 8 caracteres antes de enviarla.
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
@@ -61,6 +67,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
+            // Con la contraseña cambiada, la persona entra a su panel.
             window.location.href = rutaPanelPorRol(sesion.rol);
         } catch {
             mostrarMensaje('No se pudo conectar con el servidor. Intenta nuevamente.', true);

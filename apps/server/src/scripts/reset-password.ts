@@ -1,8 +1,15 @@
+// Herramienta de línea de comandos: genera una contraseña temporal nueva para una cuenta.
+//   npm run reset:password -- correo@ejemplo.com
+// La persona deberá cambiarla al iniciar sesión. Solo toca esa cuenta (no las otras).
+
 import 'dotenv/config';
 import crypto from 'crypto';
 import { pool } from '../db';
 import { supabaseAdmin } from '../supabaseAdmin';
 
+/**
+ * Contraseña al azar de 12 caracteres, sin letras ni números que se confunden (0/O, 1/I/l).
+ */
 function generarPasswordTemporal(): string {
     const alfabeto = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
     let password = '';

@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Planet Producciones | Cotizador VIP 2026</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 
     <!-- Favicon optimizado con Cache-Buster para forzar actualización en la pestaña -->
     <link rel="icon" type="image/png" href="logo.png?v=2">
@@ -12,13 +14,13 @@
 
     <!-- CDN LIBRERÍAS EXTERNAS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    <!-- LIBRERÍA HTML2PDF (Motor PDF Alta Resolución) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- LIBRERÍA HTML2PDF (Motor PDF Alta Resolución). Se carga en segundo plano (async): la página no la espera, el cotizador la aguarda al generar. -->
+    <script async src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <!-- LIBRERÍA EXCEL (SheetJS) -->
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script async src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body class="sitio-body cotizador-body" data-pagina="cotizador">
 
@@ -30,7 +32,7 @@
             <div class="card-panel">
                 <div class="section-header">
                     <h2><i class="fa-solid fa-sliders" style="color: var(--orange-main);"></i> Diseña tu Cotización</h2>
-                    <p>Selecciona los componentes para tu evento en 2026 y descarga tus archivos en PDF y Excel.</p>
+                    <p>Cuéntanos de tu evento y arma tu propuesta a la medida.</p>
                 </div>
 
                 <form id="quoteForm" onsubmit="return false;">
@@ -43,19 +45,19 @@
                         <div class="grid-3">
                             <div>
                                 <label for="nombre">Nombre Completo *</label>
-                                <input type="text" id="nombre" required placeholder="Ej. Valentina Gómez">
+                                <input type="text" id="nombre" autocomplete="name" required placeholder="Ej. Valentina Gómez">
                             </div>
                             <div>
                                 <label for="correo">Correo Electrónico *</label>
-                                <input type="email" id="correo" required placeholder="correo@ejemplo.com">
+                                <input type="email" id="correo" autocomplete="email" inputmode="email" required placeholder="correo@ejemplo.com">
                             </div>
                             <div>
                                 <label for="telefono">Teléfono / WhatsApp *</label>
-                                <input type="tel" id="telefono" required placeholder="+57 300 123 4567">
+                                <input type="tel" id="telefono" autocomplete="tel" inputmode="tel" required placeholder="+57 300 123 4567">
                             </div>
                             <div>
                                 <label for="documento">Documento / Cédula</label>
-                                <input type="text" id="documento" placeholder="Ej. 1012345678">
+                                <input type="text" id="documento" autocomplete="off" placeholder="Ej. 1012345678">
                             </div>
                         </div>
                     </div>
@@ -69,7 +71,7 @@
                             <div>
                                 <label for="tipoEvento">Tipo de Evento</label>
                                 <select id="tipoEvento" autocomplete="off">
-                                    <option value="" selected>-- Selecciona Tipo de Evento --</option>
+                                    <option value="" selected>Selecciona el tipo de evento</option>
                                     <option value="Boda VIP / Matrimonio">Boda VIP / Matrimonio</option>
                                     <option value="Fiesta de 15 Años Deluxe">Fiesta de 15 Años Deluxe</option>
                                     <option value="Evento Corporativo / Gala">Evento Corporativo / Gala</option>
@@ -79,13 +81,13 @@
                             <div>
                                 <label for="ciudad">Ciudad del Evento</label>
                                 <select id="ciudad" autocomplete="off">
-                                    <option value="" selected>-- Selecciona Ciudad --</option>
+                                    <option value="" selected>Selecciona la ciudad</option>
                                 </select>
                             </div>
                             <div>
                                 <label for="lugar">Sede / Recinto</label>
                                 <select id="lugar" autocomplete="off" disabled>
-                                    <option value="" selected>-- Primero selecciona una ciudad --</option>
+                                    <option value="" selected>Primero selecciona una ciudad</option>
                                 </select>
                             </div>
                             <div>
@@ -115,14 +117,14 @@
 
                     <div id="seccionCatalogoServicios">
                     <div id="catalogoDinamico">
-                        <p style="color: var(--text-muted); font-size: 0.85rem;">Cargando catálogo de servicios…</p>
+                        <p style="color: var(--text-muted); font-size: 0.85rem;">Preparando los servicios…</p>
                     </div>
 
                     </div>
 
                     <button type="button" id="btnSubmit" class="submit-btn">
                         <i class="fa-solid fa-file-pdf"></i>
-                        <span>Generar Cotización (PDF & Excel)</span>
+                        <span>Generar mi propuesta en PDF</span>
                     </button>
 
                     <button type="button" id="btnCrearEvento" class="submit-btn" hidden>
@@ -144,13 +146,13 @@
                     <div>
                         <div class="summary-list-title">Desglose de Servicios:</div>
                         <ul id="listaResumen">
-                            <li><em>Selecciona tus opciones en el formulario para calcular el costo.</em></li>
+                            <li><em>Aún no has elegido servicios. Tu presupuesto aparecerá aquí.</em></li>
                         </ul>
                     </div>
 
                     <div class="info-box">
                         <i class="fa-solid fa-circle-info" style="margin-top:2px;"></i>
-                        <span>Al hacer clic se descargarán automáticamente los archivos PDF HD (con marca de agua) y Excel profesional.</span>
+                        <span>Al finalizar recibirás tu propuesta en PDF.</span>
                     </div>
                 </div>
             </div>

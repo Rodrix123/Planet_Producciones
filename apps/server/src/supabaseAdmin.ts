@@ -1,3 +1,5 @@
+// Clientes de Supabase Auth: uno administrador (crear y editar cuentas) y uno anónimo (verificar la clave).
+
 import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
