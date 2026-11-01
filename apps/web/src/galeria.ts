@@ -1,20 +1,21 @@
-import './style.css';
-import './landing.css';
+import { montarSitio } from './shared/sitio';
 import { FOTOS_GALERIA, type CategoriaGaleria } from './galeriaFotos';
+
+montarSitio();
 
 const grid = document.getElementById('galeriaGrid') as HTMLElement;
 const vacio = document.getElementById('galeriaVacio') as HTMLElement;
-const tabs = document.querySelectorAll<HTMLButtonElement>('.galeria-tab');
+const tabs = document.querySelectorAll<HTMLButtonElement>('.galeria-filtro');
 
 const lightbox = document.getElementById('lightbox') as HTMLElement;
 const lightboxImg = document.getElementById('lightboxImg') as HTMLImageElement;
 
-let categoriaActual: CategoriaGaleria = 'con_pantalla';
+let categoriaActual: CategoriaGaleria | 'todas' = 'todas';
 let fotosVisibles: typeof FOTOS_GALERIA = [];
 let indiceLightbox = 0;
 
 function render() {
-    fotosVisibles = FOTOS_GALERIA.filter((f) => f.categoria === categoriaActual);
+    fotosVisibles = FOTOS_GALERIA.filter((f) => categoriaActual === 'todas' || f.categoria === categoriaActual);
     grid.innerHTML = '';
 
     if (fotosVisibles.length === 0) {
@@ -26,8 +27,8 @@ function render() {
     fotosVisibles.forEach((foto, i) => {
         const fig = document.createElement('button');
         fig.type = 'button';
-        fig.className = 'galeria-item';
-        fig.innerHTML = `<img src="galeria/${foto.archivo}" alt="${foto.alt}" loading="lazy">`;
+        fig.className = 'galeria-foto';
+        fig.innerHTML = `<img src="galeria/web/${foto.archivo}" width="${foto.ancho}" height="${foto.alto}" alt="${foto.alt}" loading="lazy">`;
         fig.addEventListener('click', () => abrirLightbox(i));
         grid.appendChild(fig);
     });
@@ -48,7 +49,7 @@ function cerrarLightbox() {
 function mostrarEnLightbox() {
     const foto = fotosVisibles[indiceLightbox];
     if (!foto) return;
-    lightboxImg.src = `galeria/${foto.archivo}`;
+    lightboxImg.src = `galeria/web/${foto.archivo}`;
     lightboxImg.alt = foto.alt;
 }
 
@@ -70,7 +71,7 @@ tabs.forEach((tab) => {
         });
         tab.classList.add('active');
         tab.setAttribute('aria-selected', 'true');
-        categoriaActual = tab.dataset.categoria as CategoriaGaleria;
+        categoriaActual = tab.dataset.categoria as CategoriaGaleria | 'todas';
         render();
     });
 });

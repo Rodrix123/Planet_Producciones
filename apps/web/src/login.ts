@@ -1,6 +1,8 @@
-import './style.css';
+import { montarSitio } from './shared/sitio';
 import './landing.css';
 import { apiFetch, rutaPanelPorRol, type SesionActual } from './shared/api';
+
+montarSitio();
 
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('loginForm') as HTMLFormElement;

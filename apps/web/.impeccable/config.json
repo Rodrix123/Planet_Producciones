@@ -1,0 +1,44 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "flat-type-hierarchy",
+        "value": "*",
+        "files": [
+          "apps/web/index.html"
+        ],
+        "createdAt": "2026-11-01T00:45:06.964Z",
+        "reason": "Decidido por Claude, no confirmado por el usuario: el detector no resuelve sitio.css (se importa desde src/shared/sitio.ts, sin <link>) y lee todo a 16px; los tamaños reales son titulo-pagina 2.35-5.25rem, titulo-seccion 2-3.4rem y cuerpo 1.06rem"
+      },
+      {
+        "rule": "flat-type-hierarchy",
+        "value": "*",
+        "files": [
+          "apps/web/servicios.html"
+        ],
+        "createdAt": "2026-11-01T00:45:07.503Z",
+        "reason": "Decidido por Claude, no confirmado por el usuario: el detector no resuelve sitio.css (se importa desde src/shared/sitio.ts, sin <link>) y lee todo a 16px; los tamaños reales son titulo-pagina 2.35-5.25rem, titulo-seccion 2-3.4rem y cuerpo 1.06rem"
+      },
+      {
+        "rule": "flat-type-hierarchy",
+        "value": "*",
+        "files": [
+          "apps/web/ayuda.html"
+        ],
+        "createdAt": "2026-11-01T00:45:07.911Z",
+        "reason": "Decidido por Claude, no confirmado por el usuario: el detector no resuelve sitio.css (se importa desde src/shared/sitio.ts, sin <link>) y lee todo a 16px; los tamaños reales son titulo-pagina 2.35-5.25rem, titulo-seccion 2-3.4rem y cuerpo 1.06rem"
+      },
+      {
+        "rule": "flat-type-hierarchy",
+        "value": "*",
+        "files": [
+          "apps/web/contacto.html"
+        ],
+        "createdAt": "2026-11-01T00:45:08.320Z",
+        "reason": "Decidido por Claude, no confirmado por el usuario: el detector no resuelve sitio.css (se importa desde src/shared/sitio.ts, sin <link>) y lee todo a 16px; los tamaños reales son titulo-pagina 2.35-5.25rem, titulo-seccion 2-3.4rem y cuerpo 1.06rem"
+      }
+    ]
+  }
+}

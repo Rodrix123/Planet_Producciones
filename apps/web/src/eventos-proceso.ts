@@ -140,7 +140,7 @@ function renderContrato(cotizacion: Cotizacion, contrato: ContratoInfo) {
     if (!contrato.enviadoEn) {
         estadoEl.innerHTML = '<i class="fa-solid fa-circle-exclamation" style="color:var(--orange-main);"></i> El contrato todavía no se ha generado ni enviado al cliente.';
         if (!cotizacion.clienteDocumento || !cotizacion.fechaEvento) {
-            estadoEl.innerHTML += `<br><span style="color:#f87171; font-size:0.85rem;">Falta ${!cotizacion.clienteDocumento ? 'el documento del cliente' : ''}${!cotizacion.clienteDocumento && !cotizacion.fechaEvento ? ' y ' : ''}${!cotizacion.fechaEvento ? 'la fecha del evento' : ''} — completalo arriba, en "Datos del cliente y el evento", y guarda los cambios.</span>`;
+            estadoEl.innerHTML += `<br><span style="color:#b42318; font-size:0.85rem;">Falta ${!cotizacion.clienteDocumento ? 'el documento del cliente' : ''}${!cotizacion.clienteDocumento && !cotizacion.fechaEvento ? ' y ' : ''}${!cotizacion.fechaEvento ? 'la fecha del evento' : ''} — completalo arriba, en "Datos del cliente y el evento", y guarda los cambios.</span>`;
         } else {
             estadoEl.innerHTML += '<br><span style="font-size:0.85rem;">Ya puede enviarse: pídele a Mariana que lo genere y lo envíe desde su panel de "Cotizaciones definitivas".</span>';
         }

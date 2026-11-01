@@ -29,7 +29,6 @@
     width: auto;
     max-width: 60px;
     object-fit: contain;
-    filter: drop-shadow(0 0 10px rgba(249, 115, 22, 0.5));
 }
 
 .rail-nav {
@@ -68,8 +67,8 @@
 }
 
 .rail-item.active {
-    color: var(--orange-main);
-    background: rgba(249, 115, 22, 0.12);
+    color: var(--orange-text);
+    background: rgba(229, 96, 26, 0.12);
 }
 
 .rail-item[aria-disabled="true"] {
@@ -134,7 +133,7 @@
 }
 
 .panel-estado.error {
-    color: #f87171;
+    color: var(--danger);
 }
 
 .panel-estado[hidden] {
@@ -170,9 +169,9 @@
 .rol-count {
     font-size: 0.75rem;
     font-weight: 700;
-    color: var(--orange-main);
-    background: rgba(249, 115, 22, 0.12);
-    border: 1px solid rgba(249, 115, 22, 0.3);
+    color: var(--orange-text);
+    background: rgba(229, 96, 26, 0.12);
+    border: 1px solid rgba(229, 96, 26, 0.3);
     padding: 0.2rem 0.7rem;
     border-radius: 20px;
 }
@@ -217,8 +216,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, var(--orange-main), var(--orange-hover));
-    color: #fff;
+    background: var(--orange-main);
+    color: var(--ink);
     font-weight: 700;
     overflow: hidden;
 }
@@ -258,7 +257,7 @@
 .drawer-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.55);
+    background: rgba(28, 20, 16, 0.45);
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.25s;
@@ -303,7 +302,7 @@
 }
 
 .drawer-close:hover {
-    color: var(--orange-main);
+    color: var(--orange-text);
     border-color: var(--orange-main);
 }
 
@@ -362,9 +361,9 @@
     font-weight: 600;
     padding: 0.4rem 0.8rem;
     border-radius: 20px;
-    color: #f87171;
-    background: rgba(248, 113, 113, 0.1);
-    border: 1px solid rgba(248, 113, 113, 0.3);
+    color: var(--danger);
+    background: rgba(180, 35, 24, 0.1);
+    border: 1px solid rgba(180, 35, 24, 0.3);
 }
 
 .dias-vacio {
@@ -394,9 +393,9 @@
     padding: 0 0.8rem;
     font-size: 0.78rem;
     font-weight: 700;
-    color: var(--orange-main);
-    background: rgba(249, 115, 22, 0.1);
-    border: 1px solid rgba(249, 115, 22, 0.4);
+    color: var(--orange-text);
+    background: rgba(229, 96, 26, 0.1);
+    border: 1px solid rgba(229, 96, 26, 0.4);
     border-radius: 999px;
     cursor: pointer;
     transition: background 0.2s, color 0.2s;
@@ -404,7 +403,7 @@
 
 .btn-incapacidad:hover {
     background: var(--orange-main);
-    color: #fff;
+    color: var(--ink);
 }
 
 .btn-incapacidad:focus-visible,
@@ -444,7 +443,7 @@
 }
 
 .mini-cal-flecha:hover {
-    color: var(--orange-main);
+    color: var(--orange-text);
     border-color: var(--orange-main);
 }
 
@@ -487,9 +486,9 @@
 
 .mini-dia.no-disponible {
     font-weight: 700;
-    color: #f87171;
-    background: rgba(248, 113, 113, 0.15);
-    border: 1px solid rgba(248, 113, 113, 0.4);
+    color: var(--danger);
+    background: rgba(180, 35, 24, 0.15);
+    border: 1px solid rgba(180, 35, 24, 0.4);
 }
 
 .mini-cal-leyenda {
@@ -505,12 +504,12 @@
     width: 10px;
     height: 10px;
     border-radius: 3px;
-    background: rgba(248, 113, 113, 0.25);
-    border: 1px solid rgba(248, 113, 113, 0.6);
+    background: rgba(180, 35, 24, 0.25);
+    border: 1px solid rgba(180, 35, 24, 0.6);
 }
 
 .campo input[type="date"] {
-    color-scheme: dark;
+    color-scheme: light;
 }
 
 @media (max-width: 700px) {
@@ -536,9 +535,9 @@
     width: 30px;
     height: 30px;
     border-radius: 50%;
-    border: 1px solid rgba(249, 115, 22, 0.4);
-    background: rgba(249, 115, 22, 0.1);
-    color: var(--orange-main);
+    border: 1px solid rgba(229, 96, 26, 0.4);
+    background: rgba(229, 96, 26, 0.1);
+    color: var(--orange-text);
     font-size: 0.8rem;
     cursor: pointer;
     transition: background 0.2s, color 0.2s;
@@ -546,7 +545,7 @@
 
 .btn-mini:hover {
     background: var(--orange-main);
-    color: #fff;
+    color: var(--ink);
 }
 
 .drawer-delete {
@@ -567,8 +566,8 @@
 }
 
 .drawer-delete:hover {
-    color: #f87171;
-    border-color: #f87171;
+    color: var(--danger);
+    border-color: var(--danger);
 }
 
 .campo {
@@ -601,7 +600,7 @@
 }
 
 .form-error {
-    color: #f87171;
+    color: var(--danger);
     font-size: 0.85rem;
     margin-bottom: 0.9rem;
 }
@@ -632,12 +631,13 @@
 }
 
 .btn-peligro {
-    background: #dc2626;
+    background: #b42318;
+    color: #fff;
     box-shadow: none;
 }
 
 .btn-peligro:not(:disabled):hover {
-    background: #b91c1c;
+    background: #8f1c12;
 }
 
 .btn-secundario {
@@ -663,7 +663,7 @@
     align-items: center;
     justify-content: center;
     padding: 1rem;
-    background: rgba(0, 0, 0, 0.65);
+    background: rgba(28, 20, 16, 0.45);
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.2s;
@@ -721,7 +721,7 @@
 
 .modal-cerrar:hover,
 .modal-cerrar:focus-visible {
-    color: var(--orange-main);
+    color: var(--orange-text);
     border-color: var(--orange-main);
 }
 
@@ -775,7 +775,7 @@
 }
 
 .filtro > span i {
-    color: var(--orange-main);
+    color: var(--orange-text);
     margin-right: 0.3rem;
 }
 
@@ -789,7 +789,7 @@
     border-radius: 12px;
     color: var(--text-light);
     font-size: 0.88rem;
-    color-scheme: dark;
+    color-scheme: light;
 }
 
 .filtro select:focus,
@@ -868,7 +868,7 @@
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: 14px;
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 12px 30px rgba(28, 20, 16, 0.14);
     z-index: 60;
 }
 
@@ -906,9 +906,9 @@
     gap: 0.45rem;
     padding: 0.3rem 0.4rem 0.3rem 0.8rem;
     font-size: 0.8rem;
-    color: #d9a679;
-    background: rgba(249, 115, 22, 0.1);
-    border: 1px solid rgba(249, 115, 22, 0.22);
+    color: var(--orange-text);
+    background: rgba(229, 96, 26, 0.1);
+    border: 1px solid rgba(229, 96, 26, 0.22);
     border-radius: 999px;
 }
 
@@ -932,8 +932,8 @@
 }
 
 .chip button:hover {
-    background: rgba(249, 115, 22, 0.3);
-    color: #fff;
+    background: rgba(229, 96, 26, 0.3);
+    color: var(--ink);
 }
 
 /* Casillas del menú de tipo: tamaño nativo, pegadas a su texto. */

@@ -121,7 +121,7 @@ async function abrirDetalle(id: string) {
 
     if (!contrato.enviadoEn) {
         if (!datosCompletos) {
-            estadoEl.innerHTML = `<i class="fa-solid fa-circle-exclamation" style="color:#f87171;"></i> Falta ${!cotizacion.clienteDocumento ? 'el documento del cliente' : ''}${!cotizacion.clienteDocumento && !cotizacion.fechaEvento ? ' y ' : ''}${!cotizacion.fechaEvento ? 'la fecha del evento' : ''}. Pídele a la administradora que lo complete antes de generar el contrato.`;
+            estadoEl.innerHTML = `<i class="fa-solid fa-circle-exclamation" style="color:#b42318;"></i> Falta ${!cotizacion.clienteDocumento ? 'el documento del cliente' : ''}${!cotizacion.clienteDocumento && !cotizacion.fechaEvento ? ' y ' : ''}${!cotizacion.fechaEvento ? 'la fecha del evento' : ''}. Pídele a la administradora que lo complete antes de generar el contrato.`;
         } else {
             estadoEl.innerHTML = '<i class="fa-solid fa-circle-info" style="color:var(--orange-main);"></i> El contrato todavía no se ha enviado. Revisa la vista previa antes de enviarlo.';
             btnGenerar.classList.remove('hidden');

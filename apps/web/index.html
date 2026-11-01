@@ -6,310 +6,225 @@
     <title>Planet Producciones | Producción Técnica & Eventos VIP</title>
     <meta name="description" content="Sonido, iluminación, pantallas LED y efectos especiales para bodas, fiestas de 15 años, grados y eventos corporativos VIP en el Eje Cafetero.">
 
+    <link rel="canonical" href="__SITE_URL__/">
+    <meta name="theme-color" content="#f4f5f0">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Planet Producciones">
+    <meta property="og:locale" content="es_CO">
+    <meta property="og:title" content="Planet Producciones | Producción Técnica & Eventos VIP">
+    <meta property="og:description" content="Sonido, iluminación, pantallas LED y efectos especiales para bodas, fiestas de 15 años, grados y eventos corporativos VIP en el Eje Cafetero.">
+    <meta property="og:url" content="__SITE_URL__/">
+    <meta property="og:image" content="__SITE_URL__/og.jpg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Primer baile de novios con chispas frías frente a una pantalla LED, montaje de Planet Producciones">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Planet Producciones | Producción Técnica & Eventos VIP">
+    <meta name="twitter:description" content="Sonido, iluminación, pantallas LED y efectos especiales para bodas, fiestas de 15 años, grados y eventos corporativos VIP en el Eje Cafetero.">
+    <meta name="twitter:image" content="__SITE_URL__/og.jpg">
+
     <link rel="icon" type="image/png" href="logo.png?v=2">
     <link rel="shortcut icon" type="image/png" href="logo.png?v=2">
     <link rel="apple-touch-icon" href="logo.png?v=2">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "LocalBusiness",
+      "name": "Planet Producciones",
+      "description": "Producción técnica para eventos VIP: sonido, iluminación, pantallas LED y efectos especiales.",
+      "url": "__SITE_URL__/",
+      "image": "__SITE_URL__/og.jpg",
+      "telephone": "+57 312 781 70 72",
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "Manizales",
+        "addressRegion": "Caldas",
+        "addressCountry": "CO"
+      },
+      "areaServed": [
+        "Manizales",
+        "Chinchiná",
+        "Santágueda",
+        "Pereira",
+        "Armenia"
+      ],
+      "sameAs": [
+        "https://www.instagram.com/planet.producciones/"
+      ]
+    }
+    </script>
 </head>
-<body class="landing-body">
+<body class="sitio-body" data-pagina="inicio">
 
-    <header class="promo-header">
-        <div class="header-container">
-            <div class="logo-box">
-                <img src="logo.png?v=2" alt="Planet Producciones Logo" class="logo-img">
-                <div class="logo-text">
-                    <h1>Planet Producciones</h1>
-                    <p>Eventos VIP & Producción Técnica</p>
-                </div>
-            </div>
+    <div id="sitio-header"></div>
 
-            <nav class="promo-nav">
-                <a href="#inicio">Inicio</a>
-                <a href="#servicios">Servicios</a>
-                <a href="#nosotros">Por Qué Elegirnos</a>
-                <a href="galeria.html">Galería</a>
-                <a href="#preguntas-frecuentes">Preguntas Frecuentes</a>
-                <a href="#pqrs">PQRS</a>
-                <a href="#contacto">Contacto</a>
-            </nav>
-
-            <div class="nav-cta-group">
-                <a href="login.html" class="login-link"><i class="fa-solid fa-right-to-bracket"></i> Iniciar Sesión</a>
-                <a href="cotizador.html" class="submit-btn nav-cta-btn"><i class="fa-solid fa-file-invoice-dollar"></i> Cotizar Ahora</a>
-            </div>
-        </div>
-    </header>
-
-    <main class="promo-main">
+    <main>
 
         <!-- HERO -->
-        <section class="hero-section" id="inicio">
-            <div class="hero-content">
-                <div class="hero-logo-box">
-                    <img src="logo.png?v=2" alt="Planet Producciones">
-                </div>
+        <section class="hero">
+            <div class="contenedor hero-grid">
+                <div class="hero-texto">
+                    <h1 class="titulo-pagina">Producción Técnica de Alto Impacto para tu Evento VIP</h1>
 
-                <div class="pill-badge">
-                    <i class="fa-solid fa-star"></i> +10 Años de Experiencia &nbsp;•&nbsp; Eventos VIP en el Eje Cafetero
-                </div>
-
-                <h1 class="hero-title">Producción Técnica de Alto Impacto para tu Evento VIP</h1>
-
-                <p class="hero-desc">
-                    Sonido profesional, iluminación robótica, pantallas LED y efectos especiales para
-                    bodas, fiestas de 15 años, grados y eventos corporativos. Equipos de primer nivel
-                    y un equipo técnico dedicado, de principio a fin.
-                </p>
-
-                <div class="hero-buttons">
-                    <a href="cotizador.html" class="submit-btn hero-btn-primary"><i class="fa-solid fa-file-invoice-dollar"></i> Cotizar Ahora</a>
-                    <a href="#servicios" class="hero-btn-outline"><i class="fa-solid fa-circle-play"></i> Ver Servicios</a>
-                </div>
-
-                <div class="hero-icons-row">
-                    <div class="hero-icon-item"><i class="fa-solid fa-volume-high"></i></div>
-                    <div class="hero-icon-item"><i class="fa-solid fa-lightbulb"></i></div>
-                    <div class="hero-icon-item"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
-                </div>
-            </div>
-        </section>
-
-        <!-- POR QUÉ ELEGIRNOS -->
-        <section class="features-section" id="nosotros">
-            <div class="features-grid">
-                <div class="features-text">
-                    <div class="pill-badge pill-badge-light">
-                        <i class="fa-solid fa-location-dot"></i> Cobertura Regional
-                    </div>
-                    <h2 class="section-title">Producción Técnica de Primer Nivel en el Eje Cafetero</h2>
-                    <p class="section-desc">
-                        Cubrimos Manizales, Chinchiná - Santágueda, Pereira y Armenia con equipos propios,
-                        montaje profesional y un equipo técnico presente durante todo el evento.
+                    <p class="texto-grande">
+                        Sonido profesional, iluminación robótica, pantallas LED y efectos especiales para
+                        bodas, fiestas de 15 años, grados y eventos corporativos. Equipos de primer nivel
+                        y un equipo técnico dedicado, de principio a fin.
                     </p>
 
-                    <ul class="feature-list">
-                        <li>
-                            <div class="feature-icon"><i class="fa-solid fa-bolt"></i></div>
-                            <div>
-                                <div class="feature-title">Equipos de Última Generación</div>
-                                <div class="feature-desc">Line Array RCF, iluminación robótica DMX, pantallas LED Pitch 3 y consolas digitales.</div>
-                            </div>
-                        </li>
-                        <li>
-                            <div class="feature-icon"><i class="fa-solid fa-screwdriver-wrench"></i></div>
-                            <div>
-                                <div class="feature-title">Montaje Profesional Garantizado</div>
-                                <div class="feature-desc">Instalación, pruebas de sonido y desmonte incluidos en cada servicio contratado.</div>
-                            </div>
-                        </li>
-                        <li>
-                            <div class="feature-icon"><i class="fa-solid fa-headset"></i></div>
-                            <div>
-                                <div class="feature-title">Respaldo Técnico en Sitio</div>
-                                <div class="feature-desc">Técnico dedicado durante todo el evento, con equipos de respaldo inmediato.</div>
-                            </div>
-                        </li>
-                    </ul>
+                    <div class="hero-botones">
+                        <a href="cotizador.html" class="boton boton-primario"><i class="fa-solid fa-file-invoice-dollar"></i> Cotizar Ahora</a>
+                        <a href="servicios.html" class="boton boton-linea"><i class="fa-solid fa-circle-play"></i> Ver Servicios</a>
+                    </div>
+
+                    <p class="hero-datos">
+                        <span><i class="fa-solid fa-star"></i>+10 Años de Experiencia</span>
+                        <span><i class="fa-solid fa-location-dot"></i>Eventos VIP en el Eje Cafetero</span>
+                    </p>
                 </div>
 
-                <div class="features-visual">
-                    <div class="visual-grid">
-                        <div class="visual-card visual-card-tall"><i class="fa-solid fa-volume-high"></i><span>Sonido Line Array</span></div>
-                        <div class="visual-card"><i class="fa-solid fa-lightbulb"></i><span>Iluminación Robótica</span></div>
-                        <div class="visual-card"><i class="fa-solid fa-tv"></i><span>Pantallas LED</span></div>
+                <div class="hero-visual">
+                    <div class="hero-disco" aria-hidden="true"></div>
+                    <div class="hero-arco">
+                        <img src="galeria/web/evento-con-pantalla-6.webp" width="1200" height="1481" fetchpriority="high"
+                             alt="Primer baile de novios con chispas frías y niebla baja frente a una pantalla LED">
                     </div>
-                    <div class="floating-badge-card">
+                    <div class="hero-foto-2">
+                        <img src="galeria/web/evento-sin-pantalla-5.webp" width="1200" height="1340"
+                             alt="Candelabros de cristal sobre techo de bambú con follaje, mesas y pista de piso LED">
+                    </div>
+                    <div class="hero-sello">
                         <i class="fa-solid fa-champagne-glasses"></i>
                         <div>
-                            <div class="floating-badge-title">+500 Eventos</div>
-                            <div class="floating-badge-sub">Realizados con éxito</div>
+                            <strong><span data-cuenta="500">+500</span> Eventos</strong>
+                            <span>Realizados con éxito</span>
                         </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- CTA BAND -->
-        <section class="cta-band" id="servicios">
-            <div class="cta-content">
-                <div class="pill-badge pill-badge-white">
-                    <i class="fa-solid fa-bolt"></i> Cotización 100% Gratuita y Sin Compromiso
+        <!-- GALERÍA DE EVENTOS -->
+        <section class="bloque" aria-labelledby="tGaleria">
+            <div class="contenedor">
+                <div class="bloque-cabecera" data-aparece>
+                    <div>
+                        <h2 class="titulo-seccion" id="tGaleria">Galería de Eventos</h2>
+                        <p class="texto-grande">Una muestra real de nuestros eventos.</p>
+                    </div>
+                    <a href="galeria.html" class="enlace-flecha">Ver toda la galería <i class="fa-solid fa-arrow-right"></i></a>
                 </div>
 
-                <h2 class="cta-title">Cotiza tu Evento VIP en Minutos</h2>
-
-                <p class="cta-desc">
-                    Arma tu cotización a la medida: transporte, sonido, iluminación, pantallas LED, efectos
-                    especiales y mobiliario. Descarga tu propuesta en PDF y Excel al instante.
-                </p>
-
-                <div class="cta-buttons">
-                    <a href="cotizador.html" class="cta-btn-white"><i class="fa-solid fa-file-invoice-dollar"></i> Cotizar Ahora</a>
-                    <a href="https://www.instagram.com/planet.producciones/" target="_blank" rel="noopener noreferrer" class="cta-btn-outline"><i class="fa-brands fa-instagram"></i> @planet.producciones</a>
-                </div>
-
-                <div class="cta-trust-row">
-                    <span><i class="fa-solid fa-volume-high"></i> Sonido Profesional</span>
-                    <span><i class="fa-solid fa-lightbulb"></i> Iluminación DMX</span>
-                    <span><i class="fa-solid fa-wand-magic-sparkles"></i> Efectos Especiales</span>
-                    <span><i class="fa-solid fa-tv"></i> Pantallas LED</span>
-                </div>
-            </div>
-        </section>
-
-        <!-- PREGUNTAS FRECUENTES -->
-        <section class="faq-section" id="preguntas-frecuentes">
-            <div class="faq-content">
-                <div class="pill-badge pill-badge-light">
-                    <i class="fa-solid fa-circle-question"></i> Resolvemos tus dudas
-                </div>
-                <h2 class="section-title">Preguntas Frecuentes</h2>
-                <p class="section-desc">
-                    Lo que más nos preguntan los clientes antes de reservar su evento. Si tu duda no
-                    está aquí, escríbenos en la sección de PQRS más abajo.
-                </p>
-
-                <div class="faq-list">
-                    <div class="faq-item">
-                        <button type="button" class="faq-question">
-                            <span>¿Cómo reservo la fecha de mi evento?</span>
-                            <i class="fa-solid fa-chevron-down"></i>
-                        </button>
-                        <div class="faq-answer">
-                            <p>La fecha se separa con el 30% del valor total cotizado, dentro de los 30 días siguientes a la fecha de la cotización.</p>
-                        </div>
+                <div class="mosaico-marco" data-aparece>
+                    <div class="mosaico" data-aparece>
+                        <a href="galeria.html" class="mosaico-foto m-a" aria-label="Ver la galería completa">
+                            <img src="galeria/web/evento-con-pantalla-5.webp" width="1200" height="1359" loading="lazy"
+                                 alt="Pista de baile con luz perimetral y pantalla LED con mensaje personalizado">
+                        </a>
+                        <a href="galeria.html" class="mosaico-foto m-b" aria-label="Ver la galería completa">
+                            <img src="galeria/web/evento-con-pantalla-8.webp" width="1200" height="927" loading="lazy" style="object-position: 50% 55%"
+                                 alt="Pista de baile llena de invitados frente a pantallas LED y luces violeta">
+                        </a>
+                        <a href="galeria.html" class="mosaico-foto m-c" aria-label="Ver la galería completa">
+                            <img src="galeria/web/evento-sin-pantalla-8.webp" width="1200" height="1062" loading="lazy" style="object-position: 50% 60%"
+                                 alt="Carpa transparente con bolas de espejos, flores de luz y pista negra con borde LED">
+                        </a>
+                        <a href="galeria.html" class="mosaico-foto m-d" aria-label="Ver la galería completa">
+                            <img src="galeria/web/evento-con-pantalla-12.webp" width="1200" height="1063" loading="lazy" style="object-position: 50% 40%"
+                                 alt="Cabina de DJ rodeada de pantallas LED flotantes y luces cálidas">
+                        </a>
+                        <a href="galeria.html" class="mosaico-foto m-e" aria-label="Ver la galería completa">
+                            <img src="galeria/web/evento-con-pantalla-9.webp" width="1200" height="1062" loading="lazy" style="object-position: 50% 45%"
+                                 alt="Escenario con pantalla LED, cabezas móviles y pista con diseño de hojas">
+                        </a>
                     </div>
-                    <div class="faq-item">
-                        <button type="button" class="faq-question">
-                            <span>¿Qué ciudades cubren?</span>
-                            <i class="fa-solid fa-chevron-down"></i>
-                        </button>
-                        <div class="faq-answer">
-                            <p>Cubrimos Manizales, Chinchiná - Santágueda, Pereira y Armenia con equipos propios y montaje profesional.</p>
-                        </div>
-                    </div>
-                    <div class="faq-item">
-                        <button type="button" class="faq-question">
-                            <span>¿Hasta cuándo debo completar el pago?</span>
-                            <i class="fa-solid fa-chevron-down"></i>
-                        </button>
-                        <div class="faq-answer">
-                            <p>El valor total del evento debe quedar cancelado máximo 8 días antes de la fecha de realización.</p>
-                        </div>
-                    </div>
-                    <div class="faq-item">
-                        <button type="button" class="faq-question">
-                            <span>¿Qué incluye el servicio técnico?</span>
-                            <i class="fa-solid fa-chevron-down"></i>
-                        </button>
-                        <div class="faq-answer">
-                            <p>Montaje previo, pruebas de sonido, técnico DMX dedicado durante todo el evento, desmonte y respaldo técnico inmediato con equipos de backup.</p>
-                        </div>
-                    </div>
-                    <div class="faq-item">
-                        <button type="button" class="faq-question">
-                            <span>¿La cotización tiene algún costo?</span>
-                            <i class="fa-solid fa-chevron-down"></i>
-                        </button>
-                        <div class="faq-answer">
-                            <p>No. Cotizar tu evento es 100% gratuito y sin ningún compromiso de contratación.</p>
-                        </div>
-                    </div>
-                    <div class="faq-item">
-                        <button type="button" class="faq-question">
-                            <span>¿Qué pasa si cambio el lugar o los requerimientos después de cotizar?</span>
-                            <i class="fa-solid fa-chevron-down"></i>
-                        </button>
-                        <div class="faq-answer">
-                            <p>Los precios quedan sujetos a verificación en caso de modificaciones en el requerimiento técnico, Rider/Backline de artistas o cambio de locación.</p>
+
+                    <div class="mosaico-pie">
+                        <p>Montajes con y sin pantalla LED, de principio a fin.</p>
+                        <div class="mosaico-pie-enlaces">
+                            <a href="galeria.html" class="enlace-flecha">Galería completa <i class="fa-solid fa-arrow-right"></i></a>
+                            <a href="https://www.instagram.com/planet.producciones/" target="_blank" rel="noopener noreferrer" class="enlace-flecha"><i class="fa-brands fa-instagram"></i> @planet.producciones</a>
                         </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- PQRS -->
-        <section class="pqrs-section" id="pqrs">
-            <div class="pqrs-content">
-                <div class="pill-badge pill-badge-white">
-                    <i class="fa-solid fa-comment-dots"></i> Peticiones, Quejas, Reclamos y Sugerencias
+        <!-- SERVICIOS -->
+        <section class="bloque" style="padding-top: 0;" aria-labelledby="tServicios">
+            <div class="contenedor">
+                <div class="bloque-cabecera" data-aparece>
+                    <div>
+                        <h2 class="titulo-seccion" id="tServicios">Servicios</h2>
+                        <p class="texto-grande">Transporte, sonido, iluminación, pantallas LED, efectos especiales y mobiliario, a la medida de tu evento.</p>
+                    </div>
+                    <a href="servicios.html" class="enlace-flecha">Ver todos los servicios <i class="fa-solid fa-arrow-right"></i></a>
                 </div>
-                <h2 class="cta-title">¿Tienes algo que contarnos?</h2>
-                <p class="cta-desc">
-                    Escríbenos tu PQRS y te responderemos directamente al correo que nos dejes.
-                </p>
 
-                <form id="pqrsForm" class="pqrs-form">
-                    <div class="pqrs-form-grid">
-                        <div>
-                            <label for="pqrsNombre">Nombre completo *</label>
-                            <input type="text" id="pqrsNombre" required placeholder="Ej. Valentina Gómez">
-                        </div>
-                        <div>
-                            <label for="pqrsCorreo">Correo electrónico *</label>
-                            <input type="email" id="pqrsCorreo" required placeholder="correo@ejemplo.com">
-                        </div>
-                        <div>
-                            <label for="pqrsTelefono">Teléfono (opcional)</label>
-                            <input type="tel" id="pqrsTelefono" placeholder="+57 300 123 4567">
-                        </div>
+                <div class="servicios-lista" data-aparece>
+                    <a href="servicios.html#sonido" class="servicio-fila">
+                        <h3>Sonido Profesional</h3>
+                        <p>Sistemas Line Array RCF, consolas digitales y sonido para ceremonia, cóctel y pista.</p>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </a>
+                    <a href="servicios.html#iluminacion" class="servicio-fila">
+                        <h3>Iluminación DMX</h3>
+                        <p>Iluminación robótica con cabezas móviles, truss y luces de ambientación.</p>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </a>
+                    <a href="servicios.html#iluminacion" class="servicio-fila">
+                        <h3>Pantallas LED</h3>
+                        <p>Pantalla LED Pitch 3 sobre estructura truss, de 6 hasta 18 metros.</p>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </a>
+                    <a href="servicios.html#efectos" class="servicio-fila">
+                        <h3>Efectos Especiales</h3>
+                        <p>Chispas frías, ventury con papel metalizado y bola de espejos.</p>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- COBERTURA -->
+        <section class="banda-verde" aria-labelledby="tCobertura">
+            <div class="contenedor" data-aparece>
+                <h2 class="titulo-seccion" id="tCobertura">Producción Técnica de Primer Nivel en el Eje Cafetero</h2>
+                <p class="texto-grande" style="margin-top: 1rem;">
+                    Cubrimos Manizales, Chinchiná - Santágueda, Pereira y Armenia con equipos propios,
+                    montaje profesional y un equipo técnico presente durante todo el evento.
+                </p>
+                <p class="ciudades">
+                    <span>Manizales</span><span>Chinchiná - Santágueda</span><span>Pereira</span><span>Armenia</span>
+                </p>
+                <p style="margin-top: 2rem;">
+                    <a href="nosotros.html" class="boton boton-primario">Por Qué Elegirnos <i class="fa-solid fa-arrow-right"></i></a>
+                </p>
+            </div>
+        </section>
+
+        <!-- CIERRE -->
+        <section class="cierre">
+            <div class="contenedor" data-aparece>
+                <div class="cierre-caja">
+                    <h2 class="titulo-seccion">Cotiza tu Evento VIP en Minutos</h2>
+                    <p class="texto-grande">
+                        Arma tu cotización a la medida y descarga tu propuesta en PDF y Excel al instante.
+                        Cotización 100% gratuita y sin compromiso.
+                    </p>
+                    <div class="cierre-botones">
+                        <a href="cotizador.html" class="boton boton-primario"><i class="fa-solid fa-file-invoice-dollar"></i> Cotizar Ahora</a>
+                        <a href="contacto.html" class="boton boton-linea">Contacto</a>
                     </div>
-                    <div class="pqrs-form-mensaje">
-                        <label for="pqrsMensaje">Tu mensaje *</label>
-                        <textarea id="pqrsMensaje" required rows="4" placeholder="Cuéntanos tu petición, queja, reclamo o sugerencia..."></textarea>
-                    </div>
-                    <button type="submit" id="btnEnviarPqrs" class="cta-btn-white">
-                        <i class="fa-solid fa-paper-plane"></i> Enviar PQRS
-                    </button>
-                </form>
+                </div>
             </div>
         </section>
 
     </main>
 
-    <footer class="promo-footer" id="contacto">
-        <div class="promo-footer-grid">
-            <div class="footer-col">
-                <div class="footer-brand">
-                    <img src="logo.png?v=2" alt="Planet Producciones" class="footer-logo">
-                    <div>
-                        <div class="footer-brand-name">Planet Producciones</div>
-                        <div class="footer-brand-sub">Eventos VIP & Producción Técnica</div>
-                    </div>
-                </div>
-                <p class="footer-desc">
-                    Producción técnica integral para eventos VIP: sonido, iluminación, pantallas LED y
-                    efectos especiales, con equipos propios y montaje profesional.
-                </p>
-                <div class="footer-love"><i class="fa-solid fa-heart"></i> Hecho con pasión para tus momentos únicos</div>
-            </div>
-
-            <div class="footer-col">
-                <div class="footer-col-title">Contacto</div>
-                <a href="tel:+573127817072" class="footer-contact-line"><i class="fa-solid fa-phone"></i> +57 312 781 70 72</a>
-                <a href="https://www.instagram.com/planet.producciones/" target="_blank" rel="noopener noreferrer" class="footer-contact-line"><i class="fa-brands fa-instagram"></i> @planet.producciones</a>
-                <div class="footer-contact-line"><i class="fa-solid fa-location-dot"></i> Manizales - Caldas, Colombia</div>
-            </div>
-
-            <div class="footer-col">
-                <div class="footer-col-title">Cotiza tu Evento</div>
-                <p class="footer-desc">Genera tu cotización personalizada en minutos, con PDF y Excel listos para descargar.</p>
-                <a href="cotizador.html" class="footer-cta-btn"><i class="fa-solid fa-file-invoice-dollar"></i> Cotizar Ahora</a>
-                <a href="login.html" class="footer-login-link"><i class="fa-solid fa-right-to-bracket"></i> Iniciar Sesión</a>
-            </div>
-        </div>
-
-        <div class="promo-footer-bottom">
-            <p>© 2026 Planet Producciones. Todos los derechos reservados.</p>
-            <div class="footer-bottom-links">
-                <a href="https://www.instagram.com/planet.producciones/" target="_blank" rel="noopener noreferrer">Instagram</a>
-                <a href="cotizador.html">Cotizador</a>
-                <a href="login.html">Iniciar Sesión</a>
-            </div>
-        </div>
-    </footer>
+    <div id="sitio-footer"></div>
 
     <script type="module" src="/src/home.ts"></script>
 </body>

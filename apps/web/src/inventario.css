@@ -64,7 +64,7 @@
     flex-shrink: 0;
     width: 1.2rem;
     text-align: center;
-    color: var(--orange-main);
+    color: var(--orange-text);
 }
 
 .inv-titulo {
@@ -194,11 +194,11 @@
 }
 
 .inv-estado-danado {
-    color: #f87171;
+    color: var(--danger);
 }
 
 .inv-estado-en_reparacion {
-    color: #fbbf24;
+    color: #a15c07;
 }
 
 .inv-estado-dado_de_baja {
@@ -206,7 +206,7 @@
 }
 
 .inv-estado-perdido {
-    color: #a78bfa;
+    color: #5b3fc4;
 }
 
 @media (max-width: 700px) {

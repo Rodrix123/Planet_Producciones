@@ -20,29 +20,9 @@
     <!-- LIBRERÍA EXCEL (SheetJS) -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
-<body>
+<body class="sitio-body cotizador-body" data-pagina="cotizador">
 
-    <header>
-        <div class="header-container">
-            <div class="logo-box">
-                <!-- Logo real cargado desde logo.png -->
-                <img src="logo.png?v=2" alt="Planet Producciones Logo" class="logo-img">
-                <div class="logo-text">
-                    <h1>Planet Producciones</h1>
-                    <p>Eventos VIP & Producción Técnica</p>
-                </div>
-            </div>
-
-            <div style="display:flex; align-items:center; gap:0.75rem;">
-                <a href="index.html" class="back-home-btn">
-                    <i class="fa-solid fa-arrow-left"></i> Volver al Inicio
-                </a>
-                <a href="https://www.instagram.com/planet.producciones/" target="_blank" rel="noopener noreferrer" class="insta-btn">
-                    <i class="fa-brands fa-instagram"></i> @planet.producciones
-                </a>
-            </div>
-        </div>
-    </header>
+    <div id="sitio-header"></div>
 
     <main>
         <div class="layout-grid">
@@ -88,7 +68,7 @@
                         <div class="grid-3">
                             <div>
                                 <label for="tipoEvento">Tipo de Evento</label>
-                                <select id="tipoEvento">
+                                <select id="tipoEvento" autocomplete="off">
                                     <option value="" selected>-- Selecciona Tipo de Evento --</option>
                                     <option value="Boda VIP / Matrimonio">Boda VIP / Matrimonio</option>
                                     <option value="Fiesta de 15 Años Deluxe">Fiesta de 15 Años Deluxe</option>
@@ -98,30 +78,30 @@
                             </div>
                             <div>
                                 <label for="ciudad">Ciudad del Evento</label>
-                                <select id="ciudad">
+                                <select id="ciudad" autocomplete="off">
                                     <option value="" selected>-- Selecciona Ciudad --</option>
                                 </select>
                             </div>
                             <div>
                                 <label for="lugar">Sede / Recinto</label>
-                                <select id="lugar" disabled>
+                                <select id="lugar" autocomplete="off" disabled>
                                     <option value="" selected>-- Primero selecciona una ciudad --</option>
                                 </select>
                             </div>
                             <div>
                                 <label for="fechaEvento">Fecha del Evento (tentativa)</label>
-                                <input type="date" id="fechaEvento">
+                                <input type="date" id="fechaEvento" autocomplete="off">
                             </div>
                         </div>
                         <small class="field-hint" id="transporte-hint"></small>
                         <div class="grid-2" id="lugarOtroWrap" style="display:none; margin-top:1rem;">
                             <div>
                                 <label for="lugarOtroNombre">Nombre del lugar</label>
-                                <input type="text" id="lugarOtroNombre" placeholder="Ej. Salón Los Cedros">
+                                <input type="text" id="lugarOtroNombre" autocomplete="off" placeholder="Ej. Salón Los Cedros">
                             </div>
                             <div>
                                 <label for="lugarOtroDireccion">Dirección del lugar</label>
-                                <input type="text" id="lugarOtroDireccion" placeholder="Ej. Cra 23 # 45-12">
+                                <input type="text" id="lugarOtroDireccion" autocomplete="off" placeholder="Ej. Cra 23 # 45-12">
                             </div>
                         </div>
                     </div>
@@ -178,10 +158,9 @@
         </div>
     </main>
 
-    <footer>
-        <p>© 2026 Planet Producciones. Todos los derechos reservados. Manizales - Caldas, Colombia.</p>
-    </footer>
+    <div id="sitio-footer"></div>
 
     <script type="module" src="/src/main.ts"></script>
+    <script type="module" src="/src/cotizador-pasos.ts"></script>
 </body>
 </html>

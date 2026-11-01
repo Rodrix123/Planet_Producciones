@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         catalogo = await obtenerCatalogo();
     } catch {
-        catalogoDinamicoEl.innerHTML = '<p style="color:#f87171;">No se pudo cargar el catálogo de precios. Recarga la página.</p>';
+        catalogoDinamicoEl.innerHTML = '<p style="color:#b42318;">No se pudo cargar el catálogo de precios. Recarga la página.</p>';
         return;
     }
 

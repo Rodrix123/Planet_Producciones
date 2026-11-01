@@ -6,103 +6,75 @@
     <title>Galería de Eventos | Planet Producciones</title>
     <meta name="description" content="Fotos reales de eventos realizados por Planet Producciones, con y sin pantalla LED.">
 
+    <link rel="canonical" href="__SITE_URL__/galeria.html">
+    <meta name="theme-color" content="#f4f5f0">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Planet Producciones">
+    <meta property="og:locale" content="es_CO">
+    <meta property="og:title" content="Galería de Eventos | Planet Producciones">
+    <meta property="og:description" content="Fotos reales de eventos realizados por Planet Producciones, con y sin pantalla LED.">
+    <meta property="og:url" content="__SITE_URL__/galeria.html">
+    <meta property="og:image" content="__SITE_URL__/og.jpg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Primer baile de novios con chispas frías frente a una pantalla LED, montaje de Planet Producciones">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Galería de Eventos | Planet Producciones">
+    <meta name="twitter:description" content="Fotos reales de eventos realizados por Planet Producciones, con y sin pantalla LED.">
+    <meta name="twitter:image" content="__SITE_URL__/og.jpg">
+
     <link rel="icon" type="image/png" href="logo.png?v=2">
     <link rel="shortcut icon" type="image/png" href="logo.png?v=2">
     <link rel="apple-touch-icon" href="logo.png?v=2">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="landing-body">
+<body class="sitio-body" data-pagina="galeria">
 
-    <header class="promo-header">
-        <div class="header-container">
-            <div class="logo-box">
-                <img src="logo.png?v=2" alt="Planet Producciones Logo" class="logo-img">
-                <div class="logo-text">
-                    <h1>Planet Producciones</h1>
-                    <p>Eventos VIP & Producción Técnica</p>
+    <div id="sitio-header"></div>
+
+    <main>
+        <section class="pagina-cabecera">
+            <div class="contenedor">
+                <h1 class="titulo-pagina">Galería de Eventos</h1>
+                <p class="texto-grande">
+                    Una muestra real de nuestros eventos. Filtra entre montajes con pantalla LED y sin pantalla.
+                </p>
+
+                <div class="galeria-filtros" role="tablist" style="margin-top: 2rem;">
+                    <button type="button" class="galeria-filtro active" data-categoria="todas" role="tab" aria-selected="true">
+                        Todos
+                    </button>
+                    <button type="button" class="galeria-filtro" data-categoria="con_pantalla" role="tab" aria-selected="false">
+                        <i class="fa-solid fa-tv"></i> Eventos con pantalla
+                    </button>
+                    <button type="button" class="galeria-filtro" data-categoria="sin_pantalla" role="tab" aria-selected="false">
+                        <i class="fa-solid fa-lightbulb"></i> Eventos sin pantalla
+                    </button>
                 </div>
-            </div>
-
-            <nav class="promo-nav">
-                <a href="index.html#inicio">Inicio</a>
-                <a href="index.html#servicios">Servicios</a>
-                <a href="index.html#nosotros">Por Qué Elegirnos</a>
-                <a href="galeria.html" style="color:var(--orange-main);">Galería</a>
-                <a href="index.html#preguntas-frecuentes">Preguntas Frecuentes</a>
-                <a href="index.html#contacto">Contacto</a>
-            </nav>
-
-            <div class="nav-cta-group">
-                <a href="login.html" class="login-link"><i class="fa-solid fa-right-to-bracket"></i> Iniciar Sesión</a>
-                <a href="cotizador.html" class="submit-btn nav-cta-btn"><i class="fa-solid fa-file-invoice-dollar"></i> Cotizar Ahora</a>
-            </div>
-        </div>
-    </header>
-
-    <main class="promo-main">
-        <section class="galeria-hero">
-            <div class="pill-badge pill-badge-light">
-                <i class="fa-solid fa-images"></i> Eventos Realizados
-            </div>
-            <h1 class="hero-title" style="font-size: clamp(1.8rem, 4vw, 2.6rem);">Galería de Eventos</h1>
-            <p class="hero-desc" style="margin: 0 auto;">
-                Una muestra real de nuestros eventos. Filtra entre montajes con pantalla LED y sin pantalla.
-            </p>
-
-            <div class="galeria-tabs" role="tablist">
-                <button type="button" class="galeria-tab active" data-categoria="con_pantalla" role="tab" aria-selected="true">
-                    <i class="fa-solid fa-tv"></i> Eventos con pantalla
-                </button>
-                <button type="button" class="galeria-tab" data-categoria="sin_pantalla" role="tab" aria-selected="false">
-                    <i class="fa-solid fa-lightbulb"></i> Eventos sin pantalla
-                </button>
             </div>
         </section>
 
-        <section class="galeria-grid-section">
-            <div id="galeriaGrid" class="galeria-grid"></div>
+        <section class="contenedor" style="padding-bottom: clamp(3.5rem, 8vw, 6rem);">
+            <div id="galeriaGrid" class="galeria-mosaico"></div>
             <p id="galeriaVacio" class="galeria-vacio hidden">
                 <i class="fa-solid fa-circle-info"></i> Todavía no hay fotos en esta categoría.
+            </p>
+
+            <p class="galeria-instagram">
+                <a href="https://www.instagram.com/planet.producciones/" target="_blank" rel="noopener noreferrer" class="boton boton-linea"><i class="fa-brands fa-instagram"></i> Más en @planet.producciones</a>
             </p>
         </section>
     </main>
 
-    <div id="lightbox" class="lightbox" aria-hidden="true">
+    <div id="lightbox" class="lightbox" aria-hidden="true" role="dialog" aria-label="Foto ampliada">
         <button type="button" class="lightbox-cerrar" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
         <button type="button" class="lightbox-flecha lightbox-prev" aria-label="Anterior"><i class="fa-solid fa-chevron-left"></i></button>
-        <img id="lightboxImg" src="" alt="">
+        <img id="lightboxImg" alt="">
         <button type="button" class="lightbox-flecha lightbox-next" aria-label="Siguiente"><i class="fa-solid fa-chevron-right"></i></button>
     </div>
 
-    <footer class="promo-footer" id="contacto">
-        <div class="promo-footer-grid">
-            <div class="footer-col">
-                <div class="footer-brand">
-                    <img src="logo.png?v=2" alt="Planet Producciones" class="footer-logo">
-                    <div>
-                        <div class="footer-brand-name">Planet Producciones</div>
-                        <div class="footer-brand-sub">Eventos VIP & Producción Técnica</div>
-                    </div>
-                </div>
-                <div class="footer-love"><i class="fa-solid fa-heart"></i> Hecho con pasión para tus momentos únicos</div>
-            </div>
-
-            <div class="footer-col">
-                <div class="footer-col-title">Contacto</div>
-                <a href="tel:+573127817072" class="footer-contact-line"><i class="fa-solid fa-phone"></i> +57 312 781 70 72</a>
-                <a href="https://www.instagram.com/planet.producciones/" target="_blank" rel="noopener noreferrer" class="footer-contact-line"><i class="fa-brands fa-instagram"></i> @planet.producciones</a>
-            </div>
-
-            <div class="footer-col">
-                <div class="footer-col-title">Cotiza tu Evento</div>
-                <a href="cotizador.html" class="footer-cta-btn"><i class="fa-solid fa-file-invoice-dollar"></i> Cotizar Ahora</a>
-            </div>
-        </div>
-        <div class="promo-footer-bottom">
-            <p>© 2026 Planet Producciones. Todos los derechos reservados.</p>
-        </div>
-    </footer>
+    <div id="sitio-footer"></div>
 
     <script type="module" src="/src/galeria.ts"></script>
 </body>
