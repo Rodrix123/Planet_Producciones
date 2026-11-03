@@ -1,0 +1,33 @@
+#!/bin/sh
+# Aviso (no bloquea): sugiere no pasar de LIMITE lineas cambiadas por commit.
+# Se salta en main y durante un merge. Para cambiar el limite en un commit puntual:
+#   LIMITE=200 git commit
+LIMITE="${LIMITE:-1000}"
+
+rama=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+[ "$rama" = "main" ] && exit 0
+[ -f "$(git rev-parse --git-dir)/MERGE_HEAD" ] && exit 0
+
+# Excluidos del conteo: lockfiles, codigo generado, SQL de datos/migraciones y hojas de calculo.
+numstat=$(git diff --cached --numstat -- . \
+  ':(exclude)*package-lock.json' ':(exclude)*pnpm-lock.yaml' ':(exclude)*yarn.lock' \
+  ':(exclude)*dist/*' ':(exclude)*.sql' ':(exclude)*.xlsx')
+
+# Los binarios aparecen como "-" y se ignoran.
+total=$(printf '%s\n' "$numstat" | awk '$1 ~ /^[0-9]+$/ { s += $1 + $2 } END { print s + 0 }')
+
+if [ "$total" -gt "$LIMITE" ]; then
+  {
+    echo ""
+    echo "Aviso: este commit cambia $total lineas (sugerido: $LIMITE)."
+    echo "Considera dividirlo en commits mas pequenos (por ejemplo con: git add -p)."
+    echo "Archivos con mas cambios:"
+    printf '%s\n' "$numstat" \
+      | awk '$1 ~ /^[0-9]+$/ { print $1 + $2 "\t" $3 }' \
+      | sort -rn | head -5 | sed 's/^/  /'
+    echo "(Solo es una sugerencia: el commit continua.)"
+    echo ""
+  } >&2
+fi
+
+exit 0
