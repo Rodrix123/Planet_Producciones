@@ -1,0 +1,340 @@
+import './style.css';
+import './panel.css';
+import './eventos.css';
+import './pagos.css';
+import { api } from './api';
+import { exigirSesion } from './shared/api';
+import { initPanelLayout } from './shared/layout';
+
+// Menú "Pagos": eventos confirmados en dos columnas (sin pagar / pagados) y registro
+// manual de pagos. Los datos vienen de /api/pagos (packages/db/src/pagos.ts).
+
+interface EventoPago {
+    id: number;
+    fecha: string | null;
+    hora: string | null;
+    tipo: string | null;
+    lugar: string | null;
+    ciudad: string | null;
+    cliente: { nombre: string; email: string | null; telefono: string | null } | null;
+    total: number | null;
+    totalPagado: number;
+    saldo: number;
+}
+
+type ClaveColumna = 'sinPagar' | 'pagados';
+type MetodoPago = 'efectivo' | 'transferencia';
+
+interface BorradorPago {
+    monto: string;
+    metodo: MetodoPago;
+    referencia: string;
+}
+
+const NOMBRE_METODO: Record<MetodoPago, string> = { efectivo: 'Efectivo', transferencia: 'Transferencia' };
+
+const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+const estadoCarga = $('estado');
+const columnasEl = $('columnas');
+const modal = $('modal');
+const modalContenido = $('modalContenido');
+const toast = $('toast');
+let toastTimer: number | undefined;
+
+const datos: Record<ClaveColumna, EventoPago[]> = { sinPagar: [], pagados: [] };
+
+// ---------- Utilidades ----------
+function avisar(mensaje: string): void {
+    toast.textContent = mensaje;
+    toast.classList.add('visible');
+    window.clearTimeout(toastTimer);
+    toastTimer = window.setTimeout(() => toast.classList.remove('visible'), 3500);
+}
+
+function esc(texto: string): string {
+    const d = document.createElement('div');
+    d.textContent = texto;
+    return d.innerHTML;
+}
+
+function formatearMoneda(valor: number | null): string {
+    if (valor === null) return '—';
+    return valor.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
+}
+
+function formatearFecha(iso: string | null): string {
+    if (!iso) return 'Fecha por definir';
+    return new Date(`${iso}T00:00:00`).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+const nombreTipo = (e: EventoPago): string => e.tipo?.trim() || 'Evento';
+const lugarTexto = (e: EventoPago): string => [e.lugar, e.ciudad].filter(Boolean).join(' · ') || 'Lugar por definir';
+const clienteTexto = (e: EventoPago): string => e.cliente?.nombre || 'Sin cliente';
+
+/** Texto sin mayúsculas ni tildes, para buscar sin importar cómo se escribió. */
+const normalizar = (t: string): string => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+// ---------- Columnas y filtros ----------
+function columna(clave: ClaveColumna): HTMLElement {
+    return columnasEl.querySelector<HTMLElement>(`[data-columna="${clave}"]`)!;
+}
+
+function filtro(col: HTMLElement, nombre: string): HTMLInputElement {
+    return col.querySelector<HTMLInputElement>(`[data-filtro="${nombre}"]`)!;
+}
+
+function hayFiltros(col: HTMLElement): boolean {
+    return ['texto', 'desde', 'hasta'].some(n => filtro(col, n).value.trim() !== '');
+}
+
+function filtrar(clave: ClaveColumna): EventoPago[] {
+    const col = columna(clave);
+    const texto = normalizar(filtro(col, 'texto').value.trim());
+    const desde = filtro(col, 'desde').value;
+    const hasta = filtro(col, 'hasta').value;
+
+    return datos[clave].filter(e => {
+        if (texto) {
+            const campos = [nombreTipo(e), clienteTexto(e), lugarTexto(e), e.cliente?.email ?? '', e.cliente?.telefono ?? ''];
+            if (!campos.some(c => normalizar(c).includes(texto))) return false;
+        }
+        if ((desde || hasta) && !e.fecha) return false;
+        if (desde && e.fecha! < desde) return false;
+        if (hasta && e.fecha! > hasta) return false;
+        return true;
+    });
+}
+
+function tarjeta(e: EventoPago, clave: ClaveColumna): string {
+    let dia = '—';
+    let mesCorto = 'sin fecha';
+    if (e.fecha) {
+        const d = new Date(`${e.fecha}T00:00:00`);
+        dia = String(d.getDate());
+        mesCorto = d.toLocaleDateString('es-CO', { month: 'short' }).replace('.', '');
+    }
+    const accion = clave === 'sinPagar'
+        ? `<button type="button" class="pago-agregar" data-pagar="${e.id}" title="Agregar pago" aria-label="Agregar pago a ${esc(nombreTipo(e))}">
+               <i class="fa-solid fa-plus"></i>
+           </button>`
+        : `<span class="pago-sello" title="Pagado"><i class="fa-solid fa-circle-check"></i> Pagado</span>`;
+    const montos = clave === 'sinPagar'
+        ? `Pagado ${formatearMoneda(e.totalPagado)} de ${formatearMoneda(e.total)} · <strong class="pago-saldo">Saldo ${formatearMoneda(e.saldo)}</strong>`
+        : `Total ${formatearMoneda(e.total)} · Pagado ${formatearMoneda(e.totalPagado)}`;
+
+    return `
+    <div class="lista-item pago-item">
+        <div class="lista-fecha"><strong>${dia}</strong><span>${esc(mesCorto)}</span></div>
+        <div class="lista-info">
+            <div class="lista-tipo">${esc(nombreTipo(e))}</div>
+            <div class="lista-sub">${esc(clienteTexto(e))} · ${esc(lugarTexto(e))}</div>
+            <div class="lista-sub pago-montos">${montos}</div>
+        </div>
+        ${accion}
+    </div>`;
+}
+
+function renderColumna(clave: ClaveColumna): void {
+    const col = columna(clave);
+    const visibles = filtrar(clave);
+    const conFiltros = hayFiltros(col);
+    const conteo = col.querySelector<HTMLElement>('[data-conteo]')!;
+    conteo.textContent = conFiltros ? `${visibles.length} de ${datos[clave].length}` : String(visibles.length);
+    col.querySelector<HTMLElement>('[data-limpiar]')!.hidden = !conFiltros;
+
+    const lista = col.querySelector<HTMLElement>('[data-lista]')!;
+    if (visibles.length === 0) {
+        lista.innerHTML = `<p class="lista-vacia">${conFiltros
+            ? 'Ningún evento coincide con los filtros.'
+            : clave === 'sinPagar' ? 'No hay eventos pendientes de pago.' : 'Todavía no hay eventos pagados.'}</p>`;
+        return;
+    }
+    lista.innerHTML = visibles.map(e => tarjeta(e, clave)).join('');
+}
+
+function render(): void {
+    renderColumna('sinPagar');
+    renderColumna('pagados');
+}
+
+async function cargar(): Promise<void> {
+    try {
+        const json = await api<{ sinPagar: EventoPago[]; pagados: EventoPago[] }>('GET', '/api/pagos');
+        datos.sinPagar = json.sinPagar;
+        datos.pagados = json.pagados;
+        estadoCarga.hidden = true;
+        columnasEl.hidden = false;
+        render();
+    } catch (err) {
+        columnasEl.hidden = true;
+        estadoCarga.hidden = false;
+        estadoCarga.classList.add('error');
+        estadoCarga.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> No se pudieron cargar los eventos: ${esc((err as Error).message)}`;
+    }
+}
+
+// ---------- Ventana de pago ----------
+function abrirModal(html: string): void {
+    modalContenido.innerHTML = html;
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+}
+
+function cerrarModal(): void {
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    modalContenido.innerHTML = '';
+}
+
+function resumenEvento(e: EventoPago): string {
+    return `
+    <dl class="pago-resumen">
+        <div><dt>Evento</dt><dd>${esc(nombreTipo(e))}</dd></div>
+        <div><dt>Cliente</dt><dd>${esc(clienteTexto(e))}</dd></div>
+        <div><dt>Fecha</dt><dd>${esc(formatearFecha(e.fecha))}</dd></div>
+        <div><dt>Lugar</dt><dd>${esc(lugarTexto(e))}</dd></div>
+        <div><dt>Total</dt><dd>${formatearMoneda(e.total)}</dd></div>
+        <div><dt>Pagado</dt><dd>${formatearMoneda(e.totalPagado)}</dd></div>
+        <div><dt>Saldo pendiente</dt><dd class="pago-saldo">${formatearMoneda(e.saldo)}</dd></div>
+    </dl>`;
+}
+
+/** Monto escrito a número (admite puntos de miles: "1.500.000"). */
+function leerMonto(texto: string): number {
+    const limpio = texto.replace(/[^\d,]/g, '').replace(',', '.');
+    return limpio ? Number(limpio) : NaN;
+}
+
+/** Paso 1: se ingresan monto, método y referencia. */
+function pasoIngreso(e: EventoPago, borrador: BorradorPago): void {
+    abrirModal(`
+        <button type="button" class="modal-cerrar pago-cerrar" id="pagoCerrar" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+        <h2>Registrar pago</h2>
+        ${resumenEvento(e)}
+        <label class="campo"><span>Monto a pagar (máximo ${formatearMoneda(e.saldo)})</span>
+            <input type="text" inputmode="decimal" id="pagoMonto" placeholder="Ej. 500000" value="${esc(borrador.monto)}">
+        </label>
+        <label class="campo"><span>Método de pago</span>
+            <select id="pagoMetodo">
+                <option value="efectivo" ${borrador.metodo === 'efectivo' ? 'selected' : ''}>Efectivo</option>
+                <option value="transferencia" ${borrador.metodo === 'transferencia' ? 'selected' : ''}>Transferencia</option>
+            </select>
+        </label>
+        <label class="campo"><span>Referencia (opcional)</span>
+            <input type="text" id="pagoReferencia" maxlength="150" placeholder="Ej. número de transferencia" value="${esc(borrador.referencia)}">
+        </label>
+        <p class="form-error" id="pagoError" hidden></p>
+        <div class="modal-acciones">
+            <button type="button" class="btn-secundario" id="pagoCancelar">Cancelar</button>
+            <button type="button" class="btn-guardar" id="pagoContinuar" style="width:auto;">Continuar</button>
+        </div>
+    `);
+
+    const montoEl = $<HTMLInputElement>('pagoMonto');
+    const metodoEl = $<HTMLSelectElement>('pagoMetodo');
+    const referenciaEl = $<HTMLInputElement>('pagoReferencia');
+    const errorEl = $('pagoError');
+    montoEl.focus();
+
+    $('pagoCerrar').addEventListener('click', cerrarModal);
+    $('pagoCancelar').addEventListener('click', cerrarModal);
+    $('pagoContinuar').addEventListener('click', () => {
+        const nuevo: BorradorPago = {
+            monto: montoEl.value.trim(),
+            metodo: metodoEl.value as MetodoPago,
+            referencia: referenciaEl.value.trim()
+        };
+        const monto = leerMonto(nuevo.monto);
+        let error = '';
+        if (!Number.isFinite(monto) || monto <= 0) error = 'Ingresa un monto mayor que cero.';
+        else if (Math.round(monto * 100) > Math.round(e.saldo * 100)) error = `El monto supera el saldo pendiente (${formatearMoneda(e.saldo)}).`;
+        if (error) {
+            errorEl.textContent = error;
+            errorEl.hidden = false;
+            montoEl.focus();
+            return;
+        }
+        pasoConfirmacion(e, nuevo, monto);
+    });
+}
+
+/** Paso 2: todo en solo lectura; solo se puede volver atrás o confirmar. */
+function pasoConfirmacion(e: EventoPago, borrador: BorradorPago, monto: number): void {
+    abrirModal(`
+        <h2>Confirmar pago</h2>
+        <p class="modal-texto">Revisa los datos antes de registrar el pago. Si algo no es correcto, vuelve atrás para cambiarlo.</p>
+        ${resumenEvento(e)}
+        <dl class="pago-resumen pago-resumen-monto">
+            <div><dt>Monto a registrar</dt><dd><strong>${formatearMoneda(monto)}</strong></dd></div>
+            <div><dt>Método de pago</dt><dd>${NOMBRE_METODO[borrador.metodo]}</dd></div>
+            <div><dt>Referencia</dt><dd>${borrador.referencia ? esc(borrador.referencia) : '—'}</dd></div>
+            <div><dt>Saldo después del pago</dt><dd>${formatearMoneda(Math.max(0, e.saldo - monto))}</dd></div>
+        </dl>
+        <p class="form-error" id="pagoError" hidden></p>
+        <div class="modal-acciones">
+            <button type="button" class="btn-secundario" id="pagoVolver"><i class="fa-solid fa-arrow-left"></i> Volver</button>
+            <button type="button" class="btn-guardar" id="pagoConfirmar" style="width:auto;">Confirmar pago</button>
+        </div>
+    `);
+
+    const errorEl = $('pagoError');
+    const btnConfirmar = $<HTMLButtonElement>('pagoConfirmar');
+    const btnVolver = $<HTMLButtonElement>('pagoVolver');
+
+    btnVolver.addEventListener('click', () => pasoIngreso(e, borrador));
+    btnConfirmar.addEventListener('click', async () => {
+        btnConfirmar.disabled = true;
+        btnVolver.disabled = true;
+        btnConfirmar.textContent = 'Registrando...';
+        try {
+            const json = await api<{ evento: EventoPago }>('POST', '/api/pagos', {
+                eventId: e.id,
+                monto,
+                metodo: borrador.metodo,
+                referencia: borrador.referencia || undefined
+            });
+            cerrarModal();
+            avisar(json.evento.saldo <= 0 ? 'Pago registrado: el evento quedó pagado' : 'Pago registrado');
+            await cargar();
+        } catch (err) {
+            errorEl.textContent = (err as Error).message;
+            errorEl.hidden = false;
+            btnConfirmar.disabled = false;
+            btnVolver.disabled = false;
+            btnConfirmar.textContent = 'Confirmar pago';
+        }
+    });
+}
+
+// ---------- Eventos de la página ----------
+columnasEl.addEventListener('input', ev => {
+    const col = (ev.target as HTMLElement).closest<HTMLElement>('[data-columna]');
+    if (col) renderColumna(col.dataset.columna as ClaveColumna);
+});
+
+columnasEl.addEventListener('click', ev => {
+    const t = ev.target as HTMLElement;
+    const limpiar = t.closest<HTMLElement>('[data-limpiar]');
+    if (limpiar) {
+        const col = limpiar.closest<HTMLElement>('[data-columna]')!;
+        col.querySelectorAll<HTMLInputElement>('[data-filtro]').forEach(i => { i.value = ''; });
+        renderColumna(col.dataset.columna as ClaveColumna);
+        return;
+    }
+    const pagar = t.closest<HTMLElement>('[data-pagar]');
+    if (pagar) {
+        const evento = datos.sinPagar.find(e => e.id === Number(pagar.dataset.pagar));
+        if (evento) pasoIngreso(evento, { monto: '', metodo: 'efectivo', referencia: '' });
+    }
+});
+
+// La ventana solo se cierra con sus botones: así un clic fuera no descarta un pago a medio confirmar.
+document.addEventListener('keydown', ev => {
+    if (ev.key === 'Escape' && modal.classList.contains('open') && document.getElementById('pagoCerrar')) cerrarModal();
+});
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const sesion = await exigirSesion('administrador');
+    initPanelLayout(sesion);
+    await cargar();
+});

@@ -1,0 +1,173 @@
+/* Estilos de pagos.html. Se apoya en panel.css (riel, filtros, modal, botones) y en
+   eventos.css (paneles, lista de eventos); aquí solo va lo propio del menú de Pagos. */
+
+.pagos-intro {
+    margin: -1.25rem 0 1.75rem;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+}
+
+/* ---------- Dos columnas: sin pagar | pagados ---------- */
+.pagos-columnas {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+}
+
+.pagos-columnas[hidden] {
+    display: none;
+}
+
+/* .deck-panel de eventos.css es absoluto (para el efecto del calendario); aquí va en el flujo. */
+.pagos-panel {
+    position: static;
+    width: auto;
+    height: 700px;
+    min-width: 0;
+}
+
+.pagos-icono-pendiente {
+    color: var(--orange-main);
+    margin-right: 0.35rem;
+}
+
+.pagos-icono-pagado {
+    color: var(--emerald-green);
+    margin-right: 0.35rem;
+}
+
+/* ---------- Filtros de cada columna ---------- */
+.pagos-filtros {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.pagos-filtros .panel-search {
+    width: 100%;
+}
+
+.pagos-fechas {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.pagos-fechas .filtro {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    min-width: 0;
+}
+
+.pagos-fechas .filtro input[type="date"] {
+    width: 100%;
+}
+
+.pagos-filtros .filtro-limpiar {
+    align-self: flex-start;
+    padding: 0.45rem 0.9rem;
+    font-size: 0.8rem;
+}
+
+/* ---------- Tarjetas ---------- */
+.pago-item {
+    cursor: default;
+}
+
+.pago-montos {
+    margin-top: 0.15rem;
+}
+
+.pago-saldo {
+    color: var(--orange-main);
+    font-weight: 600;
+}
+
+.pago-agregar {
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 1px solid var(--orange-main);
+    background: rgba(249, 115, 22, 0.12);
+    color: var(--orange-main);
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+
+.pago-agregar:hover,
+.pago-agregar:focus-visible {
+    outline: none;
+    background: var(--orange-main);
+    color: #fff;
+}
+
+.pago-sello {
+    flex-shrink: 0;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--emerald-green);
+    white-space: nowrap;
+}
+
+/* ---------- Ventana de pago ---------- */
+.pagos-modal {
+    position: relative;
+    width: min(100%, 480px);
+}
+
+.pago-cerrar {
+    position: absolute;
+    top: 1.25rem;
+    right: 1.25rem;
+}
+
+.pago-resumen {
+    display: grid;
+    gap: 0.45rem;
+    margin-bottom: 1.25rem;
+    padding: 0.9rem 1rem;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    font-size: 0.88rem;
+}
+
+.pago-resumen > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.pago-resumen dt {
+    color: var(--text-muted);
+}
+
+.pago-resumen dd {
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+.pago-resumen-monto {
+    border-color: rgba(249, 115, 22, 0.5);
+}
+
+.pago-resumen-monto strong {
+    color: var(--orange-main);
+    font-size: 1.05rem;
+}
+
+@media (max-width: 900px) {
+    .pagos-columnas {
+        grid-template-columns: 1fr;
+    }
+
+    .pagos-panel {
+        height: 560px;
+    }
+}
