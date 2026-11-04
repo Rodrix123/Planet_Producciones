@@ -108,6 +108,24 @@ function filtrar(clave: ClaveColumna): EventoPago[] {
     });
 }
 
+const DIAS_ANTES_PARA_PAGAR = 6;
+
+/** El último día de pago es 6 días antes de la fecha; los eventos sin fecha no tienen plazo. */
+function plazoVencido(e: EventoPago): boolean {
+    if (!e.fecha) return false;
+    const limite = new Date(`${e.fecha}T00:00:00`);
+    limite.setDate(limite.getDate() - DIAS_ANTES_PARA_PAGAR);
+    return aISO(new Date()) > aISO(limite);
+}
+
+/** Vencido el plazo, la tarjeta no lleva botón. */
+function botonPago(e: EventoPago): string {
+    if (plazoVencido(e)) return '';
+    return `<button type="button" class="pago-agregar" data-pagar="${e.id}" title="Agregar pago" aria-label="Agregar pago a ${esc(nombreTipo(e))}">
+               <i class="fa-solid fa-plus"></i>
+           </button>`;
+}
+
 function tarjeta(e: EventoPago, clave: ClaveColumna): string {
     let dia = '—';
     let mesCorto = 'sin fecha';
@@ -117,9 +135,7 @@ function tarjeta(e: EventoPago, clave: ClaveColumna): string {
         mesCorto = d.toLocaleDateString('es-CO', { month: 'short' }).replace('.', '');
     }
     const accion = clave === 'sinPagar'
-        ? `<button type="button" class="pago-agregar" data-pagar="${e.id}" title="Agregar pago" aria-label="Agregar pago a ${esc(nombreTipo(e))}">
-               <i class="fa-solid fa-plus"></i>
-           </button>`
+        ? botonPago(e)
         : `<span class="pago-sello" title="Pagado"><i class="fa-solid fa-circle-check"></i> Pagado</span>`;
     const montos = clave === 'sinPagar'
         ? `<span>Pagado ${formatearMoneda(e.totalPagado)} de ${formatearMoneda(e.total)}</span><strong class="pago-saldo">Saldo ${formatearMoneda(e.saldo)}</strong>`

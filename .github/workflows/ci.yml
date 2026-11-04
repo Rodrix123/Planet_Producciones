@@ -34,7 +34,7 @@ jobs:
       - name: Verificar que no se suban archivos .env
         run: |
           if git ls-files | grep -E '(^|/)\.env(\.local)?$'; then
-            echo "::error::Hay archivos .env versionados. Quitalos del repositorio."
+            echo "::error::Hay archivos .env versionados. Quitalos del repos  itorio."
             exit 1
           fi
 
