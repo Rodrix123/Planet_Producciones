@@ -9,11 +9,11 @@ import {
     type ItemSeleccionado,
     type ResultadoCatalogo
 } from './shared/catalogoCotizacion';
+import { formatearItemsParaMostrar, generarExcelEjecutivo, type ItemParaMostrar } from './shared/cotizacionExcel';
 
 // Librerías cargadas vía CDN en index.html (sin tipos propios en este proyecto)
 declare const Swal: any;
 declare const html2pdf: any;
-declare const XLSX: any;
 
 interface DatosCliente {
     nombre: string;
@@ -27,24 +27,6 @@ interface DatosCliente {
 }
 
 const OTRO_VALUE = 'otro';
-
-/** Ítem listo para mostrarse en el PDF/Excel (precio ya multiplicado por la cantidad,
- *  nombre con el prefijo "N x" cuando aplica). */
-interface ItemParaMostrar {
-    tag: string;
-    nombre: string;
-    descripcion: string;
-    precio: number;
-}
-
-function formatearItemsParaMostrar(formatterCOP: Intl.NumberFormat, items: ItemSeleccionado[]): ItemParaMostrar[] {
-    return items.map((item) => ({
-        tag: item.tag,
-        nombre: item.cantidad > 1 ? `${item.cantidad} x ${item.nombre} (${formatterCOP.format(item.precioUnit)} c/u)` : item.nombre,
-        descripcion: item.descripcion,
-        precio: item.precioUnit * item.cantidad
-    }));
-}
 
 /** Intenta guardar la cotización en la base de datos para que Maritza la vea en su panel.
  *  Si falla (red/servidor caído), no interrumpe la descarga del PDF/Excel del cliente: solo
@@ -383,61 +365,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         `;
 
         return container;
-    }
-
-    // Exportación a Excel Profesional Estructurado
-    function generarExcelEjecutivo(
-        datosCliente: DatosCliente,
-        itemsParaMostrar: ItemParaMostrar[],
-        total: number,
-        refNum: string,
-        fechaHoy: string
-    ): void {
-        const aoaData: any[][] = [
-            ["PLANET PRODUCCIONES - PRODUCCIÓN TÉCNICA & EVENTOS VIP"],
-            [`COTIZACIÓN OFICIAL: ${refNum}`, "", "", `FECHA: ${fechaHoy}`],
-            [""],
-            ["1. DATOS DEL CLIENTE"],
-            ["Cliente:", datosCliente.nombre, "Tipo Evento:", datosCliente.tipoEvento || 'N/A'],
-            ["Correo:", datosCliente.correo, "Sede:", datosCliente.lugar || 'Por definir'],
-            ["WhatsApp:", datosCliente.telefono, "", ""],
-            [""],
-            ["2. DESGLOSE PREVENTIVO DE SERVICIOS"],
-            ["Item", "Categoría", "Servicio / Descripción", "Valor COP"]
-        ];
-
-        itemsParaMostrar.forEach((item, index) => {
-            aoaData.push([
-                index + 1,
-                item.tag,
-                item.descripcion ? `${item.nombre} — Incluye: ${item.descripcion}` : item.nombre,
-                item.precio
-            ]);
-        });
-
-        aoaData.push([""]);
-        aoaData.push(["", "", "TOTAL PRESUPUESTO ESTIMADO:", total]);
-
-        const worksheet = XLSX.utils.aoa_to_sheet(aoaData);
-
-        worksheet['!cols'] = [
-            { wch: 8 },  // Ítem
-            { wch: 26 }, // Categoría
-            { wch: 75 }, // Descripción
-            { wch: 18 }  // Precio COP
-        ];
-
-        const numRows = aoaData.length;
-        for (let i = 11; i < numRows; i++) {
-            const cellAddress = `D${i}`;
-            if (worksheet[cellAddress] && typeof worksheet[cellAddress].v === 'number') {
-                worksheet[cellAddress].z = '"$"#,##0';
-            }
-        }
-
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'Cotización VIP');
-        XLSX.writeFile(workbook, `Cotizacion_Planet_${datosCliente.nombre.replace(/\s+/g, '_')}.xlsx`);
     }
 
     // Evento Principal al Clic
