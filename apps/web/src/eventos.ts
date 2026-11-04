@@ -24,6 +24,14 @@ interface Evento {
     transporte: string | null;
 }
 
+interface ElementoEvento {
+    tipo: string;
+    nombre: string;
+    descripcion: string;
+    cantidad: number;
+    nota: string | null;
+}
+
 type ClaveToggle = 'confirmado' | 'pagoInicial' | 'firmado';
 /** Cada filtro de estado busca los que sí cumplen, los que no, o todos (sin filtrar). */
 type ValorFiltro = 'todos' | 'si' | 'no';
@@ -41,6 +49,8 @@ const estadoCarga = $('estado');
 const deck = $('deck');
 const detalle = $('detalle');
 const detalleContenido = $('detalleContenido');
+const modal = $('modal');
+const modalContenido = $('modalContenido');
 const listaEventos = $('listaEventos');
 const listaConteo = $('listaConteo');
 const calTitulo = $('calTitulo');
@@ -55,6 +65,9 @@ let seleccionadoId: number | null = null;
 let popoverFecha: string | null = null;
 let fadeTimer: number | undefined;
 let toastTimer: number | undefined;
+// Cambia al abrir o cerrar el menú de elementos: una respuesta de un pedido anterior se descarta.
+let pedidoElementos = 0;
+let botonElementos: HTMLElement | null = null;
 const filtrosEstado: Record<ClaveToggle, ValorFiltro> = { confirmado: 'todos', pagoInicial: 'todos', firmado: 'todos' };
 const CLAVES_ESTADO = Object.keys(filtrosEstado) as ClaveToggle[];
 
@@ -342,6 +355,11 @@ function htmlDetalle(e: Evento): string {
             ${bloque('Logística y contrato', `
                 <p>Transporte: ${esc(e.transporte ?? '—')}</p>
                 <p>Contrato enviado: ${esc(formatearFechaHora(e.contratoEnviadoEn))}</p>`)}
+        </div>
+        <div class="detalle-acciones">
+            <button type="button" class="btn-secundario" data-elementos="${e.id}">
+                <i class="fa-solid fa-boxes-stacked"></i> Ver elementos
+            </button>
         </div>`;
 }
 
@@ -378,6 +396,67 @@ function seleccionar(id: number): void {
             renderCalendario(filtrar());
         }
     }
+}
+
+// ---------- Menú de elementos del evento ----------
+function htmlElementos(elementos: ElementoEvento[]): string {
+    if (elementos.length === 0) return '<p class="modal-texto">Este evento no tiene elementos registrados.</p>';
+
+    // El API los entrega ordenados por categoría: basta con agruparlos.
+    const porTipo = new Map<string, ElementoEvento[]>();
+    for (const el of elementos) porTipo.set(el.tipo, [...(porTipo.get(el.tipo) ?? []), el]);
+
+    return [...porTipo].map(([tipo, lista]) => `
+        <div class="elementos-grupo">
+            <h3>${esc(tipo)}</h3>
+            ${lista.map(el => `
+                <div class="elemento-fila">
+                    <span class="elemento-cantidad">${el.cantidad}</span>
+                    <div class="elemento-info">
+                        <p>${esc(el.nombre)}</p>
+                        ${el.descripcion ? `<small>${esc(el.descripcion)}</small>` : ''}
+                        ${el.nota ? `<small class="elemento-nota"><i class="fa-solid fa-note-sticky"></i> ${esc(el.nota)}</small>` : ''}
+                    </div>
+                </div>`).join('')}
+        </div>`).join('');
+}
+
+async function abrirElementos(boton: HTMLElement): Promise<void> {
+    const evento = eventos.find(e => e.id === Number(boton.dataset.elementos));
+    if (!evento) return;
+    const pedido = ++pedidoElementos;
+    botonElementos = boton;
+
+    modalContenido.innerHTML = `
+        <div class="elementos-head">
+            <div>
+                <h2 id="elementosTitulo">Elementos del evento</h2>
+                <p>${esc(nombreTipo(evento))} · ${esc(evento.fecha ? formatearFechaLarga(evento.fecha) : 'Fecha por definir')}</p>
+            </div>
+            <button type="button" class="modal-cerrar" id="elementosCerrar" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div id="elementosCuerpo"><p class="modal-texto"><i class="fa-solid fa-spinner fa-spin"></i> Cargando elementos...</p></div>`;
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+    $('elementosCerrar').focus();
+
+    let cuerpo: string;
+    try {
+        const json = await api<{ elementos: ElementoEvento[] }>('GET', `/api/eventos/${evento.id}/elementos`);
+        cuerpo = htmlElementos(json.elementos);
+    } catch (err) {
+        cuerpo = `<p class="modal-texto"><i class="fa-solid fa-triangle-exclamation"></i> No se pudieron cargar los elementos: ${esc((err as Error).message)}</p>`;
+    }
+    if (pedido === pedidoElementos) $('elementosCuerpo').innerHTML = cuerpo;
+}
+
+function cerrarElementos(): void {
+    pedidoElementos++;
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    modalContenido.innerHTML = '';
+    botonElementos?.focus();
+    botonElementos = null;
 }
 
 // ---------- Render general ----------
@@ -500,7 +579,21 @@ document.addEventListener('click', ev => {
     if (popoverFecha && !t.closest('.cal-popover') && !t.closest('[data-mas]')) cerrarPopover();
 });
 document.addEventListener('keydown', ev => {
-    if (ev.key === 'Escape') cerrarPopover();
+    if (ev.key !== 'Escape') return;
+    cerrarPopover();
+    if (modal.classList.contains('open')) cerrarElementos();
+});
+
+// El contenido del detalle se reemplaza al cambiar de evento: el clic se escucha en su contenedor.
+detalleContenido.addEventListener('click', ev => {
+    const boton = (ev.target as HTMLElement).closest<HTMLElement>('[data-elementos]');
+    if (boton) void abrirElementos(boton);
+});
+
+// Cerrar el menú de elementos con la X o al hacer click en el fondo.
+modal.addEventListener('click', ev => {
+    const objetivo = ev.target as HTMLElement;
+    if (objetivo === modal || objetivo.closest('#elementosCerrar')) cerrarElementos();
 });
 
 // El calendario cambia de ancho al hacer hover (se extiende y la lista se retrae) y al redimensionar la

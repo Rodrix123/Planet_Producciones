@@ -216,6 +216,62 @@ async function cargarEvento(supabase: SupabaseClient, id: number): Promise<Event
 }
 
 // ---------------------------------------------------------------------------
+// Elementos del evento
+// ---------------------------------------------------------------------------
+
+/** Un elemento cotizado para el evento (public.quote_items), sin precios. */
+export interface ElementoEvento {
+  /** Categoría del elemento (inventory.type). */
+  tipo: string;
+  nombre: string;
+  descripcion: string;
+  cantidad: number;
+  nota: string | null;
+}
+
+interface FilaElemento {
+  quantity: number;
+  nota: string | null;
+  inventory_variants: {
+    simple_description: string | null;
+    detailed_description: string | null;
+    inventory: { type: string } | null;
+  } | null;
+}
+
+/**
+ * Solo lectura. Lo que lleva el evento según su cotización, por categoría y nombre.
+ * Son los elementos cotizados, no unidades físicas: ningún flujo asigna todavía stock a un evento.
+ */
+export async function listarElementosEvento(
+  supabase: SupabaseClient,
+  id: unknown,
+): Promise<{ elementos: ElementoEvento[] }> {
+  const eventoId = idOpcional(id, "El evento");
+  if (eventoId === null) throw new ErrorEvento("El evento no es válido.");
+
+  const eventoRes = await supabase.from("events").select("quote_id").eq("id", eventoId).maybeSingle();
+  if (eventoRes.error) throw eventoRes.error;
+  if (!eventoRes.data) throw new ErrorEvento("El evento no existe.", 404);
+
+  const { data, error } = await supabase
+    .from("quote_items")
+    .select("quantity, nota, inventory_variants(simple_description, detailed_description, inventory(type))")
+    .eq("quote_id", eventoRes.data.quote_id);
+  if (error) throw error;
+
+  const elementos = (data as unknown as FilaElemento[]).map((f) => ({
+    tipo: f.inventory_variants?.inventory?.type ?? "Sin categoría",
+    nombre: f.inventory_variants?.simple_description ?? "Sin nombre",
+    descripcion: f.inventory_variants?.detailed_description ?? "",
+    cantidad: f.quantity,
+    nota: f.nota,
+  }));
+  elementos.sort((a, b) => ALFABETICO.compare(a.tipo, b.tipo) || ALFABETICO.compare(a.nombre, b.nombre));
+  return { elementos };
+}
+
+// ---------------------------------------------------------------------------
 // Creación de eventos
 // ---------------------------------------------------------------------------
 
