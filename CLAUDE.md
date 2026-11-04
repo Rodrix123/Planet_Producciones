@@ -20,7 +20,9 @@ JS + Express) migrada a esta estructura de monorepo en TypeScript.
 | Cambiar la landing / página promocional         | `apps/web/index.html` + `apps/web/src/landing.css` + `apps/web/src/home.ts` |
 | Cambiar el catálogo de precios / los servicios de la cotización | `apps/web/src/catalogo.html` (se monta en `cotizador.html`) |
 | Cambiar el cálculo del total | `apps/web/src/catalogo.ts` |
-| Cambiar la generación de PDF/Excel del navegador, o el guardado de la cotización junto con el evento en creación | `apps/web/src/main.ts` |
+| Cambiar la generación de PDF del navegador, o el guardado de la cotización junto con el evento en creación | `apps/web/src/main.ts` |
+| Cambiar el Excel de la cotización (lo usan el cotizador y el panel de consulta) | `apps/web/src/shared/cotizacionExcel.ts` |
+| Cambiar el panel de consulta (clientes > eventos > cotizaciones, solo lectura) | `apps/web/consulta.html` + `apps/web/src/consulta.ts` + `apps/web/src/consulta.css`; filtros y reglas en `apps/web/src/shared/consultaDatos.ts`; endpoint `GET /api/consulta/clientes` en `apps/server/src/routes/consulta.routes.ts` |
 | Cambiar el formulario de nuevo evento (solo datos del evento; de ahí se pasa a cotizar) | `apps/web/src/eventos.ts` + `apps/web/src/borrador-evento.ts` |
 | Cambiar cómo se guarda un evento nuevo (evento + cotización + servicios) | `packages/db/src/eventos.ts` |
 | Cambiar el menú de inventario (tipo > elemento > variante > unidad física, solo lectura) | `apps/web/inventario.html` + `apps/web/src/inventario.ts` + `apps/web/src/inventario.css`; consulta en `packages/db/src/inventario.ts` y endpoint `GET /api/inventario` en `apps/server/src/index.ts` |
