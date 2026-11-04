@@ -29,7 +29,7 @@
     </aside>
 
     <main class="panel-main">
-        <header class="panel-topbar">
+        <header class="panel-topbar pagos-topbar">
             <h1>Pagos</h1>
         </header>
         <p class="pagos-intro">Registro manual de los pagos de los eventos confirmados.</p>
@@ -58,10 +58,10 @@
                             <span><i class="fa-regular fa-calendar-minus"></i> Fecha final</span>
                             <input type="date" data-filtro="hasta">
                         </label>
+                        <button type="button" class="btn-secundario filtro-limpiar" data-limpiar hidden title="Quitar la búsqueda y la fecha final; la fecha de inicio vuelve a hoy">
+                            <i class="fa-solid fa-filter-circle-xmark"></i> Limpiar
+                        </button>
                     </div>
-                    <button type="button" class="btn-secundario filtro-limpiar" data-limpiar hidden>
-                        <i class="fa-solid fa-filter-circle-xmark"></i> Limpiar filtros
-                    </button>
                 </div>
                 <div class="lista-eventos" data-lista></div>
             </article>
@@ -85,10 +85,10 @@
                             <span><i class="fa-regular fa-calendar-minus"></i> Fecha final</span>
                             <input type="date" data-filtro="hasta">
                         </label>
+                        <button type="button" class="btn-secundario filtro-limpiar" data-limpiar hidden title="Quitar la búsqueda y la fecha final; la fecha de inicio vuelve a hoy">
+                            <i class="fa-solid fa-filter-circle-xmark"></i> Limpiar
+                        </button>
                     </div>
-                    <button type="button" class="btn-secundario filtro-limpiar" data-limpiar hidden>
-                        <i class="fa-solid fa-filter-circle-xmark"></i> Limpiar filtros
-                    </button>
                 </div>
                 <div class="lista-eventos" data-lista></div>
             </article>

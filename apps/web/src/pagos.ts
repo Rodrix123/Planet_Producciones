@@ -83,8 +83,11 @@ function filtro(col: HTMLElement, nombre: string): HTMLInputElement {
     return col.querySelector<HTMLInputElement>(`[data-filtro="${nombre}"]`)!;
 }
 
+/** Hay algo distinto de lo que deja "Limpiar" (sin búsqueda, desde hoy y sin fecha final). */
 function hayFiltros(col: HTMLElement): boolean {
-    return ['texto', 'desde', 'hasta'].some(n => filtro(col, n).value.trim() !== '');
+    return filtro(col, 'texto').value.trim() !== ''
+        || filtro(col, 'desde').value !== aISO(new Date())
+        || filtro(col, 'hasta').value !== '';
 }
 
 function filtrar(clave: ClaveColumna): EventoPago[] {
@@ -119,8 +122,8 @@ function tarjeta(e: EventoPago, clave: ClaveColumna): string {
            </button>`
         : `<span class="pago-sello" title="Pagado"><i class="fa-solid fa-circle-check"></i> Pagado</span>`;
     const montos = clave === 'sinPagar'
-        ? `Pagado ${formatearMoneda(e.totalPagado)} de ${formatearMoneda(e.total)} · <strong class="pago-saldo">Saldo ${formatearMoneda(e.saldo)}</strong>`
-        : `Total ${formatearMoneda(e.total)} · Pagado ${formatearMoneda(e.totalPagado)}`;
+        ? `<span>Pagado ${formatearMoneda(e.totalPagado)} de ${formatearMoneda(e.total)}</span><strong class="pago-saldo">Saldo ${formatearMoneda(e.saldo)}</strong>`
+        : `<span>Total ${formatearMoneda(e.total)}</span><span>Pagado ${formatearMoneda(e.totalPagado)}</span>`;
 
     return `
     <div class="lista-item pago-item">
@@ -139,12 +142,13 @@ function renderColumna(clave: ClaveColumna): void {
     const visibles = filtrar(clave);
     const conFiltros = hayFiltros(col);
     const conteo = col.querySelector<HTMLElement>('[data-conteo]')!;
-    conteo.textContent = conFiltros ? `${visibles.length} de ${datos[clave].length}` : String(visibles.length);
+    const total = datos[clave].length;
+    conteo.textContent = visibles.length < total ? `${visibles.length} de ${total}` : String(total);
     col.querySelector<HTMLElement>('[data-limpiar]')!.hidden = !conFiltros;
 
     const lista = col.querySelector<HTMLElement>('[data-lista]')!;
     if (visibles.length === 0) {
-        lista.innerHTML = `<p class="lista-vacia">${conFiltros
+        lista.innerHTML = `<p class="lista-vacia">${visibles.length < datos[clave].length
             ? 'Ningún evento coincide con los filtros.'
             : clave === 'sinPagar' ? 'No hay eventos pendientes de pago.' : 'Todavía no hay eventos pagados.'}</p>`;
         return;
@@ -309,6 +313,7 @@ function pasoConfirmacion(e: EventoPago, borrador: BorradorPago, monto: number):
 // ---------- Eventos de la página ----------
 columnasEl.addEventListener('input', ev => {
     const col = (ev.target as HTMLElement).closest<HTMLElement>('[data-columna]');
+    actualizarTextosFecha();
     if (col) renderColumna(col.dataset.columna as ClaveColumna);
 });
 
@@ -317,7 +322,11 @@ columnasEl.addEventListener('click', ev => {
     const limpiar = t.closest<HTMLElement>('[data-limpiar]');
     if (limpiar) {
         const col = limpiar.closest<HTMLElement>('[data-columna]')!;
-        col.querySelectorAll<HTMLInputElement>('[data-filtro]').forEach(i => { i.value = ''; });
+        // Limpiar quita la búsqueda y la fecha final; la fecha de inicio vuelve a hoy.
+        filtro(col, 'texto').value = '';
+        filtro(col, 'desde').value = aISO(new Date());
+        filtro(col, 'hasta').value = '';
+        actualizarTextosFecha();
         renderColumna(col.dataset.columna as ClaveColumna);
         return;
     }
@@ -333,8 +342,52 @@ document.addEventListener('keydown', ev => {
     if (ev.key === 'Escape' && modal.classList.contains('open') && document.getElementById('pagoCerrar')) cerrarModal();
 });
 
+function aISO(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** Rango por defecto de ambas columnas: de hoy al último día del mes actual. */
+function filtrosPorDefecto(): void {
+    const hoy = new Date();
+    const finDeMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+    columnasEl.querySelectorAll<HTMLElement>('[data-columna]').forEach(col => {
+        filtro(col, 'desde').value = aISO(hoy);
+        filtro(col, 'hasta').value = aISO(finDeMes);
+    });
+    actualizarTextosFecha();
+}
+
+/**
+ * El navegador muestra los <input type="date"> en el formato del sistema (a veces mes/día/año).
+ * Encima de cada uno se pinta la fecha como día/mes/año; el calendario nativo sigue funcionando.
+ */
+function prepararCamposFecha(): void {
+    columnasEl.querySelectorAll<HTMLInputElement>('input[type="date"]').forEach(input => {
+        const envoltura = document.createElement('span');
+        envoltura.className = 'fecha-campo';
+        input.replaceWith(envoltura);
+        const texto = document.createElement('span');
+        texto.className = 'fecha-texto';
+        texto.setAttribute('aria-hidden', 'true');
+        envoltura.append(input, texto);
+        // Como el texto nativo está oculto, un clic en cualquier parte del campo abre el calendario.
+        input.addEventListener('click', () => {
+            try { input.showPicker(); } catch { /* navegador sin showPicker: abre con el ícono */ }
+        });
+    });
+}
+
+function actualizarTextosFecha(): void {
+    columnasEl.querySelectorAll<HTMLInputElement>('.fecha-campo input').forEach(input => {
+        const [anio, mes, dia] = input.value.split('-');
+        input.nextElementSibling!.textContent = input.value ? `${dia}/${mes}/${anio}` : 'dd/mm/aaaa';
+    });
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     const sesion = await exigirSesion('administrador');
     initPanelLayout(sesion);
+    prepararCamposFecha();
+    filtrosPorDefecto();
     await cargar();
 });

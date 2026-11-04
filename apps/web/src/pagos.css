@@ -1,6 +1,17 @@
 /* Estilos de pagos.html. Se apoya en panel.css (riel, filtros, modal, botones) y en
    eventos.css (paneles, lista de eventos); aquí solo va lo propio del menú de Pagos. */
 
+/* Estos <header> heredan la barra del cotizador ("header" en style.css): fondo oscuro,
+   borde y relleno que aquí se veían como un recuadro hundido alrededor del título. */
+.pagos-topbar,
+.pagos-panel .deck-head {
+    position: static;
+    padding: 0;
+    background: none;
+    border: 0;
+    backdrop-filter: none;
+}
+
 .pagos-intro {
     margin: -1.25rem 0 1.75rem;
     color: var(--text-muted);
@@ -26,6 +37,16 @@
     min-width: 0;
 }
 
+.pagos-panel .deck-head h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+}
+
+.pagos-panel .rol-count {
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+}
+
 .pagos-icono-pendiente {
     color: var(--orange-main);
     margin-right: 0.35rem;
@@ -34,6 +55,21 @@
 .pagos-icono-pagado {
     color: var(--emerald-green);
     margin-right: 0.35rem;
+}
+
+/* La columna de pagados usa el verde en lugar del naranja de lo pendiente. */
+[data-columna="pagados"] .rol-count {
+    color: var(--emerald-green);
+    background: rgba(52, 211, 153, 0.12);
+    border-color: rgba(52, 211, 153, 0.3);
+}
+
+[data-columna="pagados"] .lista-fecha {
+    background: rgba(52, 211, 153, 0.12);
+}
+
+[data-columna="pagados"] .lista-fecha strong {
+    color: var(--emerald-green);
 }
 
 /* ---------- Filtros de cada columna ---------- */
@@ -50,10 +86,12 @@
     width: 100%;
 }
 
+/* Fechas y "Limpiar" en una sola fila. */
 .pagos-fechas {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.75rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.6rem;
 }
 
 .pagos-fechas .filtro {
@@ -64,22 +102,75 @@
 }
 
 .pagos-fechas .filtro input[type="date"] {
-    width: 100%;
+    width: 138px;
+    min-width: 0;
+    padding: 0 0.6rem;
+}
+
+/* Fecha visible como día/mes/año (la pinta pagos.ts) encima del campo nativo, cuyo texto se oculta. */
+/* Más específico que ".filtro > span" de panel.css, que es para el título del filtro. */
+.filtro > .fecha-campo {
+    position: relative;
+    display: block;
+    margin: 0;
+    font-size: inherit;
+    font-weight: normal;
+    color: inherit;
+}
+
+.fecha-campo input[type="date"] {
+    color: transparent;
+    cursor: pointer;
+}
+
+.fecha-campo input[type="date"]::-webkit-datetime-edit {
+    opacity: 0;
+}
+
+.fecha-campo input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.7;
+}
+
+.fecha-texto {
+    position: absolute;
+    left: 0.6rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-light);
+    font-size: 0.88rem;
+    pointer-events: none;
 }
 
 .pagos-filtros .filtro-limpiar {
-    align-self: flex-start;
-    padding: 0.45rem 0.9rem;
+    height: 40px;
+    margin-left: auto;
+    padding: 0 0.9rem;
     font-size: 0.8rem;
+    white-space: nowrap;
 }
 
 /* ---------- Tarjetas ---------- */
+/* La tarjeta no se puede pulsar (la acción es el botón), así que no se ilumina al pasar el cursor. */
 .pago-item {
+    align-items: flex-start;
+    padding: 0.95rem 1rem;
     cursor: default;
 }
 
+.pago-item:hover {
+    border-color: transparent;
+}
+
+/* Sin recorte: el saldo es el dato principal y debe leerse completo aunque la columna sea angosta. */
 .pago-montos {
-    margin-top: 0.15rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.15rem 0.9rem;
+    margin-top: 0.45rem;
+    white-space: normal;
+    font-variant-numeric: tabular-nums;
 }
 
 .pago-saldo {
@@ -87,10 +178,15 @@
     font-weight: 600;
 }
 
+.pago-montos .pago-saldo {
+    font-size: 0.9rem;
+}
+
 .pago-agregar {
     flex-shrink: 0;
-    width: 38px;
-    height: 38px;
+    align-self: center;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     border: 1px solid var(--orange-main);
     background: rgba(249, 115, 22, 0.12);
@@ -102,13 +198,18 @@
 
 .pago-agregar:hover,
 .pago-agregar:focus-visible {
-    outline: none;
     background: var(--orange-main);
     color: #fff;
 }
 
+.pago-agregar:focus-visible {
+    outline: 2px solid var(--orange-main);
+    outline-offset: 2px;
+}
+
 .pago-sello {
     flex-shrink: 0;
+    align-self: center;
     font-size: 0.78rem;
     font-weight: 600;
     color: var(--emerald-green);
