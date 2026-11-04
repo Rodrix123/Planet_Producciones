@@ -12,7 +12,7 @@
     "seed:usuarios": "tsx src/scripts/seed-usuarios.ts",
     "reset:password": "tsx src/scripts/reset-password.ts",
     "seed:catalogo": "tsx src/scripts/seed-catalogo.ts",
-    "test": "node --import tsx --test test/modelo-convocatorias.test.ts"
+    "test": "node --import tsx --test test/modelo-convocatorias.test.ts test/consulta.test.ts"
   },
   "dependencies": {
     "@my-app/db": "*",

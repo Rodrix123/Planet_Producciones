@@ -4,9 +4,7 @@ import { requireAuth, requireRole } from '../auth';
 import { asyncHandler } from '../asyncHandler';
 import { enviarCorreo } from '../mailer';
 import { generarCotizacionPdfBuffer, type ItemCotizacionPdf } from '../pdf/cotizacionPdf';
-
-const ESTADOS_VALIDOS = ['recibida', 'en_revision', 'finalizada', 'contrato_enviado', 'programada', 'cancelada'] as const;
-type EstadoCotizacion = (typeof ESTADOS_VALIDOS)[number];
+import { ESTADOS_VALIDOS, derivarEstado, numeroReferencia, type EstadoCotizacion } from '../estadoCotizacion';
 
 // La secretaria solo puede ver cotizaciones que ya pasaron por "finalizada" en adelante;
 // nunca las que Maritza todavía está revisando.
@@ -82,18 +80,6 @@ interface ItemGuardado {
     descripcion: string;
     precioUnit: number;
     nota: string | null;
-}
-
-function derivarEstado(fila: FilaCotizacion): EstadoCotizacion {
-    if (!fila.event_id) return fila.quote_estado;
-    if (fila.confirmed) return 'programada';
-    if (fila.contrato_enviado_en) return 'contrato_enviado';
-    return 'finalizada';
-}
-
-function numeroReferencia(id: number, creadaEn: string): string {
-    const anio = new Date(creadaEn).getFullYear();
-    return `PL-${anio}-${String(id).padStart(4, '0')}`;
 }
 
 function mapCotizacion(fila: FilaCotizacion, items: ItemGuardado[] = []) {
@@ -443,6 +429,8 @@ cotizacionesRouter.get('/:id/historial', requireRole('administrador'), asyncHand
         comentario: r.comentario,
         estadoAntes: r.estado_antes,
         estadoDespues: r.estado_despues,
+        itemsAntes: r.items_antes,
+        itemsDespues: r.items_despues,
         usuarioNombre: r.profile_nombre,
         creadoEn: r.creado_en
     })));
