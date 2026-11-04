@@ -36,6 +36,7 @@ const NOMBRE_METODO: Record<MetodoPago, string> = { efectivo: 'Efectivo', transf
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const estadoCarga = $('estado');
 const columnasEl = $('columnas');
+const btnAnadirPago = $<HTMLButtonElement>('btnAnadirPago');
 const modal = $('modal');
 const modalContenido = $('modalContenido');
 const toast = $('toast');
@@ -90,6 +91,13 @@ function hayFiltros(col: HTMLElement): boolean {
         || filtro(col, 'hasta').value !== '';
 }
 
+/** `texto` ya normalizado; vacío coincide con todo. */
+function coincideTexto(e: EventoPago, texto: string): boolean {
+    if (!texto) return true;
+    const campos = [nombreTipo(e), clienteTexto(e), lugarTexto(e), e.cliente?.email ?? '', e.cliente?.telefono ?? ''];
+    return campos.some(c => normalizar(c).includes(texto));
+}
+
 function filtrar(clave: ClaveColumna): EventoPago[] {
     const col = columna(clave);
     const texto = normalizar(filtro(col, 'texto').value.trim());
@@ -97,10 +105,7 @@ function filtrar(clave: ClaveColumna): EventoPago[] {
     const hasta = filtro(col, 'hasta').value;
 
     return datos[clave].filter(e => {
-        if (texto) {
-            const campos = [nombreTipo(e), clienteTexto(e), lugarTexto(e), e.cliente?.email ?? '', e.cliente?.telefono ?? ''];
-            if (!campos.some(c => normalizar(c).includes(texto))) return false;
-        }
+        if (!coincideTexto(e, texto)) return false;
         if ((desde || hasta) && !e.fecha) return false;
         if (desde && e.fecha! < desde) return false;
         if (hasta && e.fecha! > hasta) return false;
@@ -126,7 +131,8 @@ function botonPago(e: EventoPago): string {
            </button>`;
 }
 
-function tarjeta(e: EventoPago, clave: ClaveColumna): string {
+/** Fecha, evento y montos: lo que comparten las tarjetas de las columnas y las filas del menú "Añadir pago". */
+function datosTarjeta(e: EventoPago, montos: string): string {
     let dia = '—';
     let mesCorto = 'sin fecha';
     if (e.fecha) {
@@ -134,21 +140,29 @@ function tarjeta(e: EventoPago, clave: ClaveColumna): string {
         dia = String(d.getDate());
         mesCorto = d.toLocaleDateString('es-CO', { month: 'short' }).replace('.', '');
     }
-    const accion = clave === 'sinPagar'
-        ? botonPago(e)
-        : `<span class="pago-sello" title="Pagado"><i class="fa-solid fa-circle-check"></i> Pagado</span>`;
-    const montos = clave === 'sinPagar'
-        ? `<span>Pagado ${formatearMoneda(e.totalPagado)} de ${formatearMoneda(e.total)}</span><strong class="pago-saldo">Saldo ${formatearMoneda(e.saldo)}</strong>`
-        : `<span>Total ${formatearMoneda(e.total)}</span><span>Pagado ${formatearMoneda(e.totalPagado)}</span>`;
-
     return `
-    <div class="lista-item pago-item">
         <div class="lista-fecha"><strong>${dia}</strong><span>${esc(mesCorto)}</span></div>
         <div class="lista-info">
             <div class="lista-tipo">${esc(nombreTipo(e))}</div>
             <div class="lista-sub">${esc(clienteTexto(e))} · ${esc(lugarTexto(e))}</div>
             <div class="lista-sub pago-montos">${montos}</div>
-        </div>
+        </div>`;
+}
+
+const montosPendientes = (e: EventoPago): string =>
+    `<span>Pagado ${formatearMoneda(e.totalPagado)} de ${formatearMoneda(e.total)}</span><strong class="pago-saldo">Saldo ${formatearMoneda(e.saldo)}</strong>`;
+
+function tarjeta(e: EventoPago, clave: ClaveColumna): string {
+    const accion = clave === 'sinPagar'
+        ? botonPago(e)
+        : `<span class="pago-sello" title="Pagado"><i class="fa-solid fa-circle-check"></i> Pagado</span>`;
+    const montos = clave === 'sinPagar'
+        ? montosPendientes(e)
+        : `<span>Total ${formatearMoneda(e.total)}</span><span>Pagado ${formatearMoneda(e.totalPagado)}</span>`;
+
+    return `
+    <div class="lista-item pago-item">
+        ${datosTarjeta(e, montos)}
         ${accion}
     </div>`;
 }
@@ -157,9 +171,6 @@ function renderColumna(clave: ClaveColumna): void {
     const col = columna(clave);
     const visibles = filtrar(clave);
     const conFiltros = hayFiltros(col);
-    const conteo = col.querySelector<HTMLElement>('[data-conteo]')!;
-    const total = datos[clave].length;
-    conteo.textContent = visibles.length < total ? `${visibles.length} de ${total}` : String(total);
     col.querySelector<HTMLElement>('[data-limpiar]')!.hidden = !conFiltros;
 
     const lista = col.querySelector<HTMLElement>('[data-lista]')!;
@@ -184,8 +195,10 @@ async function cargar(): Promise<void> {
         datos.pagados = json.pagados;
         estadoCarga.hidden = true;
         columnasEl.hidden = false;
+        btnAnadirPago.disabled = false;
         render();
     } catch (err) {
+        btnAnadirPago.disabled = true;
         columnasEl.hidden = true;
         estadoCarga.hidden = false;
         estadoCarga.classList.add('error');
@@ -194,7 +207,8 @@ async function cargar(): Promise<void> {
 }
 
 // ---------- Ventana de pago ----------
-function abrirModal(html: string): void {
+function abrirModal(html: string, lista = false): void {
+    modalContenido.classList.toggle('pagos-modal-lista', lista);
     modalContenido.innerHTML = html;
     modal.classList.add('open');
     modal.setAttribute('aria-hidden', 'false');
@@ -223,6 +237,49 @@ function resumenEvento(e: EventoPago): string {
 function leerMonto(texto: string): number {
     const limpio = texto.replace(/[^\d,]/g, '').replace(',', '.');
     return limpio ? Number(limpio) : NaN;
+}
+
+/** Paso previo del botón "Añadir pago": se elige el evento entre los que aún se pueden pagar. */
+function pasoSeleccion(): void {
+    const pagables = datos.sinPagar.filter(e => !plazoVencido(e));
+
+    abrirModal(`
+        <header class="deck-head">
+            <h2>Eventos sin pagar</h2>
+            <button type="button" class="modal-cerrar" id="pagoCerrar" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+        </header>
+        <div class="pagos-filtros">
+            <label class="panel-search">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="search" id="pagoBuscar" placeholder="Buscar por cliente, tipo o lugar">
+            </label>
+        </div>
+        <div class="lista-eventos" id="pagoLista"></div>
+    `, true);
+
+    const buscarEl = $<HTMLInputElement>('pagoBuscar');
+    const listaEl = $('pagoLista');
+
+    const pintar = (): void => {
+        const texto = normalizar(buscarEl.value.trim());
+        const visibles = pagables.filter(e => coincideTexto(e, texto));
+        listaEl.innerHTML = visibles.length === 0
+            ? `<p class="lista-vacia">${pagables.length === 0 ? 'No hay eventos pendientes de pago.' : 'Ningún evento coincide con los filtros.'}</p>`
+            : visibles.map(e => `
+                <button type="button" class="lista-item pago-opcion" data-elegir="${e.id}">
+                    ${datosTarjeta(e, montosPendientes(e))}
+                </button>`).join('');
+    };
+
+    pintar();
+    buscarEl.focus();
+    buscarEl.addEventListener('input', pintar);
+    $('pagoCerrar').addEventListener('click', cerrarModal);
+    listaEl.addEventListener('click', ev => {
+        const fila = (ev.target as HTMLElement).closest<HTMLElement>('[data-elegir]');
+        const evento = fila && pagables.find(e => e.id === Number(fila.dataset.elegir));
+        if (evento) pasoIngreso(evento, { monto: '', metodo: 'efectivo', referencia: '' });
+    });
 }
 
 /** Paso 1: se ingresan monto, método y referencia. */
@@ -327,6 +384,8 @@ function pasoConfirmacion(e: EventoPago, borrador: BorradorPago, monto: number):
 }
 
 // ---------- Eventos de la página ----------
+btnAnadirPago.addEventListener('click', pasoSeleccion);
+
 columnasEl.addEventListener('input', ev => {
     const col = (ev.target as HTMLElement).closest<HTMLElement>('[data-columna]');
     actualizarTextosFecha();

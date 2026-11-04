@@ -31,8 +31,10 @@
     <main class="panel-main">
         <header class="panel-topbar pagos-topbar">
             <h1>Pagos</h1>
+            <button type="button" id="btnAnadirPago" class="submit-btn pagos-btn-anadir" disabled>
+                <i class="fa-solid fa-plus"></i> Añadir pago
+            </button>
         </header>
-        <p class="pagos-intro">Registro manual de los pagos de los eventos confirmados.</p>
 
         <div id="estado" class="panel-estado">
             <i class="fa-solid fa-spinner fa-spin"></i> Cargando eventos...
@@ -41,8 +43,7 @@
         <section class="pagos-columnas" id="columnas" hidden>
             <article class="deck-panel pagos-panel" data-columna="sinPagar">
                 <header class="deck-head">
-                    <h2><i class="fa-solid fa-hourglass-half pagos-icono-pendiente"></i> Sin pagar</h2>
-                    <span class="rol-count" data-conteo>0</span>
+                    <h2>Eventos sin pagar</h2>
                 </header>
                 <div class="pagos-filtros">
                     <label class="panel-search">
@@ -68,8 +69,7 @@
 
             <article class="deck-panel pagos-panel" data-columna="pagados">
                 <header class="deck-head">
-                    <h2><i class="fa-solid fa-circle-check pagos-icono-pagado"></i> Pagados</h2>
-                    <span class="rol-count" data-conteo>0</span>
+                    <h2>Eventos pagados</h2>
                 </header>
                 <div class="pagos-filtros">
                     <label class="panel-search">
