@@ -210,10 +210,11 @@ function renderLista(visibles: Evento[]): void {
 
 
     if (items.length === 0) {
-        let mensaje = 'No hay eventos registrados.';
-        if (hayFiltros()) mensaje = 'Ningún evento coincide con los filtros.';
-        else if (eventos.length > 0) mensaje = 'No hay eventos desde hoy. Elige una fecha anterior para ver eventos pasados.';
-        listaEventos.innerHTML = `<p class="lista-vacia">${mensaje}</p>`;
+        // Sin filtros y con eventos solo pasados, la lista queda vacía y sin aviso.
+        const soloPasados = !hayFiltros() && eventos.length > 0;
+        listaEventos.innerHTML = soloPasados ? '' : `<p class="lista-vacia">${hayFiltros()
+            ? 'Ningún evento coincide con los filtros.'
+            : 'No hay eventos registrados.'}</p>`;
         return;
     }
 
