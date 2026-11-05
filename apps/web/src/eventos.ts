@@ -157,26 +157,35 @@ function reiniciarRango(): void {
     fHasta.min = HOY_ISO;
 }
 
+function hayFiltrosEstado(): boolean {
+    return CLAVES_ESTADO.some(c => filtrosEstado[c] !== 'todos');
+}
+
 function hayFiltros(): boolean {
-    return CLAVES_ESTADO.some(c => filtrosEstado[c] !== 'todos') || !rangoInicial();
+    return hayFiltrosEstado() || !rangoInicial();
+}
+
+function enRango(e: Evento): boolean {
+    const desde = fDesde.value;
+    const hasta = fHasta.value;
+    // Sin fecha no se puede saber si cae dentro de un rango: se oculta si se eligió uno.
+    // No cuenta el rango inicial: esos eventos están pendientes y no se pueden dar por pasados.
+    if (!e.fecha) return rangoInicial() || (!desde && !hasta);
+    if (desde && e.fecha < desde) return false;
+    if (hasta && e.fecha > hasta) return false;
+    return true;
+}
+
+/** 'si' deja solo los que cumplen; 'no', solo los que no; 'todos' no filtra. */
+function cumpleEstados(e: Evento): boolean {
+    return CLAVES_ESTADO.every(clave => {
+        const valor = filtrosEstado[clave];
+        return valor === 'todos' || e[clave] === (valor === 'si');
+    });
 }
 
 function filtrar(): Evento[] {
-    const desde = fDesde.value;
-    const hasta = fHasta.value;
-    return eventos.filter(e => {
-        // 'si' deja solo los que cumplen; 'no', solo los que no; 'todos' no filtra.
-        for (const clave of CLAVES_ESTADO) {
-            const valor = filtrosEstado[clave];
-            if (valor !== 'todos' && e[clave] !== (valor === 'si')) return false;
-        }
-        // Sin fecha no se puede saber si cae dentro de un rango: se oculta si se eligió uno.
-        // No cuenta el rango inicial: esos eventos están pendientes y no se pueden dar por pasados.
-        if (!e.fecha) return rangoInicial() || (!desde && !hasta);
-        if (desde && e.fecha < desde) return false;
-        if (hasta && e.fecha > hasta) return false;
-        return true;
-    });
+    return eventos.filter(e => enRango(e) && cumpleEstados(e));
 }
 
 // ---------- Lista de eventos ----------
@@ -192,8 +201,11 @@ function renderLista(visibles: Evento[]): void {
 
     // Todos los eventos que pasan los filtros, del más antiguo al más reciente.
     const items = [...visibles].sort(porFechaYHora);
-    // Único contador de eventos: los que coinciden con los filtros ("N de M" cuando hay filtros activos).
-    listaConteo.textContent = hayFiltros() ? `${items.length} de ${eventos.length}` : String(items.length);
+    // Único contador de eventos. El total son los del rango de fechas; con filtros de estado activos
+    // se muestra "N de M": N son los de ese rango que además pasan esos filtros.
+    listaConteo.textContent = hayFiltrosEstado()
+        ? `${items.length} de ${eventos.filter(enRango).length}`
+        : String(items.length);
     listaConteo.title = `${listaConteo.textContent} eventos`;
 
 
