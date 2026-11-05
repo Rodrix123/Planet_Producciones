@@ -284,6 +284,11 @@
     text-overflow: ellipsis;
 }
 
+.evento-cliente {
+    font-weight: 400;
+    color: var(--text-muted);
+}
+
 .lista-sub {
     font-size: 0.8rem;
     color: var(--text-muted);

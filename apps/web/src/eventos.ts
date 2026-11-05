@@ -141,6 +141,12 @@ function nombreTipo(e: Evento): string {
     return e.tipo?.trim() || 'Evento';
 }
 
+/** Tipo del evento y, a su lado, el nombre del cliente si lo tiene. */
+function tituloEvento(e: Evento): string {
+    const cliente = e.cliente ? ` <span class="evento-cliente">· ${esc(e.cliente.nombre)}</span>` : '';
+    return `${esc(nombreTipo(e))}${cliente}`;
+}
+
 function lugarTexto(e: Evento): string {
     return [e.lugar, e.ciudad].filter(Boolean).join(' · ') || 'Lugar por definir';
 }
@@ -232,7 +238,7 @@ function renderLista(visibles: Evento[]): void {
             <div class="lista-fecha"><strong>${dia}</strong><span>${esc(mesCorto)}</span></div>
 
             <div class="lista-info">
-                <div class="lista-tipo">${esc(nombreTipo(e))}</div>
+                <div class="lista-tipo">${tituloEvento(e)}</div>
                 <div class="lista-sub">${esc(horaTexto(e))} · ${esc(lugarTexto(e))}</div>
             </div>
             ${iconosEstado(e)}
@@ -358,7 +364,7 @@ function htmlDetalle(e: Evento): string {
 
     return `
         <div class="detalle-head">
-            <h2>${esc(nombreTipo(e))}</h2>
+            <h2>${tituloEvento(e)}</h2>
             <div class="detalle-badges">
                 ${badge(e.confirmado, 'fa-circle-check', 'Confirmado')}
                 ${badge(e.pagoInicial, 'fa-money-bill-wave', 'Pago inicial')}
