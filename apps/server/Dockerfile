@@ -16,5 +16,5 @@ RUN npm install --omit=dev
 COPY --from=build /app/apps/server/dist ./dist
 COPY --from=build /app/apps/server/assets ./assets
 
-EXPOSE 3000
+EXPOSE 5174
 CMD ["node", "dist/index.js"]

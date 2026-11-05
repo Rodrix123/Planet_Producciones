@@ -27,11 +27,11 @@ process.on('uncaughtException', (err) => {
 });
 
 const app = express();
-app.use(cors({ origin: process.env.WEB_ORIGIN || 'http://localhost:5173', credentials: true }));
+app.use(cors({ origin: process.env.WEB_ORIGIN || 'http://localhost:5174', credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, '..', 'assets')));
-// Sirve el frontend compilado (apps/web/dist) para abrir la app en http://localhost:PORT
+// Sirve el frontend compilado (apps/web/dist): la app se abre en http://localhost:5174
 app.use(express.static(path.join(__dirname, '..', '..', 'web', 'dist')));
 
 app.use('/api/auth', authRouter);
@@ -61,7 +61,7 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
     res.status(500).json({ status: 'error', message: 'Ocurrió un error inesperado en el servidor. Intenta de nuevo.' });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5174;
 app.listen(PORT, () => {
     console.log(`Servidor iniciado en http://localhost:${PORT}`);
 });

@@ -39,19 +39,21 @@ Esto instala las dependencias de todos los workspaces (`apps/server`,
 ## Desarrollo
 
 ```bash
-# Backend (http://localhost:3000)
+# API y web en http://localhost:5174
+npm run dev
+
+# Solo el servidor (API + web ya compilada)
 npm run dev:server
 
-# Frontend (Vite dev server)
+# Solo recompilar la web al guardar
 npm run dev:web
-
-# Ambos a la vez
-npm run dev
 ```
 
-Abrir la app en http://localhost:5173 (Vite). El navegador no ejecuta
-TypeScript directamente, por eso `apps/web/index.html` no funciona abierto
-con doble clic ni con Live Server sin compilar.
+Abrir la app en http://localhost:5174, el único puerto de desarrollo: Express
+sirve la API y la web compilada. Al guardar, la web se recompila y hay que
+recargar el navegador a mano. El navegador no ejecuta TypeScript directamente,
+por eso `apps/web/index.html` no funciona abierto con doble clic ni con Live
+Server sin compilar.
 
 ## Build de producción
 
@@ -61,7 +63,7 @@ npm start
 ```
 
 Tras el build, el servidor sirve también el frontend compilado en
-http://localhost:3000.
+http://localhost:5174.
 
 ### Live Server (VS Code)
 
@@ -79,7 +81,7 @@ reales (usuario/clave SMTP, correo de destino, puerto).
 docker compose up --build
 ```
 
-Levanta el backend en `:3000` y el frontend (servido por Nginx) en `:8080`.
+Levanta el backend en `:5174` y el frontend (servido por Nginx) en `:8080`.
 
 ## Funcionalidad
 
