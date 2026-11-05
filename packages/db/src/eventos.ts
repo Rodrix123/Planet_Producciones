@@ -167,16 +167,9 @@ function aEvento(f: FilaEvento, nombrePorPerfil: Map<string, string>): Evento {
 const claveDeOrden = (e: Evento): string => `${e.fecha ?? "9999-99-99"} ${e.hora ?? "99:99:99"}`;
 
 /**
- * Fecha de hoy en Colombia (YYYY-MM-DD). Se usa la hora local y no la UTC para que
- * un evento de hoy siga vigente toda la tarde y la noche, cuando en UTC ya es mañana.
- */
-const hoyEnColombia = (): string => new Date().toLocaleDateString("en-CA", { timeZone: "America/Bogota" });
-
-/**
- * Solo lectura. Devuelve los eventos vigentes: los de hoy en adelante, más los que
- * todavía no tienen fecha (no se pueden dar por pasados). Un evento de hoy cuenta como
- * vigente todo el día, aunque su hora ya haya pasado, porque los eventos no guardan
- * duración y puede seguir en curso.
+ * Solo lectura. Devuelve todos los eventos, también los pasados y los que todavía no
+ * tienen fecha: el menú de eventos decide qué mostrar con su filtro de fechas, que
+ * arranca en el día de hoy.
  *
  * - public.events + public.quote (+ venue, users, transportation) -> datos del evento
  * - public.event_staff + auth.users (Admin API)                   -> personal asignado y su nombre
@@ -194,12 +187,7 @@ export async function listarEventos(supabase: SupabaseClient): Promise<{ eventos
   const eventosRes = await supabase.from("events").select(COLUMNAS);
   if (eventosRes.error) throw eventosRes.error;
 
-  const hoy = hoyEnColombia();
-  const filas = (eventosRes.data as unknown as FilaEvento[]).filter((f) => {
-    const { fecha } = datosDelEvento(f);
-    return fecha === null || fecha >= hoy;
-  });
-
+  const filas = eventosRes.data as unknown as FilaEvento[];
   const nombrePorPerfil = await nombresPorPerfil(supabase, idsDelPersonal(filas));
   const eventos = filas.map((f) => aEvento(f, nombrePorPerfil));
   eventos.sort((a, b) => claveDeOrden(a).localeCompare(claveDeOrden(b)));

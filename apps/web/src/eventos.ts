@@ -146,8 +146,19 @@ function lugarTexto(e: Evento): string {
 }
 
 // ---------- Filtros ----------
+/** El rango con el que arranca la página: desde hoy y sin fecha final. */
+function rangoInicial(): boolean {
+    return fDesde.value === HOY_ISO && fHasta.value === '';
+}
+
+function reiniciarRango(): void {
+    fDesde.value = HOY_ISO;
+    fHasta.value = '';
+    fHasta.min = HOY_ISO;
+}
+
 function hayFiltros(): boolean {
-    return CLAVES_ESTADO.some(c => filtrosEstado[c] !== 'todos') || fDesde.value !== '' || fHasta.value !== '';
+    return CLAVES_ESTADO.some(c => filtrosEstado[c] !== 'todos') || !rangoInicial();
 }
 
 function filtrar(): Evento[] {
@@ -159,15 +170,16 @@ function filtrar(): Evento[] {
             const valor = filtrosEstado[clave];
             if (valor !== 'todos' && e[clave] !== (valor === 'si')) return false;
         }
-        // Sin fecha no se puede saber si cae dentro de un rango: con un rango activo se oculta.
-        if ((desde || hasta) && !e.fecha) return false;
-        if (desde && e.fecha! < desde) return false;
-        if (hasta && e.fecha! > hasta) return false;
+        // Sin fecha no se puede saber si cae dentro de un rango: se oculta si se eligió uno.
+        // No cuenta el rango inicial: esos eventos están pendientes y no se pueden dar por pasados.
+        if (!e.fecha) return rangoInicial() || (!desde && !hasta);
+        if (desde && e.fecha < desde) return false;
+        if (hasta && e.fecha > hasta) return false;
         return true;
     });
 }
 
-// ---------- Lista de eventos vigentes ----------
+// ---------- Lista de eventos ----------
 function iconosEstado(e: Evento): string {
     return `<span class="estados">
         <i class="fa-solid fa-circle-check ${e.confirmado ? 'on' : ''}" title="Confirmado"></i>
@@ -186,9 +198,10 @@ function renderLista(visibles: Evento[]): void {
 
 
     if (items.length === 0) {
-        listaEventos.innerHTML = `<p class="lista-vacia">${hayFiltros()
-            ? 'Ningún evento coincide con los filtros.'
-            : 'No hay eventos registrados.'}</p>`;
+        let mensaje = 'No hay eventos registrados.';
+        if (hayFiltros()) mensaje = 'Ningún evento coincide con los filtros.';
+        else if (eventos.length > 0) mensaje = 'No hay eventos desde hoy. Elige una fecha anterior para ver eventos pasados.';
+        listaEventos.innerHTML = `<p class="lista-vacia">${mensaje}</p>`;
         return;
     }
 
@@ -212,10 +225,6 @@ function renderLista(visibles: Evento[]): void {
             ${iconosEstado(e)}
         </button>`;
     }).join('');
-
-
-    // El API solo trae eventos vigentes: el primero de la lista es el próximo.
-
 
     listaEventos.scrollTop = 0;
 }
@@ -523,12 +532,12 @@ function alCambiarRango(): void {
 }
 fDesde.addEventListener('change', alCambiarRango);
 fHasta.addEventListener('change', alCambiarRango);
+reiniciarRango();
 
 fLimpiar.addEventListener('click', () => {
     CLAVES_ESTADO.forEach(c => { filtrosEstado[c] = 'todos'; });
-    fDesde.value = '';
-    fHasta.value = '';
-    fHasta.min = '';
+    reiniciarRango();
+    mes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
     render();
 });
 
