@@ -24,7 +24,7 @@ independientes, además de configuración compartida en `packages/`.
 
 ## Requisitos
 
-- Node.js >= 22
+- Node.js >= 18
 - npm >= 9
 
 ## Instalación

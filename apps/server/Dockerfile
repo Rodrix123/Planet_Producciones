@@ -1,7 +1,7 @@
 # Contexto de build: raíz del monorepo (ver docker-compose.yml)
 
 # --- Etapa 1: compilar --------------------------------------------------------------
-FROM node:22-alpine AS build
+FROM node:20-alpine AS build
 WORKDIR /app
 # El servidor usa el paquete @my-app/db del monorepo: se instala desde la raíz (workspaces) para que
 # lo encuentre. Se copian primero solo los package.json para aprovechar la caché de Docker.
@@ -15,7 +15,7 @@ COPY apps/server ./apps/server
 RUN npm run build --workspace apps/server
 
 # --- Etapa 2: imagen final ----------------------------------------------------------
-FROM node:22-alpine
+FROM node:20-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 # Solo las dependencias de ejecución. @my-app/db (del monorepo, no está en el registro público de npm)
