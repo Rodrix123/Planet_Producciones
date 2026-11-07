@@ -4,6 +4,7 @@ import './eventos.css';
 import { api } from './api';
 import { exigirSesion, rutaPanelPorRol, type SesionActual } from './shared/api';
 import { initPanelLayout } from './shared/layout';
+import { abrirAsignacionPersonal } from './asignacion-personal';
 
 interface Evento {
     id: number;
@@ -320,6 +321,11 @@ function htmlDetalle(e: Evento): string {
     const personal = e.personal.length
         ? `<div class="personal-lista">${e.personal.map(n => `<span>${esc(n)}</span>`).join('')}</div>`
         : '<p>Sin personal asignado</p>';
+    // Solo un evento confirmado admite personal (el servidor lo vuelve a comprobar).
+    const accionPersonal = e.confirmado
+        ? `<button type="button" class="btn-secundario btn-asignar-personal" data-asignar-personal="${e.id}">
+               <i class="fa-solid fa-user-plus"></i> Asignar personal</button>`
+        : '<p><small>Solo los eventos confirmados admiten asignar personal.</small></p>';
 
     return `
         <div class="detalle-head">
@@ -338,7 +344,7 @@ function htmlDetalle(e: Evento): string {
                 <p>Total: ${esc(formatearMoneda(e.total))}</p>
                 <p>Pagado: ${esc(formatearMoneda(e.totalPagado))}</p>
                 <p>Saldo: ${esc(formatearMoneda(saldo))}</p>`)}
-            ${bloque('Personal', personal)}
+            ${bloque('Personal', personal + accionPersonal)}
             ${bloque('Logística y contrato', `
                 <p>Transporte: ${esc(e.transporte ?? '—')}</p>
                 <p>Contrato enviado: ${esc(formatearFechaHora(e.contratoEnviadoEn))}</p>`)}
@@ -426,7 +432,24 @@ async function cargar(): Promise<void> {
     }
 }
 
+/** Vuelve a pedir los eventos sin perder la selección (p. ej. después de asignar personal). */
+async function recargarEventos(): Promise<void> {
+    try {
+        const json = await api<{ eventos: Evento[] }>('GET', '/api/eventos');
+        eventos = json.eventos;
+        render();
+        mostrarDetalle(seleccionadoId, true);
+    } catch (err) {
+        avisar(`No se pudo actualizar la lista de eventos: ${(err as Error).message}`);
+    }
+}
+
 // ---------- Eventos de la interfaz ----------
+detalleContenido.addEventListener('click', ev => {
+    const boton = (ev.target as HTMLElement).closest<HTMLElement>('[data-asignar-personal]');
+    if (boton) abrirAsignacionPersonal(Number(boton.dataset.asignarPersonal), { avisar, alCambiar: recargarEventos });
+});
+
 segmentos.forEach(s => s.addEventListener('click', () => {
     filtrosEstado[s.dataset.filtro as ClaveToggle] = s.dataset.valor as ValorFiltro;
     render();

@@ -697,3 +697,356 @@
         grid-auto-rows: minmax(92px, auto);
     }
 }
+
+/* ---------- Asignar personal (src/asignacion-personal.ts) ---------- */
+.btn-asignar-personal {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-top: 0.75rem;
+    padding: 0.5rem 0.9rem;
+    font-size: 0.82rem;
+}
+
+.btn-asignar-personal:hover,
+.btn-asignar-personal:focus-visible {
+    color: var(--orange-main);
+    border-color: var(--orange-main);
+}
+
+.asig-dialogo {
+    width: min(100% - 2rem, 640px);
+    max-width: none;
+    max-height: calc(100dvh - 2rem);
+    margin: auto;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--text-light);
+    overflow: visible;
+}
+
+.asig-dialogo::backdrop {
+    background: rgba(0, 0, 0, 0.65);
+}
+
+/* Más específico que .modal-card (panel.css), que en el build puede cargarse después. */
+.modal-card.asig-card {
+    width: 100%;
+    max-height: calc(100dvh - 2rem);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.5rem;
+}
+
+.asig-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.asig-card .asig-head h2 {
+    margin-bottom: 0.2rem;
+}
+
+.asig-sub {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.asig-cuerpo {
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+}
+
+.asig-estado-carga {
+    padding: 2rem 0;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.asig-resumen {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.9rem 1rem;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+}
+
+.asig-resumen-datos {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    font-size: 0.88rem;
+}
+
+.asig-resumen-datos span {
+    color: var(--text-muted);
+}
+
+.asig-aviso {
+    display: flex;
+    gap: 0.6rem;
+    margin-top: 0.75rem;
+    padding: 0.75rem 0.9rem;
+    font-size: 0.85rem;
+    line-height: 1.45;
+    color: var(--text-light);
+    background: rgba(249, 115, 22, 0.08);
+    border: 1px solid rgba(249, 115, 22, 0.35);
+    border-radius: 12px;
+}
+
+.asig-aviso i {
+    margin-top: 0.15rem;
+    color: var(--orange-main);
+}
+
+.asig-aviso-error {
+    margin-top: 0;
+    background: rgba(248, 113, 113, 0.08);
+    border-color: rgba(248, 113, 113, 0.4);
+}
+
+.asig-aviso-error i {
+    color: #f87171;
+}
+
+.asig-horario-fila {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem 1rem;
+}
+
+.asig-horario input[type="time"] {
+    width: 10rem;
+    padding: 0.65rem 0.8rem;
+    font: inherit;
+    font-size: 0.9rem;
+    color: #fff;
+    color-scheme: dark;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    outline: none;
+}
+
+.asig-horario input[type="time"]:focus {
+    border-color: var(--orange-main);
+}
+
+.asig-inicio {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.asig-seccion h3 {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    margin-bottom: 0.55rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.asig-conteo {
+    font-weight: 600;
+    letter-spacing: normal;
+    text-transform: none;
+    color: var(--text-muted);
+}
+
+.asig-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    list-style: none;
+}
+
+.asig-fila {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin: 0;
+    padding: 0.65rem 0.8rem;
+    font-size: 0.88rem;
+    color: var(--text-light);
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+}
+
+.asig-opcion {
+    cursor: pointer;
+    transition: border-color 0.15s;
+}
+
+.asig-opcion:hover,
+.asig-opcion:has(input:focus-visible) {
+    border-color: var(--orange-main);
+}
+
+.asig-opcion:has(input:checked) {
+    border-color: var(--orange-main);
+    background: rgba(249, 115, 22, 0.08);
+}
+
+.asig-opcion.bloqueada {
+    cursor: default;
+}
+
+.asig-opcion.bloqueada:hover {
+    border-color: var(--border-color);
+}
+
+.asig-opcion input[type="checkbox"] {
+    flex-shrink: 0;
+    width: 1.05rem;
+    height: 1.05rem;
+    accent-color: var(--orange-main);
+}
+
+.asig-persona {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.asig-persona strong {
+    font-weight: 600;
+}
+
+.asig-persona small {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    line-height: 1.4;
+}
+
+.asig-opcion.bloqueada .asig-persona strong {
+    color: var(--text-muted);
+}
+
+.asig-persona small.asig-motivo {
+    color: #fdba74;
+}
+
+.asig-persona small.asig-motivo-alerta {
+    color: #f87171;
+}
+
+.asig-estado {
+    flex-shrink: 0;
+    padding: 0.2rem 0.6rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--text-muted);
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+}
+
+.asig-estado-disponible {
+    color: var(--emerald-green);
+    border-color: rgba(52, 211, 153, 0.35);
+}
+
+.asig-estado-no_disponible,
+.asig-estado-rechazo_whatsapp {
+    color: #fdba74;
+    border-color: rgba(253, 186, 116, 0.35);
+}
+
+.asig-vacio {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.asig-btn-quitar {
+    flex-shrink: 0;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+}
+
+.asig-confirmar {
+    display: inline-flex;
+    flex-shrink: 0;
+    gap: 0.4rem;
+}
+
+.asig-confirmar .btn-secundario {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+}
+
+.asig-btn-primario,
+.asig-btn-peligro {
+    padding: 0.7rem 1.25rem;
+    font: inherit;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    background: linear-gradient(to right, var(--orange-main), var(--orange-hover));
+}
+
+.asig-btn-peligro {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+    background: #dc2626;
+}
+
+.asig-btn-peligro:hover {
+    background: #b91c1c;
+}
+
+.asig-btn-primario:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.asig-btn-primario:focus-visible,
+.asig-btn-peligro:focus-visible {
+    outline: 2px solid var(--text-light);
+    outline-offset: 2px;
+}
+
+.asig-card .asig-error {
+    margin: 0;
+    line-height: 1.45;
+}
+
+@media (max-width: 560px) {
+    .modal-card.asig-card {
+        padding: 1.1rem;
+    }
+
+    .asig-resumen {
+        flex-direction: column;
+    }
+
+    .asig-fila {
+        flex-wrap: wrap;
+    }
+
+    .asig-estado {
+        margin-left: calc(1.05rem + 0.8rem);
+    }
+}
