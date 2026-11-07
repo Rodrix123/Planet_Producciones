@@ -504,18 +504,26 @@
     gap: 2.5rem;
 }
 
+/* Panel translúcido detrás del texto: se lee igual de bien sobre fotos claras u oscuras. */
 .hero-texto {
-    max-width: 44rem;
+    max-width: 46rem;
+    padding: clamp(1.2rem, 2.6vw, 2rem);
+    border-radius: 26px;
+    background: rgba(20, 14, 10, 0.44);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    -webkit-backdrop-filter: blur(8px) saturate(1.1);
+    backdrop-filter: blur(8px) saturate(1.1);
+    box-shadow: 0 30px 60px -34px rgba(0, 0, 0, 0.7);
 }
 
 .hero-texto .titulo-pagina {
-    font-size: clamp(2.35rem, 5.2vw, 4.4rem);
+    font-size: clamp(2.1rem, 4.4vw, 3.7rem);
     color: #fff;
-    text-shadow: 0 2px 30px rgba(0, 0, 0, 0.35);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 4px 28px rgba(0, 0, 0, 0.5);
 }
 
 .hero-texto .texto-grande {
-    margin-top: 1.5rem;
+    margin-top: 1.1rem;
     color: rgba(255, 255, 255, 0.88);
 }
 
@@ -523,7 +531,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.9rem;
-    margin-top: 2.2rem;
+    margin-top: 1.6rem;
 }
 
 .hero .boton-linea {
@@ -542,8 +550,8 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem 1.4rem;
-    margin-top: 2.4rem;
-    padding-top: 1.4rem;
+    margin-top: 1.6rem;
+    padding-top: 1.1rem;
     border-top: 1px solid rgba(255, 255, 255, 0.25);
     font-size: 0.95rem;
     font-weight: 600;
@@ -559,6 +567,7 @@
     display: flex;
     align-items: center;
     gap: 0.8rem;
+    margin-bottom: clamp(3.5rem, 9vh, 5.5rem);
     padding: 0.85rem 1.2rem 0.85rem 0.95rem;
     border-radius: 18px;
     background: rgba(253, 253, 250, 0.14);
@@ -591,33 +600,16 @@
     color: rgba(255, 255, 255, 0.8);
 }
 
-/* Pausa y puntos para elegir la foto. */
+/* Barra de puntos para elegir la foto, centrada abajo. */
 .hero-controles {
     position: absolute;
     z-index: 2;
-    left: var(--margen);
+    left: 0;
+    right: 0;
     bottom: clamp(3.4rem, 6vw, 5rem);
     display: flex;
     align-items: center;
-    gap: 0.9rem;
-}
-
-.hero-pausa {
-    display: grid;
-    place-items: center;
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    border: 1px solid rgba(255, 255, 255, 0.5);
-    background: rgba(20, 14, 10, 0.35);
-    color: #fff;
-    font-size: 0.7rem;
-    cursor: pointer;
-    transition: background-color 0.25s;
-}
-
-.hero-pausa:hover {
-    background: rgba(255, 255, 255, 0.22);
+    justify-content: center;
 }
 
 .hero-puntos {
@@ -1559,55 +1551,69 @@
     padding: 7.5rem 0 3rem;
 }
 
-.acceso-grid {
-    display: grid;
-    gap: 3rem;
-    align-items: center;
-}
-
-@media (min-width: 900px) {
-    .acceso-grid {
-        grid-template-columns: 1fr 440px;
-        gap: clamp(3rem, 7vw, 7rem);
-    }
-}
-
-.acceso-arco {
-    display: none;
+/* Fondo con los motivos de la marca (el círculo del logo y el arco) en lugar de una foto: la pantalla
+   queda limpia y el foco está en el formulario. */
+.sitio-body .acceso {
     position: relative;
-    width: min(100%, 420px);
-    aspect-ratio: 3 / 4;
-    margin-inline: auto;
+    overflow: hidden;
+    isolation: isolate;
+    padding: 8.5rem 0 4rem;
 }
 
-@media (min-width: 900px) {
-    .acceso-arco {
-        display: block;
-    }
-}
-
-.acceso-arco::before {
+.acceso::before {
     content: '';
     position: absolute;
-    right: -6%;
-    top: -4%;
-    width: 58%;
+    z-index: -1;
+    top: 24vh;
+    right: -15vmax;
+    width: 40vmax;
     aspect-ratio: 1;
     border-radius: 50%;
     background: var(--orange);
+    opacity: 0.92;
 }
 
-.acceso-arco div {
+.acceso::after {
+    content: '';
     position: absolute;
-    inset: 6% 8% 0 0;
-    overflow: hidden;
-    border-radius: 999px 999px 22px 22px;
+    z-index: -1;
+    left: max(-14vmax, -160px);
+    bottom: -8vmax;
+    width: min(34vmax, 420px);
+    aspect-ratio: 3 / 4;
+    border: 2px solid var(--champagne);
+    border-radius: 999px 999px 0 0;
+    border-bottom: 0;
 }
 
-.acceso-arco img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+.acceso-centro {
+    display: grid;
+    justify-items: center;
+}
+
+.acceso-centro .login-card {
+    position: relative;
+    width: min(100%, 460px);
+    border: 1px solid var(--line);
+    background: var(--surface);
+}
+
+/* Filete dorado y naranja en el borde superior de la tarjeta. */
+.acceso-centro .login-card::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: 12%;
+    right: 12%;
+    height: 4px;
+    border-radius: 0 0 6px 6px;
+    background: linear-gradient(90deg, var(--champagne), var(--orange), var(--champagne));
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .acceso-centro .login-card {
+        animation: sube 0.9s var(--ease) both;
+    }
 }
 
 .sitio-body .login-card {

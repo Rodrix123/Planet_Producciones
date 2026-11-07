@@ -9,14 +9,13 @@ const SEGUNDOS_POR_FOTO = 6.5;
 
 const slides = Array.from(document.querySelectorAll<HTMLElement>('.hero-slide'));
 const puntos = Array.from(document.querySelectorAll<HTMLButtonElement>('#heroPuntos button'));
-const botonPausa = document.getElementById('heroPausa') as HTMLButtonElement | null;
 
 if (slides.length > 1) {
     const sinMovimiento = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     let actual = 0;
     let temporizador: number | undefined;
-    // La persona puede pausar; con "reducir movimiento" activado las fotos no pasan solas.
-    let pausado = sinMovimiento;
+    // Las fotos pasan solas; solo se quedan quietas si la persona pidió "reducir movimiento" en su sistema.
+    const pausado = sinMovimiento;
 
     // Solo la primera foto viene en el HTML; las demás se crean y descargan cuando la página ya terminó de cargar.
     const cargarFotos = () => {
@@ -70,21 +69,8 @@ if (slides.length > 1) {
         });
     });
 
-    const actualizarBotonPausa = () => {
-        if (!botonPausa) return;
-        botonPausa.setAttribute('aria-pressed', String(pausado));
-        botonPausa.setAttribute('aria-label', pausado ? 'Reanudar las fotos' : 'Pausar las fotos');
-        botonPausa.innerHTML = `<i class="fa-solid ${pausado ? 'fa-play' : 'fa-pause'}"></i>`;
-    };
-    botonPausa?.addEventListener('click', () => {
-        pausado = !pausado;
-        actualizarBotonPausa();
-        programar();
-    });
-
     // Si la pestaña no se está viendo, las fotos no avanzan.
     document.addEventListener('visibilitychange', programar);
 
-    actualizarBotonPausa();
     programar();
 }
