@@ -13,6 +13,9 @@ import {
 
 export const authRouter = Router();
 
+/** Roles que entran al panel (los de UsuarioRol). */
+const ROLES_DEL_PANEL: readonly string[] = ['administrador', 'secretaria', 'jefe_logistica'] satisfies UsuarioRol[];
+
 authRouter.post('/login', asyncHandler(async (req, res) => {
     const { correo, password } = req.body as { correo?: string; password?: string };
 
@@ -38,6 +41,10 @@ authRouter.post('/login', asyncHandler(async (req, res) => {
 
     if (!perfil?.rol) {
         return res.status(403).json({ status: 'error', message: 'Tu cuenta no tiene un rol asignado. Contacta al desarrollador.' });
+    }
+    // El personal de eventos (rol "trabajador") tiene cuenta solo para asignarlo; no usa el panel.
+    if (!ROLES_DEL_PANEL.includes(perfil.rol)) {
+        return res.status(403).json({ status: 'error', message: 'Tu cuenta no tiene acceso al panel. Si crees que es un error, contacta a la administradora.' });
     }
 
     const sesion: UsuarioSesion = {

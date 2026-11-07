@@ -62,7 +62,8 @@ interface FilaEvento extends Logistica {
   contrato_enviado_en: string | null;
   contrato_firmado_subido_en: string | null;
   quote: FilaCotizacion | null;
-  event_staff: { profile_id: string }[] | null;
+  /** estado_respuesta: null = asignado a mano; PENDIENTE/CONFIRMADO/RECHAZADO = convocatoria por WhatsApp. */
+  event_staff: { profile_id: string; estado_respuesta: string | null }[] | null;
 }
 
 const LOGISTICA = [
@@ -77,7 +78,7 @@ const COLUMNAS = [
   "contrato_enviado_en, contrato_firmado_subido_en",
   LOGISTICA,
   `quote(total, ${LOGISTICA})`,
-  "event_staff(profile_id)",
+  "event_staff(profile_id, estado_respuesta)",
 ].join(", ");
 
 const POR_PAGINA = 200;
@@ -114,8 +115,15 @@ async function nombresPorPerfil(supabase: SupabaseClient, ids: string[]): Promis
   return nombres;
 }
 
+/**
+ * Personal asignado al evento: las filas de event_staff hechas a mano (sin respuesta) y las
+ * convocatorias de WhatsApp confirmadas. Una convocatoria pendiente o rechazada no es asignación.
+ */
+const personalAsignado = (f: FilaEvento): { profile_id: string }[] =>
+  (f.event_staff ?? []).filter((s) => s.estado_respuesta === null || s.estado_respuesta === "CONFIRMADO");
+
 const idsDelPersonal = (filas: FilaEvento[]): string[] =>
-  filas.flatMap((f) => (f.event_staff ?? []).map((s) => s.profile_id));
+  filas.flatMap((f) => personalAsignado(f).map((s) => s.profile_id));
 
 type DatosEvento = Pick<
   Evento,
@@ -159,7 +167,9 @@ function aEvento(f: FilaEvento, nombrePorPerfil: Map<string, string>): Evento {
     pagoInicial: f.initial_payment,
     firmado: f.contrato_firmado_subido_en !== null,
     contratoEnviadoEn: f.contrato_enviado_en,
-    personal: (f.event_staff ?? []).map((s) => nombrePorPerfil.get(s.profile_id) ?? "Sin nombre"),
+    personal: personalAsignado(f)
+      .map((s) => nombrePorPerfil.get(s.profile_id) ?? "Sin nombre")
+      .sort((a, b) => ALFABETICO.compare(a, b)),
   };
 }
 
