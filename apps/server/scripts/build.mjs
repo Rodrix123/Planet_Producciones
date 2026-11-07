@@ -26,7 +26,7 @@ await build({
     outfile: path.join(salida, 'index.js'),
     bundle: true,
     platform: 'node',
-    target: 'node20',
+    target: 'node22',
     format: 'cjs',
     external: externos.flatMap((n) => [n, `${n}/*`]),
     sourcemap: true,

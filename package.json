@@ -18,7 +18,7 @@
     "typecheck": "npm run typecheck --workspace apps/server && npm run typecheck --workspace apps/web"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "devDependencies": {
     "concurrently": "^9.2.4"
