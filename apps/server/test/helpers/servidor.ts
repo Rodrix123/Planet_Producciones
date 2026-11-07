@@ -96,6 +96,7 @@ function instalarPoolFalso(): void {
     };
     class PoolFalso {
         private cola: Promise<void> = Promise.resolve();
+        on(): this { return this; } // el pool real avisa de errores de conexiones ociosas; aquí no hay conexiones
         private adquirir(): Promise<() => void> {
             let liberar!: () => void;
             const turno = new Promise<void>((r) => { liberar = r; });
@@ -118,6 +119,11 @@ function instalarPoolFalso(): void {
 export async function iniciarServidor(): Promise<void> {
     process.env.DATABASE_URL = 'postgres://prueba/prueba';
     process.env.JWT_SECRET = 'secreto-solo-para-pruebas';
+    // Las rutas de cuentas de acceso crean el cliente de Supabase al cargarse; las pruebas lo sustituyen por un doble.
+    process.env.SUPABASE_URL ??= 'http://supabase.invalid';
+    process.env.SUPABASE_ANON_KEY ??= 'anon-de-prueba';
+    process.env.SUPABASE_SERVICE_ROLE_KEY ??= 'servicio-de-prueba';
+    if (!process.env.PROBAR_LIMITES) process.env.LIMITES_DESACTIVADOS = 'true'; // las pruebas hacen muchas peticiones seguidas
     process.env.EMAIL_USER = 'planet@prueba.co';
     process.env.EMAIL_ADMINISTRADOR = 'maritza@prueba.co';
     delete process.env.EMAIL_JEFE; // ninguna prueba manda correos
@@ -143,6 +149,11 @@ export async function iniciarServidor(): Promise<void> {
     const { cotizacionesRouter } = require('../../src/routes/cotizaciones.routes');
     const { contratosRouter } = require('../../src/routes/contratos.routes');
     const { logisticaRouter } = require('../../src/routes/logistica.routes');
+    const { panelRouter } = require('../../src/routes/panel.routes');
+    const { catalogoRouter } = require('../../src/routes/catalogo.routes');
+    const { pqrsRouter } = require('../../src/routes/pqrs.routes');
+    const { empleadosRouter } = require('../../src/routes/empleados.routes');
+    const { cuentasAccesoRouter } = require('../../src/routes/cuentasAcceso.routes');
     const { signSessionToken } = require('../../src/auth');
     const { manejadorErrores } = require('../../src/manejadorErrores');
 
@@ -152,6 +163,11 @@ export async function iniciarServidor(): Promise<void> {
     app.use('/api/cotizaciones', cotizacionesRouter);
     app.use('/api/contratos', contratosRouter);
     app.use('/api/logistica', logisticaRouter);
+    app.use('/api/panel', panelRouter);
+    app.use('/api/catalogo', catalogoRouter);
+    app.use('/api/pqrs', pqrsRouter);
+    app.use('/api/empleados', empleadosRouter);
+    app.use('/api/cuentas-acceso', cuentasAccesoRouter);
     app.use(manejadorErrores); // el mismo que usa src/index.ts
 
     const sesion = (id: string, rol: string, nombre: string) => signSessionToken({ id, rol, nombre, correo: `${rol}@prueba.co`, debeCambiarPassword: false });
@@ -172,7 +188,7 @@ export async function detenerServidor(): Promise<void> {
 
 /** Deja la base con solo el catálogo de prueba, la carpeta de subidas vacía y el correo normal. */
 export async function reiniciarDatos(): Promise<void> {
-    await ctx.db.exec('TRUNCATE users, venue, transportation, inventory, quote RESTART IDENTITY CASCADE');
+    await ctx.db.exec('TRUNCATE users, venue, transportation, inventory, quote, pqrs, empleados, unavailability_users, profiles, role RESTART IDENTITY CASCADE');
     await ctx.db.exec(SQL_CATALOGO);
     const firmados = path.join(ctx.carpetaSubidas, 'contratos-firmados');
     fs.mkdirSync(firmados, { recursive: true });

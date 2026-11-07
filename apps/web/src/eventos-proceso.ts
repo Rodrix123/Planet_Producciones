@@ -34,6 +34,8 @@ interface Cotizacion {
     lugar: string | null;
     fechaEvento: string | null;
     items: ItemSeleccionado[];
+    // Elementos adicionales: no salen de la bodega, se consiguen aparte; se muestran como un servicio más.
+    extras?: { tag: string; nombre: string; descripcion: string; cantidad: number; precioUnit: number; nota?: string | null }[];
     total: number;
     estado: string;
 }
@@ -64,6 +66,13 @@ let cotizacionActual: Cotizacion | null = null;
 const listaEl = document.getElementById('listaEventos') as HTMLElement;
 const detalleEl = document.getElementById('detalleEvento') as HTMLElement;
 
+// Cómo se rotula cada estado en la tarjeta (un texto por estado: ninguno se deduce del otro).
+const ETIQUETA_ESTADO: Record<string, string> = {
+    finalizada: 'Sin contrato enviado',
+    contrato_enviado: 'Contrato enviado',
+    programada: 'Programado'
+};
+
 // Trae las cotizaciones finalizadas o con contrato enviado (las que aún no son definitivas).
 async function cargarLista() {
     const res = await apiFetch('/api/cotizaciones?estado=finalizada,contrato_enviado');
@@ -84,7 +93,7 @@ function renderLista(cotizaciones: Cotizacion[]) {
         card.className = 'item-card';
         card.innerHTML = `
             <div class="item-card-main">
-                <h3>${esc(c.clienteNombre)} <span class="badge">${c.estado === 'finalizada' ? 'Sin contrato enviado' : 'Contrato enviado'}</span></h3>
+                <h3>${esc(c.clienteNombre)} <span class="badge">${ETIQUETA_ESTADO[c.estado] || c.estado}</span></h3>
                 <p>Ref: ${esc(c.numeroReferencia)} · ${esc(c.tipoEvento || 'Tipo de evento sin definir')} · ${c.fechaEvento ? new Date(c.fechaEvento + 'T00:00:00').toLocaleDateString('es-CO') : 'Sin fecha'}</p>
             </div>
             <div class="item-card-side">
@@ -120,7 +129,7 @@ async function abrirDetalle(id: string) {
     (document.getElementById('inpFechaEvento') as HTMLInputElement).value = cotizacion.fechaEvento || '';
 
     const itemsCont = document.getElementById('listaItemsDetalle')!;
-    itemsCont.innerHTML = cotizacion.items.map((item) => `
+    itemsCont.innerHTML = [...cotizacion.items, ...(cotizacion.extras ?? [])].map((item) => `
         <div class="detail-row">
             <div>
                 <div class="detail-row-main"><strong>${esc(item.cantidad > 1 ? `${item.cantidad} x ${item.nombre}` : item.nombre)}</strong></div>

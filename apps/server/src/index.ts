@@ -7,6 +7,7 @@ import express, { NextFunction, Request, Response } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import compression from 'compression';
+import { pool } from './db';
 import { authRouter } from './routes/auth.routes';
 import { cotizacionesRouter } from './routes/cotizaciones.routes';
 import { empleadosRouter } from './routes/empleados.routes';
@@ -34,6 +35,18 @@ process.on('uncaughtException', (err) => {
 
 // Configuración general. CORS solo deja pasar al frontend (WEB_ORIGIN) y permite la cookie de sesión.
 const app = express();
+// Detrás de nginx o un balanceador, la IP real del visitante viene en X-Forwarded-For (la usan los límites de peticiones).
+if (process.env.TRUST_PROXY === 'true') app.set('trust proxy', 1);
+app.disable('x-powered-by');
+// Cabeceras de seguridad básicas: que el navegador no adivine tipos de archivo, que nadie incruste el sitio en
+// otra página (clickjacking) y que no se envíe la dirección completa a otros sitios.
+app.use((_req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    next();
+});
 app.use(cors({ origin: process.env.WEB_ORIGIN || 'http://localhost:5173', credentials: true }));
 // Respuestas JSON y archivos estáticos comprimidos: el catálogo, por ejemplo, baja de ~18 KB a ~3 KB.
 app.use(compression());
@@ -65,4 +78,6 @@ app.use(manejadorErrores);
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Servidor iniciado en http://localhost:${PORT}`);
+    // Abre la primera conexión a la base ya, para que la primera persona que entre no espere el handshake.
+    pool.query('select 1').catch((error: Error) => console.error('No se pudo conectar con la base de datos al arrancar:', error.message));
 });

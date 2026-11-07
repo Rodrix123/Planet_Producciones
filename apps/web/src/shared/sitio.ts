@@ -187,6 +187,18 @@ function montarWhatsApp(pagina: Pagina): void {
 /**
  * Punto de entrada: inserta menú y pie, y activa menú, apariciones, contadores y WhatsApp.
  */
+// Las páginas públicas se animan entre sí con View Transitions (ver sitio.css). Hacia un panel (que no
+// participa) o al recargar la misma página no hay con qué animar: se cancela la transición, que de otro modo
+// deja un error "Transition was aborted" en la consola del navegador.
+const PAGINAS_PUBLICAS = ['index', 'servicios', 'nosotros', 'galeria', 'ayuda', 'contacto', 'login', 'cotizador'];
+window.addEventListener('pageswap', (evento) => {
+    const e = evento as Event & { viewTransition?: { skipTransition(): void }; activation?: { entry?: { url?: string } } };
+    if (!e.viewTransition) return;
+    const destino = new URL(e.activation?.entry?.url || window.location.href);
+    const nombre = destino.pathname.split('/').pop()?.replace('.html', '') || 'index';
+    if (destino.pathname === window.location.pathname || !PAGINAS_PUBLICAS.includes(nombre)) e.viewTransition.skipTransition();
+});
+
 export function montarSitio(): void {
     const pagina = (document.body.dataset.pagina || 'inicio') as Pagina;
     const header = document.getElementById('sitio-header');

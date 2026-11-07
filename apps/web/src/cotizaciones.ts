@@ -18,6 +18,19 @@ import {
 
 declare const Swal: any;
 
+// Un elemento adicional: no sale de la bodega, se alquila o se consigue aparte. El proveedor y su costo
+// (por unidad) solo los recibe la administradora.
+interface ExtraCotizacion {
+    tag: string;
+    nombre: string;
+    descripcion: string;
+    cantidad: number;
+    precioUnit: number;
+    proveedor?: string | null;
+    costoProveedor?: number | null;
+    nota?: string | null;
+}
+
 // Una cotización tal como la devuelve /api/cotizaciones.
 interface Cotizacion {
     id: string;
@@ -34,6 +47,7 @@ interface Cotizacion {
     transportationId: number | null;
     fechaEvento: string | null;
     items: ItemSeleccionado[];
+    extras?: ExtraCotizacion[];
     total: number;
     estado: string;
     creadaEn: string;
@@ -62,9 +76,10 @@ const ESTADO_LABEL: Record<string, string> = {
     cancelada: 'Cancelada'
 };
 
-// Estado de la edición: servicios que se están editando (todavía sin guardar), la cotización abierta,
-// los ítems manuales que el editor del catálogo debe conservar y el catálogo ya descargado.
+// Estado de la edición: servicios y elementos adicionales que se están editando (todavía sin guardar), la
+// cotización abierta, los servicios del editor del catálogo que no calzan con ningún control y el catálogo ya descargado.
 let itemsEnEdicion: ItemSeleccionado[] = [];
+let extrasEnEdicion: ExtraCotizacion[] = [];
 let cotizacionActualId: string | null = null;
 let itemsManualesPendientes: ItemSeleccionado[] = [];
 let catalogo: Catalogo | null = null;
@@ -189,6 +204,7 @@ async function abrirDetalle(id: string) {
 
     cotizacionActualId = cotizacion.id;
     itemsEnEdicion = cotizacion.items.map((i) => ({ ...i }));
+    extrasEnEdicion = (cotizacion.extras || []).map((e) => ({ ...e }));
 
     (document.getElementById('inpClienteNombre') as HTMLInputElement).value = cotizacion.clienteNombre;
     (document.getElementById('inpClienteDocumento') as HTMLInputElement).value = cotizacion.clienteDocumento || '';
@@ -223,6 +239,7 @@ async function abrirDetalle(id: string) {
     (document.getElementById('linkVerPdf') as HTMLAnchorElement).href = apiUrl(`/api/cotizaciones/${id}/pdf`);
 
     renderItemsDetalle();
+    renderExtrasDetalle();
     renderHistorial(historial);
 
     editorCatalogoEl.classList.add('hidden');
@@ -280,8 +297,161 @@ function renderItemsDetalle() {
         cont.appendChild(row);
     });
 
-    const total = itemsEnEdicion.reduce((acc, i) => acc + i.precioUnit * i.cantidad, 0);
+    actualizarTotalDetalle();
+}
+
+// Total que se muestra junto a los botones: servicios del catálogo más elementos adicionales.
+function actualizarTotalDetalle() {
+    const total = itemsEnEdicion.reduce((acc, i) => acc + i.precioUnit * i.cantidad, 0)
+        + extrasEnEdicion.reduce((acc, e) => acc + e.precioUnit * e.cantidad, 0);
     (document.getElementById('totalDetalle') as HTMLElement).textContent = formatterCOP.format(total);
+}
+
+// Dibuja los elementos adicionales (los que se consiguen aparte), con su proveedor y su costo, y el resumen
+// de lo que cuestan frente a lo que se le cobra al cliente.
+function renderExtrasDetalle() {
+    const cont = document.getElementById('listaExtrasDetalle') as HTMLElement;
+    cont.innerHTML = '';
+
+    if (extrasEnEdicion.length === 0) {
+        cont.innerHTML = '<p style="color:var(--text-muted); font-size:0.9rem;">Sin elementos adicionales.</p>';
+    }
+
+    extrasEnEdicion.forEach((extra, index) => {
+        const row = document.createElement('div');
+        row.className = 'detail-row';
+        const conCosto = typeof extra.costoProveedor === 'number';
+        const partesProveedor = [
+            extra.proveedor ? 'Proveedor: ' + extra.proveedor : '',
+            conCosto ? 'Costo: ' + formatterCOP.format(extra.costoProveedor as number) + ' c/u' : ''
+        ].filter(Boolean).join(' · ');
+        row.innerHTML = `
+            <div>
+                <div class="detail-row-main"><strong>${esc(extra.cantidad > 1 ? extra.cantidad + ' x ' + extra.nombre : extra.nombre)}</strong>
+                    <span class="badge">Se consigue aparte</span></div>
+                <div class="detail-row-sub">${esc(extra.tag + (extra.descripcion ? ' · Incluye: ' + extra.descripcion : ''))}</div>
+                ${partesProveedor ? `<div class="detail-row-sub">${esc(partesProveedor)}</div>` : ''}
+                ${extra.nota ? `<div class="detail-row-sub" style="color:var(--orange-main); margin-top:0.3rem;"><i class="fa-solid fa-note-sticky"></i> ${esc(extra.nota)}</div>` : ''}
+            </div>
+            <div style="display:flex; align-items:center; gap:0.6rem;">
+                <div class="detail-row-price">${formatterCOP.format(extra.precioUnit * extra.cantidad)}</div>
+                <button class="btn btn-secondary btn-sm" data-accion="editar" title="Editar elemento">
+                    <i class="fa-solid fa-pen"></i>
+                </button>
+                <button class="btn btn-danger btn-sm" data-accion="quitar" title="Quitar elemento">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </div>
+        `;
+        row.querySelector('[data-accion="quitar"]')?.addEventListener('click', () => {
+            extrasEnEdicion.splice(index, 1);
+            renderExtrasDetalle();
+        });
+        row.querySelector('[data-accion="editar"]')?.addEventListener('click', conManejoDeErrores(async () => {
+            const editado = await pedirExtra(extra);
+            if (!editado) return;
+            extrasEnEdicion[index] = editado;
+            renderExtrasDetalle();
+        }));
+        cont.appendChild(row);
+    });
+
+    // Resumen para la administradora: cuánto cuesta conseguirlo y cuánto queda sobre lo cobrado.
+    const resumenEl = document.getElementById('resumenExtras') as HTMLElement;
+    const conCosto = extrasEnEdicion.filter((e) => typeof e.costoProveedor === 'number');
+    if (conCosto.length === 0) {
+        resumenEl.textContent = '';
+    } else {
+        const cobrado = conCosto.reduce((acc, e) => acc + e.precioUnit * e.cantidad, 0);
+        const costo = conCosto.reduce((acc, e) => acc + (e.costoProveedor as number) * e.cantidad, 0);
+        const sufijo = conCosto.length < extrasEnEdicion.length ? ' (solo los que tienen costo)' : '';
+        resumenEl.textContent = `Cobrado: ${formatterCOP.format(cobrado)} · Costo de proveedores: ${formatterCOP.format(costo)} · Queda: ${formatterCOP.format(cobrado - costo)}${sufijo}`;
+    }
+
+    actualizarTotalDetalle();
+}
+
+// Ventana para crear (sin elemento) o editar un elemento adicional. Devuelve null si se cancela.
+async function pedirExtra(actual?: ExtraCotizacion): Promise<ExtraCotizacion | null> {
+    const { value } = await Swal.fire({
+        title: actual ? 'Editar elemento adicional' : 'Agregar elemento adicional',
+        confirmButtonColor: '#f97316',
+        showCancelButton: true,
+        confirmButtonText: actual ? 'Guardar' : 'Agregar',
+        cancelButtonText: 'Cancelar',
+        focusConfirm: false,
+        width: '42rem',
+        html: `
+            <style>
+                .extra-form { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem 1rem; text-align: left; }
+                .extra-form .completo { grid-column: 1 / -1; }
+                .extra-form label { display: block; margin-bottom: 0.3rem; font-size: 0.8rem; font-weight: 600; color: #475569; }
+                .extra-form input { width: 100%; box-sizing: border-box; margin: 0; padding: 0.6rem 0.75rem; font: inherit; font-size: 0.95rem; border: 1px solid #cbd5e1; border-radius: 10px; background: #fff; color: #0f172a; }
+                .extra-form input:focus { outline: 2px solid #f97316; outline-offset: 0; border-color: #f97316; }
+                .extra-form small { display: block; margin-top: 0.25rem; font-size: 0.75rem; color: #64748b; }
+                @media (max-width: 560px) { .extra-form { grid-template-columns: 1fr; } }
+            </style>
+            <div class="extra-form">
+                <div class="completo">
+                    <label for="swalExtraNombre">Nombre del elemento</label>
+                    <input id="swalExtraNombre" placeholder="Ej. Planta eléctrica 20 kVA" maxlength="150" value="${esc(actual?.nombre || '')}">
+                </div>
+                <div>
+                    <label for="swalExtraTag">Categoría (opcional)</label>
+                    <input id="swalExtraTag" placeholder="Ej. ENERGÍA" maxlength="100" value="${esc(actual && actual.tag !== 'ELEMENTO ADICIONAL' ? actual.tag : '')}">
+                </div>
+                <div>
+                    <label for="swalExtraCantidad">Cantidad</label>
+                    <input id="swalExtraCantidad" type="number" min="1" step="1" value="${actual ? actual.cantidad : 1}">
+                </div>
+                <div class="completo">
+                    <label for="swalExtraDescripcion">Incluye / descripción (opcional)</label>
+                    <input id="swalExtraDescripcion" placeholder="Ej. Con operario y combustible" maxlength="1000" value="${esc(actual?.descripcion || '')}">
+                </div>
+                <div class="completo">
+                    <label for="swalExtraPrecio">Precio por unidad al cliente (COP)</label>
+                    <input id="swalExtraPrecio" type="number" min="0" step="any" placeholder="Ej. 800000" value="${actual ? actual.precioUnit : ''}">
+                    <small>Es lo que se le cobra al cliente: suma al total y sale en el PDF.</small>
+                </div>
+                <div>
+                    <label for="swalExtraProveedor">Proveedor (opcional)</label>
+                    <input id="swalExtraProveedor" placeholder="Quién lo alquila o vende" maxlength="150" value="${esc(actual?.proveedor || '')}">
+                </div>
+                <div>
+                    <label for="swalExtraCosto">Costo por unidad del proveedor (opcional)</label>
+                    <input id="swalExtraCosto" type="number" min="0" step="any" placeholder="Ej. 500000" value="${typeof actual?.costoProveedor === 'number' ? actual.costoProveedor : ''}">
+                </div>
+                <small class="completo" style="margin-top: -0.4rem;">El proveedor y su costo son internos: solo los ves tú, no salen en el PDF ni los ve el cliente.</small>
+                <div class="completo">
+                    <label for="swalExtraNota">Nota (opcional)</label>
+                    <input id="swalExtraNota" placeholder="Ej. Llega el día anterior al evento" maxlength="1000" value="${esc(actual?.nota || '')}">
+                </div>
+            </div>
+        `,
+        preConfirm: () => {
+            const campo = (id: string) => (document.getElementById(id) as HTMLInputElement).value.trim();
+            const nombre = campo('swalExtraNombre');
+            const cantidad = Number(campo('swalExtraCantidad'));
+            const precio = Number(campo('swalExtraPrecio'));
+            const costoTexto = campo('swalExtraCosto');
+            const costo = costoTexto === '' ? null : Number(costoTexto);
+            if (!nombre) { Swal.showValidationMessage('Indica el nombre del elemento'); return false; }
+            if (!Number.isInteger(cantidad) || cantidad <= 0) { Swal.showValidationMessage('La cantidad debe ser un número entero mayor a 0'); return false; }
+            if (!Number.isFinite(precio) || precio <= 0) { Swal.showValidationMessage('Indica un precio por unidad mayor a 0'); return false; }
+            if (costo !== null && (!Number.isFinite(costo) || costo < 0)) { Swal.showValidationMessage('El costo del proveedor no es válido'); return false; }
+            return {
+                tag: campo('swalExtraTag') || 'ELEMENTO ADICIONAL',
+                nombre,
+                descripcion: campo('swalExtraDescripcion'),
+                cantidad,
+                precioUnit: precio,
+                proveedor: campo('swalExtraProveedor') || null,
+                costoProveedor: costo,
+                nota: campo('swalExtraNota') || null
+            } as ExtraCotizacion;
+        }
+    });
+    return value || null;
 }
 
 // Dibuja el historial de la cotización (del más antiguo al más nuevo).
@@ -411,12 +581,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }));
 
-    // Guarda los servicios editados; el total lo recalcula el servidor.
+    // Guarda los servicios y los elementos adicionales editados; el total lo recalcula el servidor.
     document.getElementById('btnGuardarItems')?.addEventListener('click', conManejoDeErrores(async () => {
         if (!cotizacionActualId) return;
         const res = await apiFetch(`/api/cotizaciones/${cotizacionActualId}/items`, {
             method: 'PUT',
-            body: JSON.stringify({ items: itemsEnEdicion })
+            body: JSON.stringify({ items: itemsEnEdicion, extras: extrasEnEdicion })
         });
         if (res.ok) {
             Swal.fire({ icon: 'success', title: 'Servicios actualizados', confirmButtonColor: '#f97316', timer: 1400, showConfirmButton: false });
@@ -426,48 +596,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }));
 
-    // Agrega un servicio que no está en el catálogo (categoría, nombre, descripción y precio); queda oculto del cotizador público.
-    document.getElementById('btnAgregarManual')?.addEventListener('click', conManejoDeErrores(async () => {
-        const { value: datos } = await Swal.fire({
-            title: 'Agregar servicio manual',
-            confirmButtonColor: '#f97316',
-            showCancelButton: true,
-            confirmButtonText: 'Agregar',
-            cancelButtonText: 'Cancelar',
-            focusConfirm: false,
-            html: `
-                <input id="swalTag" class="swal2-input" placeholder="Categoría (ej. EFECTO ESPECIAL FX)">
-                <input id="swalNombre" class="swal2-input" placeholder="Nombre del servicio">
-                <input id="swalDescripcion" class="swal2-input" placeholder="Incluye / descripción (opcional)">
-                <input id="swalPrecio" type="number" class="swal2-input" placeholder="Precio en COP">
-            `,
-            preConfirm: () => {
-                const tag = (document.getElementById('swalTag') as HTMLInputElement).value.trim();
-                const nombre = (document.getElementById('swalNombre') as HTMLInputElement).value.trim();
-                const precio = Number((document.getElementById('swalPrecio') as HTMLInputElement).value) || 0;
-                if (!nombre || precio <= 0) {
-                    Swal.showValidationMessage('Indica un nombre y un precio mayor a 0');
-                    return false;
-                }
-                return {
-                    tag,
-                    nombre,
-                    descripcion: (document.getElementById('swalDescripcion') as HTMLInputElement).value.trim(),
-                    precio
-                };
-            }
-        });
-        if (!datos) return;
-
-        const res = await apiFetch('/api/catalogo/manual', { method: 'POST', body: JSON.stringify(datos) });
-        if (!res.ok) {
-            const error = await res.json();
-            Swal.fire({ icon: 'error', title: 'No se pudo crear el ítem', text: error.message, confirmButtonColor: '#f97316' });
-            return;
-        }
-        const creado = await res.json() as { variantId: number; tag: string; nombre: string; descripcion: string; precioUnit: number };
-        itemsEnEdicion.push({ variantId: creado.variantId, cantidad: 1, tag: creado.tag, nombre: creado.nombre, descripcion: creado.descripcion, precioUnit: creado.precioUnit });
-        renderItemsDetalle();
+    // Agrega un elemento adicional (se consigue aparte): queda en la lista y se guarda con "Guardar cambios".
+    document.getElementById('btnAgregarExtra')?.addEventListener('click', conManejoDeErrores(async () => {
+        const nuevo = await pedirExtra();
+        if (!nuevo) return;
+        extrasEnEdicion.push(nuevo);
+        renderExtrasDetalle();
     }));
 
     document.getElementById('btnAbrirCatalogo')?.addEventListener('click', conManejoDeErrores(abrirEditorCatalogo));

@@ -89,15 +89,20 @@ async function obtenerFila(id: string): Promise<FilaContrato | null> {
  * Servicios del contrato: solo cantidad y nombre (el contrato no muestra precios por ítem).
  */
 async function obtenerItemsContrato(quoteId: number): Promise<ItemContratoPdf[]> {
-    const { rows } = await pool.query<{ quantity: number; simple_description: string }>(
-        `select qi.quantity, iv.simple_description
+    // Los elementos adicionales (que se consiguen aparte) también son parte de lo contratado.
+    const { rows } = await pool.query<{ quantity: number; nombre: string }>(
+        `select qi.quantity, iv.simple_description as nombre
          from quote_items qi
          join inventory_variants iv on iv.id = qi.variant_id
          where qi.quote_id = $1
-         order by iv.simple_description asc`,
+         union all
+         select qe.quantity, qe.name as nombre
+         from quote_extra_items qe
+         where qe.quote_id = $1
+         order by nombre asc`,
         [quoteId]
     );
-    return rows.map((r) => ({ cantidad: r.quantity, nombre: r.simple_description }));
+    return rows.map((r) => ({ cantidad: r.quantity, nombre: r.nombre }));
 }
 
 export const contratosRouter = Router();

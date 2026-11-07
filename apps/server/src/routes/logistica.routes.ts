@@ -68,6 +68,27 @@ async function obtenerEquiposDeQuote(quoteId: string): Promise<{ tag: string; no
     }));
 }
 
+/**
+ * Elementos externos de varias cotizaciones: los que se alquilan o se consiguen aparte y no salen de la
+ * bodega. Sin precios, proveedor ni costo (eso es solo para la administradora).
+ */
+async function obtenerExternosDeQuotes(quoteIds: (string | number)[]): Promise<Map<number, { nombre: string; descripcion: string; cantidad: number; nota: string | null }[]>> {
+    const { rows } = await pool.query(
+        `select quote_id, name, description, quantity, nota
+         from quote_extra_items
+         where quote_id = any($1::bigint[])
+         order by id`,
+        [quoteIds]
+    );
+    const porQuote = new Map<number, { nombre: string; descripcion: string; cantidad: number; nota: string | null }[]>();
+    for (const r of rows) {
+        const id = Number(r.quote_id);
+        if (!porQuote.has(id)) porQuote.set(id, []);
+        porQuote.get(id)!.push({ nombre: r.name, descripcion: r.description || '', cantidad: r.quantity, nota: r.nota });
+    }
+    return porQuote;
+}
+
 // Lista de eventos confirmados con sus equipos, del más próximo al más lejano.
 // Andrés nunca debe ver precios: la consulta ni siquiera selecciona inventory_variants.price.
 logisticaRouter.get('/eventos', asyncHandler(async (_req, res) => {
@@ -90,15 +111,19 @@ logisticaRouter.get('/eventos', asyncHandler(async (_req, res) => {
 
     if (eventos.length === 0) return res.json([]);
 
-    const { rows: items } = await pool.query(
-        `select qi.quote_id, qi.quantity, iv.simple_description, iv.detailed_description, i.type
-         from quote_items qi
-         join inventory_variants iv on iv.id = qi.variant_id
-         join inventory i on i.id = iv.inventory_id
-         where qi.quote_id = any($1)
-         order by i.type, iv.simple_description`,
-        [eventos.map((e) => e.quote_id)]
-    );
+    // Equipos de la bodega y elementos externos son consultas independientes: se piden a la vez.
+    const [{ rows: items }, externosPorQuote] = await Promise.all([
+        pool.query(
+            `select qi.quote_id, qi.quantity, iv.simple_description, iv.detailed_description, i.type
+             from quote_items qi
+             join inventory_variants iv on iv.id = qi.variant_id
+             join inventory i on i.id = iv.inventory_id
+             where qi.quote_id = any($1)
+             order by i.type, iv.simple_description`,
+            [eventos.map((e) => e.quote_id)]
+        ),
+        obtenerExternosDeQuotes(eventos.map((e) => e.quote_id))
+    ]);
 
     const equiposPorQuote = new Map<number, { tag: string; nombre: string; descripcion: string; cantidad: number }[]>();
     for (const item of items) {
@@ -120,7 +145,8 @@ logisticaRouter.get('/eventos', asyncHandler(async (_req, res) => {
         lugar: e.venue_nombre,
         direccion: e.venue_direccion_manual,
         fechaEvento: e.fecha_evento,
-        equipos: equiposPorQuote.get(e.quote_id) || []
+        equipos: equiposPorQuote.get(e.quote_id) || [],
+        externos: externosPorQuote.get(e.quote_id) || []
     })));
 }));
 
@@ -130,7 +156,7 @@ logisticaRouter.get('/eventos/:id/pdf', asyncHandler(async (req, res) => {
     const fila = await obtenerEventoLogistica(req.params.id);
     if (!fila) return res.status(404).json({ status: 'error', message: 'Evento no encontrado' });
 
-    const equipos = await obtenerEquiposDeQuote(req.params.id);
+    const [equipos, externosPorQuote] = await Promise.all([obtenerEquiposDeQuote(req.params.id), obtenerExternosDeQuotes([req.params.id])]);
 
     const buffer = await generarListaCargaPdfBuffer({
         numeroReferencia: numeroReferencia(fila.quote_id, fila.created_at),
@@ -140,7 +166,8 @@ logisticaRouter.get('/eventos/:id/pdf', asyncHandler(async (req, res) => {
         lugar: fila.venue_nombre,
         direccion: fila.venue_direccion_manual,
         fechaEvento: fila.fecha_evento,
-        equipos
+        equipos,
+        externos: externosPorQuote.get(Number(req.params.id)) || []
     });
 
     res.setHeader('Content-Type', 'application/pdf');

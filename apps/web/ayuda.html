@@ -114,19 +114,19 @@
                     <form id="pqrsForm" class="pqrs-form">
                         <div>
                             <label for="pqrsNombre">Nombre completo *</label>
-                            <input type="text" id="pqrsNombre" required placeholder="Ej. Valentina Gómez" autocomplete="name">
+                            <input type="text" id="pqrsNombre" required maxlength="100" placeholder="Ej. Valentina Gómez" autocomplete="name">
                         </div>
                         <div>
                             <label for="pqrsCorreo">Correo electrónico *</label>
-                            <input type="email" id="pqrsCorreo" required placeholder="correo@ejemplo.com" autocomplete="email">
+                            <input type="email" id="pqrsCorreo" required maxlength="150" placeholder="correo@ejemplo.com" autocomplete="email">
                         </div>
                         <div>
                             <label for="pqrsTelefono">Teléfono (opcional)</label>
-                            <input type="tel" id="pqrsTelefono" placeholder="+57 300 123 4567" autocomplete="tel">
+                            <input type="tel" id="pqrsTelefono" maxlength="30" placeholder="+57 300 123 4567" autocomplete="tel">
                         </div>
                         <div>
                             <label for="pqrsMensaje">Tu mensaje *</label>
-                            <textarea id="pqrsMensaje" required rows="4" placeholder="Cuéntanos tu petición, queja, reclamo o sugerencia..."></textarea>
+                            <textarea id="pqrsMensaje" required rows="4" maxlength="2000" placeholder="Cuéntanos tu petición, queja, reclamo o sugerencia..."></textarea>
                         </div>
                         <button type="submit" id="btnEnviarPqrs" class="boton boton-primario">
                             <i class="fa-solid fa-paper-plane"></i> Enviar PQRS

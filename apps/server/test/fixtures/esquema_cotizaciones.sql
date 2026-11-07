@@ -51,7 +51,7 @@ CREATE TABLE "PriceVariants" (
 
 CREATE TABLE quote (
     id                     BIGSERIAL PRIMARY KEY,
-    total                  NUMERIC NOT NULL DEFAULT 0 CONSTRAINT quote_total_check CHECK (total >= 0),
+    total                  NUMERIC(10, 2) NOT NULL DEFAULT 0 CONSTRAINT quote_total_check CHECK (total >= 0),
     created_at             TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at             TIMESTAMPTZ NOT NULL DEFAULT now(),
     estado                 TEXT NOT NULL DEFAULT 'recibida' CHECK (estado IN ('recibida', 'en_revision', 'finalizada', 'cancelada')),
@@ -170,3 +170,95 @@ $$;
 CREATE TRIGGER set_created_at BEFORE INSERT ON quote FOR EACH ROW EXECUTE FUNCTION set_created_at();
 CREATE TRIGGER set_updated_at BEFORE UPDATE ON quote FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 CREATE TRIGGER update_total_quote AFTER INSERT OR DELETE OR UPDATE ON quote_items FOR EACH ROW EXECUTE FUNCTION update_total_quote();
+
+-- Elementos adicionales (migración 20261107120000, sin RLS ni comentarios: la prueba no tiene roles de Supabase)
+CREATE TABLE IF NOT EXISTS public.quote_extra_items (
+    id            BIGSERIAL      PRIMARY KEY,
+    quote_id      BIGINT         NOT NULL REFERENCES public.quote (id) ON DELETE CASCADE,
+    tag           VARCHAR(100)   NOT NULL DEFAULT 'ELEMENTO ADICIONAL',
+    name          VARCHAR(150)   NOT NULL,
+    description   TEXT,
+    quantity      INT            NOT NULL CHECK (quantity > 0),
+    unit_price    NUMERIC(10, 2) NOT NULL CHECK (unit_price >= 0),
+    supplier      VARCHAR(150),
+    supplier_cost NUMERIC(10, 2) CHECK (supplier_cost >= 0),
+    nota          TEXT,
+    created_at    TIMESTAMPTZ    NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS quote_extra_items_quote_id_idx ON public.quote_extra_items (quote_id);
+
+-- Total de la cotización: suma lo que se cobra por cada elemento adicional al insertarlo, resta al
+-- borrarlo y ajusta la diferencia al editarlo.
+CREATE OR REPLACE FUNCTION public.update_total_quote_extra() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE
+    v_delta NUMERIC(10, 2);
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        UPDATE public.quote SET total = total + (NEW.quantity * NEW.unit_price) WHERE id = NEW.quote_id;
+        RETURN NEW;
+    ELSIF TG_OP = 'DELETE' THEN
+        UPDATE public.quote SET total = total - (OLD.quantity * OLD.unit_price) WHERE id = OLD.quote_id;
+        RETURN OLD;
+    END IF;
+
+    -- UPDATE: la cotización no cambia de dueño (quote_id), solo cantidad o precio.
+    v_delta := (NEW.quantity * NEW.unit_price) - (OLD.quantity * OLD.unit_price);
+    UPDATE public.quote SET total = total + v_delta WHERE id = NEW.quote_id;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS update_total_quote_extra ON public.quote_extra_items;
+CREATE TRIGGER update_total_quote_extra
+    AFTER INSERT OR DELETE OR UPDATE ON public.quote_extra_items
+    FOR EACH ROW EXECUTE FUNCTION public.update_total_quote_extra();
+
+-- PQRS (supabase/migrations/0008_perfiles_ciudades_pqrs.sql, sin RLS ni la referencia a profiles)
+CREATE TABLE IF NOT EXISTS pqrs (
+    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    nombre         TEXT NOT NULL,
+    correo         TEXT NOT NULL,
+    telefono       TEXT,
+    mensaje        TEXT NOT NULL,
+    respuesta      TEXT,
+    respondido_en  TIMESTAMPTZ,
+    respondido_por UUID,
+    creado_en      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Nómina (supabase/migrations/0009_recrear_empleados_3_categorias.sql)
+CREATE TABLE IF NOT EXISTS empleados (
+    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    nombre         TEXT NOT NULL,
+    documento      TEXT,
+    telefono       TEXT,
+    salario        NUMERIC,
+    numero_cuenta  TEXT,
+    banco          TEXT,
+    tipo_contrato  TEXT NOT NULL CHECK (tipo_contrato IN ('con_contrato', 'freelance_fijo', 'freelance_no_fijo')),
+    activo         BOOLEAN NOT NULL DEFAULT TRUE,
+    creado_en      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    actualizado_en TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Cuentas de acceso (esquema.sql + supabase/migrations/0008: perfiles con nombre y correo; sin la referencia a auth.users)
+CREATE TABLE IF NOT EXISTS role (
+    id          BIGSERIAL    PRIMARY KEY,
+    name        VARCHAR(100) NOT NULL,
+    description TEXT
+);
+
+CREATE TABLE IF NOT EXISTS profiles (
+    id                    UUID    PRIMARY KEY,
+    role_id               INTEGER REFERENCES role (id),
+    debe_cambiar_password BOOLEAN NOT NULL DEFAULT TRUE,
+    nombre                TEXT    NOT NULL,
+    correo                TEXT    NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS unavailability_users (
+    id      BIGSERIAL PRIMARY KEY,
+    id_user UUID      NOT NULL REFERENCES profiles (id) ON DELETE CASCADE,
+    date    DATE      NOT NULL
+);

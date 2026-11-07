@@ -36,7 +36,7 @@ function render() {
         fig.className = 'galeria-foto';
         // Tres tamaños de cada foto: el celular no descarga la versión grande para una miniatura.
         const base = foto.archivo.replace('.webp', '');
-        const srcset = `galeria/web/${base}-480.webp 480w, galeria/web/${base}-800.webp 800w, galeria/web/${foto.archivo} 1200w`;
+        const srcset = `galeria/web/${base}-480.webp 520w, galeria/web/${base}-800.webp 900w, galeria/web/${foto.archivo} ${foto.ancho}w`;
         fig.innerHTML = `<img src="galeria/web/${foto.archivo}" srcset="${srcset}" sizes="(max-width: 899px) 50vw, 400px" width="${foto.ancho}" height="${foto.alto}" alt="${foto.alt}" loading="lazy" decoding="async">`;
         fig.addEventListener('click', () => abrirLightbox(i));
         grid.appendChild(fig);

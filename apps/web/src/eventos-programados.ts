@@ -8,6 +8,8 @@ import './shared/panelRail.css';
 import { apiFetch, apiUrl, conManejoDeErrores, exigirSesion } from './shared/api';
 import { initPanelLayout } from './shared/layout';
 
+declare const Swal: any;
+
 // Un servicio de la cotización.
 interface ItemSeleccionado {
     variantId: number;
@@ -30,6 +32,8 @@ interface Cotizacion {
     lugar: string | null;
     fechaEvento: string | null;
     items: ItemSeleccionado[];
+    // Elementos adicionales: no salen de la bodega, se consiguen aparte; se muestran como un servicio más.
+    extras?: { tag: string; nombre: string; descripcion: string; cantidad: number; precioUnit: number; nota?: string | null }[];
     total: number;
 }
 
@@ -155,7 +159,7 @@ async function abrirDetalle(c: Cotizacion) {
         <div class="detail-row"><div class="detail-row-main"><strong>Fecha del evento:</strong> ${c.fechaEvento ? new Date(c.fechaEvento + 'T00:00:00').toLocaleDateString('es-CO') : 'Sin definir'}</div></div>
     `;
 
-    document.getElementById('listaItemsDetalle')!.innerHTML = c.items.map((item) => `
+    document.getElementById('listaItemsDetalle')!.innerHTML = [...c.items, ...(c.extras ?? [])].map((item) => `
         <div class="detail-row">
             <div>
                 <div class="detail-row-main"><strong>${esc(item.cantidad > 1 ? `${item.cantidad} x ${item.nombre}` : item.nombre)}</strong></div>
@@ -168,10 +172,38 @@ async function abrirDetalle(c: Cotizacion) {
     document.getElementById('totalDetalle')!.textContent = formatterCOP.format(c.total);
     (document.getElementById('linkVerPdfCotizacion') as HTMLAnchorElement).href = apiUrl(`/api/cotizaciones/${c.id}/pdf`);
     (document.getElementById('linkVerContratoFirmado') as HTMLAnchorElement).href = apiUrl(`/api/contratos/${c.id}/firmado`);
+    await mostrarContrato(c);
 
     listaEl.classList.add('hidden');
     document.querySelector('.calendar-grid')?.parentElement?.classList.add('hidden');
     detalleEl.classList.remove('hidden');
+}
+
+// Evento abierto en el detalle (para subir su contrato firmado).
+let eventoAbierto: Cotizacion | null = null;
+
+// Muestra qué hay del contrato de este evento. Un evento confirmado puede no tener contrato en el sistema
+// (p. ej. se confirmó por otro medio): en ese caso se avisa y se ofrece subir el firmado.
+async function mostrarContrato(c: Cotizacion) {
+    eventoAbierto = c;
+    const res = await apiFetch(`/api/contratos/${c.id}`);
+    const contrato = res.ok ? ((await res.json()) as { enviadoEn: string | null; firmadoSubidoEn: string | null; tieneFirmado: boolean }) : null;
+    const estadoEl = document.getElementById('estadoContrato') as HTMLElement;
+    const fecha = (iso: string | null) => (iso ? new Date(iso).toLocaleString('es-CO') : '');
+
+    document.getElementById('linkVerContratoFirmado')!.classList.toggle('hidden', !contrato?.tieneFirmado);
+    document.getElementById('etiquetaArchivoFirmado')!.textContent = contrato?.tieneFirmado ? 'Reemplazar contrato firmado (PDF)' : 'Subir contrato firmado (PDF)';
+    (document.getElementById('btnSubirFirmado') as HTMLButtonElement).innerHTML = `<i class="fa-solid fa-upload"></i> ${contrato?.tieneFirmado ? 'Reemplazar contrato firmado' : 'Subir contrato firmado'}`;
+
+    if (!contrato) {
+        estadoEl.innerHTML = '<i class="fa-solid fa-circle-exclamation" style="color:var(--orange-main);"></i> No se pudo consultar el estado del contrato.';
+    } else if (contrato.tieneFirmado) {
+        estadoEl.innerHTML = `<i class="fa-solid fa-circle-check" style="color:var(--emerald-green);"></i> Contrato firmado guardado el ${esc(fecha(contrato.firmadoSubidoEn))}`;
+    } else if (contrato.enviadoEn) {
+        estadoEl.innerHTML = `<i class="fa-solid fa-paper-plane" style="color:var(--orange-main);"></i> Contrato enviado el ${esc(fecha(contrato.enviadoEn))}, pero todavía no hay un contrato firmado guardado.`;
+    } else {
+        estadoEl.innerHTML = '<i class="fa-solid fa-circle-exclamation" style="color:var(--orange-main);"></i> Sin contrato en el sistema: este evento se confirmó sin generar ni enviar un contrato desde aquí. Si ya existe uno firmado, súbelo para dejarlo guardado.';
+    }
 }
 
 // Vuelve del detalle al calendario y la lista.
@@ -196,6 +228,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderCalendario();
     });
     document.getElementById('btnVolverLista')?.addEventListener('click', volverALista);
+
+    // Sube (o reemplaza) el contrato firmado de este evento; el servidor verifica que sea un PDF de hasta 10 MB.
+    document.getElementById('btnSubirFirmado')?.addEventListener('click', conManejoDeErrores(async () => {
+        if (!eventoAbierto) return;
+        const input = document.getElementById('inputArchivoFirmado') as HTMLInputElement;
+        const archivo = input.files?.[0];
+        if (!archivo) {
+            Swal.fire({ icon: 'warning', title: 'Selecciona un archivo PDF', confirmButtonColor: '#f97316' });
+            return;
+        }
+        const formData = new FormData();
+        formData.append('archivo', archivo);
+        const res = await apiFetch(`/api/contratos/${eventoAbierto.id}/firmado`, { method: 'POST', body: formData });
+        const datos = await res.json();
+        if (!res.ok) {
+            Swal.fire({ icon: 'error', title: 'No se pudo subir', text: datos.message, confirmButtonColor: '#f97316' });
+            return;
+        }
+        input.value = '';
+        await Swal.fire({ icon: 'success', title: 'Contrato firmado guardado', confirmButtonColor: '#f97316', timer: 1600, showConfirmButton: false });
+        await mostrarContrato(eventoAbierto);
+    }));
 
     await cargarEventos();
 });

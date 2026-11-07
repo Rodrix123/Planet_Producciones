@@ -24,6 +24,9 @@
     <meta name="twitter:description" content="Sonido, iluminación, pantallas LED y efectos especiales para bodas, fiestas de 15 años, grados y eventos corporativos VIP en el Eje Cafetero.">
     <meta name="twitter:image" content="__SITE_URL__/og.jpg">
 
+    <link rel="preload" as="image" href="hero/m-a.webp" media="(max-width: 700px)" fetchpriority="high">
+    <link rel="preload" as="image" href="hero/a-1600.webp" imagesrcset="hero/a-1000.webp 1000w, hero/a-1600.webp 1600w" imagesizes="100vw" media="(min-width: 701px)" fetchpriority="high">
+
     <link rel="icon" type="image/png" href="logo.png?v=2">
     <link rel="shortcut icon" type="image/png" href="logo.png?v=2">
     <link rel="apple-touch-icon" href="logo.png?v=2">
@@ -63,9 +66,24 @@
 
     <main>
 
-        <!-- HERO -->
-        <section class="hero">
-            <div class="contenedor hero-grid">
+        <!-- HERO: fotos de eventos que van pasando de fondo -->
+        <section class="hero hero-cine" aria-label="Planet Producciones">
+            <div class="hero-fondo" aria-hidden="true">
+                <div class="hero-slide activa">
+                    <picture>
+                        <source media="(max-width: 700px)" srcset="hero/m-a.webp">
+                        <img src="hero/a-1600.webp" srcset="hero/a-1000.webp 1000w, hero/a-1600.webp 1600w" sizes="100vw" alt="" fetchpriority="high">
+                    </picture>
+                </div>
+                <div class="hero-slide" data-movil="hero/m-b.webp" data-src="hero/b-1600.webp" data-srcset="hero/b-1000.webp 1000w, hero/b-1600.webp 1600w"></div>
+                <div class="hero-slide" data-movil="hero/m-c.webp" data-src="hero/c-1600.webp" data-srcset="hero/c-1000.webp 1000w, hero/c-1600.webp 1600w"></div>
+                <div class="hero-slide" data-movil="hero/m-d.webp" data-src="hero/d-1600.webp" data-srcset="hero/d-1000.webp 1000w, hero/d-1600.webp 1600w"></div>
+                <div class="hero-slide" data-movil="hero/m-e.webp" data-src="hero/e-1600.webp" data-srcset="hero/e-1000.webp 1000w, hero/e-1600.webp 1600w"></div>
+                <div class="hero-slide" data-movil="hero/m-f.webp" data-src="hero/f-1600.webp" data-srcset="hero/f-1000.webp 1000w, hero/f-1600.webp 1600w"></div>
+            </div>
+            <div class="hero-velo" aria-hidden="true"></div>
+
+            <div class="contenedor hero-contenido">
                 <div class="hero-texto">
                     <h1 class="titulo-pagina">Producción Técnica de Alto Impacto para tu Evento VIP</h1>
 
@@ -86,23 +104,24 @@
                     </p>
                 </div>
 
-                <div class="hero-visual">
-                    <div class="hero-disco" aria-hidden="true"></div>
-                    <div class="hero-arco">
-                        <img src="galeria/web/evento-con-pantalla-6.webp" srcset="galeria/web/evento-con-pantalla-6-480.webp 480w, galeria/web/evento-con-pantalla-6-800.webp 800w, galeria/web/evento-con-pantalla-6.webp 1200w" sizes="(max-width: 959px) 70vw, 380px" width="1200" height="1481" fetchpriority="high"
-                             alt="Primer baile de novios con chispas frías y niebla baja frente a una pantalla LED">
+                <div class="hero-sello">
+                    <i class="fa-solid fa-champagne-glasses"></i>
+                    <div>
+                        <strong><span data-cuenta="500">+500</span> Eventos</strong>
+                        <span>Realizados con éxito</span>
                     </div>
-                    <div class="hero-foto-2">
-                        <img src="galeria/web/evento-sin-pantalla-5.webp" srcset="galeria/web/evento-sin-pantalla-5-480.webp 480w, galeria/web/evento-sin-pantalla-5-800.webp 800w, galeria/web/evento-sin-pantalla-5.webp 1200w" sizes="(max-width: 959px) 40vw, 230px" width="1200" height="1340"
-                             alt="Candelabros de cristal sobre techo de bambú con follaje, mesas y pista de piso LED">
-                    </div>
-                    <div class="hero-sello">
-                        <i class="fa-solid fa-champagne-glasses"></i>
-                        <div>
-                            <strong><span data-cuenta="500">+500</span> Eventos</strong>
-                            <span>Realizados con éxito</span>
-                        </div>
-                    </div>
+                </div>
+            </div>
+
+            <div class="hero-controles" role="group" aria-label="Fotos de eventos">
+                <button type="button" class="hero-pausa" id="heroPausa" aria-label="Pausar las fotos" aria-pressed="false"><i class="fa-solid fa-pause"></i></button>
+                <div class="hero-puntos" id="heroPuntos">
+                    <button type="button" aria-label="Ver la foto 1 de 6" aria-current="true"></button>
+                    <button type="button" aria-label="Ver la foto 2 de 6"></button>
+                    <button type="button" aria-label="Ver la foto 3 de 6"></button>
+                    <button type="button" aria-label="Ver la foto 4 de 6"></button>
+                    <button type="button" aria-label="Ver la foto 5 de 6"></button>
+                    <button type="button" aria-label="Ver la foto 6 de 6"></button>
                 </div>
             </div>
         </section>
@@ -121,24 +140,24 @@
                 <div class="mosaico-marco" data-aparece>
                     <div class="mosaico" data-aparece>
                         <a href="galeria.html" class="mosaico-foto m-a" aria-label="Ver la galería completa">
-                            <img src="galeria/web/evento-con-pantalla-5.webp" srcset="galeria/web/evento-con-pantalla-5-480.webp 480w, galeria/web/evento-con-pantalla-5-800.webp 800w, galeria/web/evento-con-pantalla-5.webp 1200w" sizes="(max-width: 819px) 50vw, 33vw" width="1200" height="1359" loading="lazy"
-                                 alt="Pista de baile con luz perimetral y pantalla LED con mensaje personalizado">
+                            <img src="galeria/web/evento-sin-pantalla-12.webp" srcset="galeria/web/evento-sin-pantalla-12-480.webp 520w, galeria/web/evento-sin-pantalla-12-800.webp 900w, galeria/web/evento-sin-pantalla-12.webp 1200w" sizes="(max-width: 819px) 50vw, 33vw" width="1200" height="1600" loading="lazy"
+                                 alt="Telas verdes con aros de luz sobre la cabina de DJ, jardín de girasoles y pista en abanico">
                         </a>
                         <a href="galeria.html" class="mosaico-foto m-b" aria-label="Ver la galería completa">
-                            <img src="galeria/web/evento-con-pantalla-8.webp" srcset="galeria/web/evento-con-pantalla-8-480.webp 480w, galeria/web/evento-con-pantalla-8-800.webp 800w, galeria/web/evento-con-pantalla-8.webp 1200w" sizes="(max-width: 819px) 50vw, 33vw" width="1200" height="927" loading="lazy" style="object-position: 50% 55%"
-                                 alt="Pista de baile llena de invitados frente a pantallas LED y luces violeta">
+                            <img src="galeria/web/evento-sin-pantalla-19.webp" srcset="galeria/web/evento-sin-pantalla-19-480.webp 520w, galeria/web/evento-sin-pantalla-19-800.webp 900w, galeria/web/evento-sin-pantalla-19.webp 1600w" sizes="(max-width: 819px) 50vw, 33vw" width="1600" height="1202" loading="lazy" style="object-position: 50% 60%"
+                                 alt="Mesa de novios con flores y velas bajo una cortina de luces, con la cabina de DJ al fondo">
                         </a>
                         <a href="galeria.html" class="mosaico-foto m-c" aria-label="Ver la galería completa">
-                            <img src="galeria/web/evento-sin-pantalla-8.webp" srcset="galeria/web/evento-sin-pantalla-8-480.webp 480w, galeria/web/evento-sin-pantalla-8-800.webp 800w, galeria/web/evento-sin-pantalla-8.webp 1200w" sizes="(max-width: 819px) 50vw, 33vw" width="1200" height="1062" loading="lazy" style="object-position: 50% 60%"
-                                 alt="Carpa transparente con bolas de espejos, flores de luz y pista negra con borde LED">
+                            <img src="galeria/web/evento-sin-pantalla-14.webp" srcset="galeria/web/evento-sin-pantalla-14-480.webp 520w, galeria/web/evento-sin-pantalla-14-800.webp 900w, galeria/web/evento-sin-pantalla-14.webp 1200w" sizes="(max-width: 819px) 50vw, 33vw" width="1200" height="1600" loading="lazy" style="object-position: 50% 55%"
+                                 alt="Bolas de espejos y follaje bajo techo de bambú, con luces de estrella tras la cabina de DJ">
                         </a>
                         <a href="galeria.html" class="mosaico-foto m-d" aria-label="Ver la galería completa">
-                            <img src="galeria/web/evento-con-pantalla-12.webp" srcset="galeria/web/evento-con-pantalla-12-480.webp 480w, galeria/web/evento-con-pantalla-12-800.webp 800w, galeria/web/evento-con-pantalla-12.webp 1200w" sizes="(max-width: 819px) 50vw, 33vw" width="1200" height="1063" loading="lazy" style="object-position: 50% 40%"
-                                 alt="Cabina de DJ rodeada de pantallas LED flotantes y luces cálidas">
+                            <img src="galeria/web/evento-con-pantalla-1.webp" srcset="galeria/web/evento-con-pantalla-1-480.webp 520w, galeria/web/evento-con-pantalla-1-800.webp 900w, galeria/web/evento-con-pantalla-1.webp 1200w" sizes="(max-width: 819px) 50vw, 33vw" width="1200" height="1600" loading="lazy" style="object-position: 50% 55%"
+                                 alt="Montaje con pantallas LED, pista de baile e iluminación ambiental en jardín">
                         </a>
                         <a href="galeria.html" class="mosaico-foto m-e" aria-label="Ver la galería completa">
-                            <img src="galeria/web/evento-con-pantalla-9.webp" srcset="galeria/web/evento-con-pantalla-9-480.webp 480w, galeria/web/evento-con-pantalla-9-800.webp 800w, galeria/web/evento-con-pantalla-9.webp 1200w" sizes="(max-width: 819px) 50vw, 33vw" width="1200" height="1062" loading="lazy" style="object-position: 50% 45%"
-                                 alt="Escenario con pantalla LED, cabezas móviles y pista con diseño de hojas">
+                            <img src="galeria/web/evento-con-pantalla-18.webp" srcset="galeria/web/evento-con-pantalla-18-480.webp 520w, galeria/web/evento-con-pantalla-18-800.webp 900w, galeria/web/evento-con-pantalla-18.webp 1200w" sizes="(max-width: 819px) 50vw, 33vw" width="1200" height="1600" loading="lazy" style="object-position: 50% 70%"
+                                 alt="Pantalla LED de luces cálidas tras la cabina de DJ, con pista de ajedrez rojo y blanco">
                         </a>
                     </div>
 

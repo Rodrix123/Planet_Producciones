@@ -40,7 +40,9 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (!res.ok) {
-                Swal.fire({ icon: 'error', title: 'No se pudo enviar', text: 'Intenta de nuevo en unos minutos.', confirmButtonColor: COLOR_CONFIRMAR });
+                // Si el servidor explica el motivo (correo inválido, mensaje muy largo, demasiados envíos), se le dice a la persona.
+                const motivo = res.status === 400 || res.status === 429 ? ((await res.json().catch(() => null)) as { message?: string } | null)?.message : undefined;
+                Swal.fire({ icon: 'error', title: 'No se pudo enviar', text: motivo || 'Intenta de nuevo en unos minutos.', confirmButtonColor: COLOR_CONFIRMAR });
                 return;
             }
 

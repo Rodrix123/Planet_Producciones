@@ -92,6 +92,10 @@ reales (usuario/clave SMTP, correo de destino, puerto).
 - `EMAIL_CA_FILE` / `EMAIL_TLS_INSECURE`: el certificado de Gmail se verifica siempre. Si tu red lo
   intercepta (error `self-signed certificate in certificate chain`), usa `EMAIL_CA_FILE` con el
   certificado raíz del antivirus/proxy, o `EMAIL_TLS_INSECURE=true` solo en desarrollo.
+- `TRUST_PROXY`: ponlo en `true` si el servidor corre detrás de nginx o un balanceador. El servidor limita los
+  intentos de inicio de sesión (8 fallos por correo e IP cada 15 min), las cotizaciones públicas (40 por hora)
+  y los PQRS (10 por hora) por cada IP; sin esta variable detrás de un proxy todos los visitantes parecerían
+  la misma IP.
 
 ## Docker
 

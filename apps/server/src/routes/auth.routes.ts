@@ -6,6 +6,7 @@
 import { Router } from 'express';
 import { pool } from '../db';
 import { asyncHandler } from '../asyncHandler';
+import { limiteLogin } from '../limitador';
 import { supabaseAdmin, supabaseAnon } from '../supabaseAdmin';
 import {
     COOKIE_NAME,
@@ -19,8 +20,9 @@ import {
 export const authRouter = Router();
 
 // Inicio de sesión: valida correo y contraseña en Supabase Auth, busca el rol del perfil y deja
-// la sesión en una cookie. Los mensajes de error no dicen cuál de los dos datos falló.
-authRouter.post('/login', asyncHandler(async (req, res) => {
+// la sesión en una cookie. Los mensajes de error no dicen cuál de los dos datos falló. Tras 8 intentos
+// fallidos seguidos con el mismo correo desde la misma IP se bloquea unos minutos (ver limitador.ts).
+authRouter.post('/login', limiteLogin, asyncHandler(async (req, res) => {
     const { correo, password } = req.body as { correo?: string; password?: string };
 
     if (!correo || !password) {

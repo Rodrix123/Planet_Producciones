@@ -1,6 +1,7 @@
 import fs from 'fs';
 import tls from 'tls';
 import nodemailer from 'nodemailer';
+import type SMTPTransport from 'nodemailer/lib/smtp-transport';
 
 /**
  * Opciones de TLS de la conexión con el servidor de correo.
@@ -57,7 +58,7 @@ function esperar(ms: number): Promise<void> {
  *  real de configuración/credenciales — reintentar varias veces más resuelve la gran mayoría
  *  de esos casos sin que el usuario vea el error. Solo se relanza (sin reintentar) un fallo
  *  que no sea de red/conexión. */
-export async function enviarCorreo(opciones: Parameters<typeof transporter.sendMail>[0]): ReturnType<typeof transporter.sendMail> {
+export async function enviarCorreo(opciones: Parameters<typeof transporter.sendMail>[0]): Promise<SMTPTransport.SentMessageInfo> {
     const intentos = 5;
     for (let intento = 1; intento <= intentos; intento++) {
         try {

@@ -89,6 +89,14 @@ describe('servidor compilado (producción)', () => {
         }
     });
 
+    it('manda cabeceras de seguridad y no revela que usa Express', async () => {
+        const r = await fetch(`http://127.0.0.1:${puerto}/api/auth/me`);
+        assert.equal(r.headers.get('x-content-type-options'), 'nosniff');
+        assert.equal(r.headers.get('x-frame-options'), 'SAMEORIGIN');
+        assert.equal(r.headers.get('referrer-policy'), 'strict-origin-when-cross-origin');
+        assert.equal(r.headers.get('x-powered-by'), null);
+    });
+
     it('un id raro responde 404 y una petición mal formada 400 (manejador de errores incluido en el paquete)', async () => {
         const mal = await fetch(`http://127.0.0.1:${puerto}/api/cotizaciones`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"x":' });
         assert.equal(mal.status, 400);

@@ -15,8 +15,9 @@ import { requireAuth, requireRole } from '../auth';
 import { asyncHandler } from '../asyncHandler';
 import { enviarCorreo } from '../mailer';
 import { generarCotizacionPdfBuffer, type ItemCotizacionPdf } from '../pdf/cotizacionPdf';
-import { esCorreoValido, limpiarTexto, LIMITES, normalizarCotizacion, normalizarItems } from '../cotizacionEntrada';
+import { esCorreoValido, limpiarTexto, LIMITES, normalizarCotizacion, normalizarExtras, normalizarItems } from '../cotizacionEntrada';
 import { numeroReferencia } from '../referencia';
+import { limiteCotizar } from '../limitador';
 
 // Estados posibles de una cotización, en orden del recorrido.
 const ESTADOS_VALIDOS = ['recibida', 'en_revision', 'finalizada', 'contrato_enviado', 'programada', 'cancelada'] as const;
@@ -27,11 +28,13 @@ type EstadoCotizacion = (typeof ESTADOS_VALIDOS)[number];
 const ESTADOS_VISIBLES_SECRETARIA: EstadoCotizacion[] = ['finalizada', 'contrato_enviado', 'programada'];
 
 // Traduce cada estado "virtual" (no existe como columna única) a la condición SQL que lo
-// identifica a partir de quote + events, usando los alias q/e.
+// identifica a partir de quote + events, usando los alias q/e. Debe decir lo mismo que derivarEstado():
+// con evento, "confirmado" gana sobre todo (programada); si no, un contrato enviado la deja en
+// contrato_enviado; y si no, finalizada. Así un evento aparece en una sola lista y con su etiqueta real.
 const CONDICION_SQL: Record<EstadoCotizacion, string> = {
     recibida: "q.estado = 'recibida' and e.id is null",
     en_revision: "q.estado = 'en_revision' and e.id is null",
-    finalizada: 'e.id is not null and e.contrato_enviado_en is null',
+    finalizada: 'e.id is not null and e.contrato_enviado_en is null and e.confirmed = false',
     contrato_enviado: 'e.id is not null and e.contrato_enviado_en is not null and e.confirmed = false',
     programada: 'e.confirmed = true',
     cancelada: "q.estado = 'cancelada'"
@@ -103,6 +106,20 @@ interface ItemGuardado {
     nota: string | null;
 }
 
+// Un elemento adicional guardado (quote_extra_items): no sale de la bodega, se alquila o se consigue
+// aparte. `proveedor` y `costoProveedor` son internos: solo los ve la administradora.
+interface ExtraGuardado {
+    id: number;
+    tag: string;
+    nombre: string;
+    descripcion: string;
+    cantidad: number;
+    precioUnit: number;
+    proveedor: string | null;
+    costoProveedor: number | null;
+    nota: string | null;
+}
+
 /**
  * Deduce el estado visible: sin evento es el de la cotización; con evento depende de si ya se envió el
  * contrato o ya está confirmado.
@@ -117,7 +134,7 @@ function derivarEstado(fila: FilaCotizacion): EstadoCotizacion {
 /**
  * Convierte la fila de la base al formato JSON que usa el frontend.
  */
-function mapCotizacion(fila: FilaCotizacion, items: ItemGuardado[] = []) {
+function mapCotizacion(fila: FilaCotizacion, items: ItemGuardado[] = [], extras: ExtraGuardado[] = [], verCostos = false) {
     return {
         id: fila.id,
         numeroReferencia: numeroReferencia(fila.id, fila.created_at),
@@ -135,7 +152,19 @@ function mapCotizacion(fila: FilaCotizacion, items: ItemGuardado[] = []) {
         total: Number(fila.total),
         estado: derivarEstado(fila),
         creadaEn: fila.created_at,
-        items
+        items,
+        // Los elementos adicionales viajan aparte de los servicios del catálogo. El proveedor y su costo
+        // solo salen para quien puede verlos (la administradora).
+        extras: extras.map((e) => ({
+            id: e.id,
+            tag: e.tag,
+            nombre: e.nombre,
+            descripcion: e.descripcion,
+            cantidad: e.cantidad,
+            precioUnit: e.precioUnit,
+            nota: e.nota,
+            ...(verCostos ? { proveedor: e.proveedor, costoProveedor: e.costoProveedor } : {})
+        }))
     };
 }
 
@@ -181,10 +210,40 @@ async function obtenerItems(quoteId: string | number): Promise<ItemGuardado[]> {
     });
 }
 
-/** Cotización + servicios en paralelo: dos consultas independientes no tienen por qué esperarse una a otra. */
+/** Elementos adicionales (externos) de una cotización, en el orden en que se agregaron. */
+async function obtenerExtras(quoteId: string | number): Promise<ExtraGuardado[]> {
+    const { rows } = await pool.query(
+        `select id, tag, name, description, quantity, unit_price, supplier, supplier_cost, nota
+         from quote_extra_items
+         where quote_id = $1
+         order by id`,
+        [quoteId]
+    );
+    return rows.map((r) => ({
+        id: Number(r.id),
+        tag: r.tag,
+        nombre: r.name,
+        descripcion: r.description || '',
+        cantidad: r.quantity,
+        precioUnit: Number(r.unit_price),
+        proveedor: r.supplier,
+        costoProveedor: r.supplier_cost === null ? null : Number(r.supplier_cost),
+        nota: r.nota
+    }));
+}
+
+/**
+ * Cotización + servicios + elementos adicionales en paralelo: consultas independientes no tienen por qué
+ * esperarse una a otra. Solo se usa en rutas de la administradora, por eso incluye proveedor y costo.
+ */
 async function cargarCotizacion(id: string | number) {
-    const [fila, items] = await Promise.all([obtenerFilaCotizacion(String(id)), obtenerItems(id)]);
-    return fila ? mapCotizacion(fila, items) : null;
+    const [fila, items, extras] = await Promise.all([obtenerFilaCotizacion(String(id)), obtenerItems(id), obtenerExtras(id)]);
+    return fila ? mapCotizacion(fila, items, extras, true) : null;
+}
+
+/** Los elementos adicionales en el historial: sin proveedor ni costo, que son solo para la administradora. */
+function resumenExtras(extras: ExtraGuardado[]) {
+    return extras.map((e) => ({ externo: true, tag: e.tag, nombre: e.nombre, cantidad: e.cantidad, precioUnit: e.precioUnit }));
 }
 
 /**
@@ -203,7 +262,7 @@ export const cotizacionesRouter = Router();
 // respuesta antes de bajar su PDF y cada viaje a la base cuesta ~0,25 s (antes eran 7 viajes,
 // ~2 s). Al ser una sola sentencia SQL es atómica: si algo falla (p. ej. un servicio que ya no
 // existe) no queda nada a medias.
-cotizacionesRouter.post('/', asyncHandler(async (req, res) => {
+cotizacionesRouter.post('/', limiteCotizar, asyncHandler(async (req, res) => {
     const entrada = normalizarCotizacion(req.body);
     if (!entrada.ok) return res.status(400).json({ status: 'error', message: entrada.message });
     const { cliente, items } = entrada.datos;
@@ -323,7 +382,7 @@ cotizacionesRouter.get('/', requireRole('administrador', 'secretaria'), asyncHan
 
 // Detalle de una cotización con sus servicios. La secretaria no puede abrir las que aún se revisan.
 cotizacionesRouter.get('/:id', requireRole('administrador', 'secretaria'), asyncHandler(async (req, res) => {
-    const [fila, items] = await Promise.all([obtenerFilaCotizacion(req.params.id), obtenerItems(req.params.id)]);
+    const [fila, items, extras] = await Promise.all([obtenerFilaCotizacion(req.params.id), obtenerItems(req.params.id), obtenerExtras(req.params.id)]);
     if (!fila) return res.status(404).json({ status: 'error', message: 'Cotización no encontrada' });
 
     const estado = derivarEstado(fila);
@@ -331,7 +390,7 @@ cotizacionesRouter.get('/:id', requireRole('administrador', 'secretaria'), async
         return res.status(403).json({ status: 'error', message: 'No tienes permiso para ver esta cotización' });
     }
 
-    res.json(mapCotizacion(fila, items));
+    res.json(mapCotizacion(fila, items, extras, req.usuario!.rol === 'administrador'));
 }));
 
 cotizacionesRouter.put('/:id/items', requireRole('administrador'), asyncHandler(async (req, res) => {
@@ -339,8 +398,13 @@ cotizacionesRouter.put('/:id/items', requireRole('administrador'), asyncHandler(
     if (items === null) {
         return res.status(400).json({ status: 'error', message: 'La lista de servicios no es válida' });
     }
+    // Si no vienen `extras`, los elementos adicionales guardados no se tocan; si vienen, la lista reemplaza a la guardada.
+    const extras = normalizarExtras((req.body as { extras?: unknown }).extras);
+    if (extras === null) {
+        return res.status(400).json({ status: 'error', message: 'La lista de elementos adicionales no es válida. Revisa el nombre, la cantidad y el precio de cada uno.' });
+    }
 
-    const [fila, itemsAntes] = await Promise.all([obtenerFilaCotizacion(req.params.id), obtenerItems(req.params.id)]);
+    const [fila, itemsAntes, extrasAntes] = await Promise.all([obtenerFilaCotizacion(req.params.id), obtenerItems(req.params.id), obtenerExtras(req.params.id)]);
     if (!fila) return res.status(404).json({ status: 'error', message: 'Cotización no encontrada' });
 
     const nuevoEstado = fila.quote_estado === 'recibida' ? 'en_revision' : fila.quote_estado;
@@ -353,6 +417,24 @@ cotizacionesRouter.put('/:id/items', requireRole('administrador'), asyncHandler(
     try {
         await db.query('begin');
         await db.query('delete from quote_items where quote_id = $1', [fila.id]);
+        if (extras !== undefined) {
+            // El trigger update_total_quote_extra resta cada elemento al borrarlo y suma los nuevos al insertarlos.
+            await db.query('delete from quote_extra_items where quote_id = $1', [fila.id]);
+            if (extras.length > 0) {
+                await db.query(
+                    `insert into quote_extra_items (quote_id, tag, name, description, quantity, unit_price, supplier, supplier_cost, nota)
+                     select $1, s.tag, s.nombre, s.descripcion, s.cantidad, s.precio, s.proveedor, s.costo, s.nota
+                     from unnest($2::text[], $3::text[], $4::text[], $5::int[], $6::numeric[], $7::text[], $8::numeric[], $9::text[])
+                          as s(tag, nombre, descripcion, cantidad, precio, proveedor, costo, nota)`,
+                    [
+                        fila.id,
+                        extras.map((e) => e.tag), extras.map((e) => e.nombre), extras.map((e) => e.descripcion ?? null),
+                        extras.map((e) => e.cantidad), extras.map((e) => e.precioUnit), extras.map((e) => e.proveedor ?? null),
+                        extras.map((e) => e.costoProveedor ?? null), extras.map((e) => e.nota ?? null)
+                    ]
+                );
+            }
+        }
         if (items.length > 0) {
             await db.query(
                 `insert into quote_items (quote_id, variant_id, quantity, nota)
@@ -365,7 +447,12 @@ cotizacionesRouter.put('/:id/items', requireRole('administrador'), asyncHandler(
             `with estado as (update quote set estado = $1, updated_at = now() where id = $2 returning id)
              insert into quote_historial (quote_id, profile_id, profile_nombre, tipo, items_antes, items_despues, estado_antes, estado_despues)
              values ($2, $3, $4, 'edicion', $5, $6, $7, $1)`,
-            [nuevoEstado, fila.id, req.usuario!.id, req.usuario!.nombre, JSON.stringify(itemsAntes), JSON.stringify(items), fila.quote_estado]
+            [
+                nuevoEstado, fila.id, req.usuario!.id, req.usuario!.nombre,
+                JSON.stringify([...itemsAntes, ...resumenExtras(extrasAntes)]),
+                JSON.stringify([...items, ...(extras === undefined ? resumenExtras(extrasAntes) : extras.map((e) => ({ externo: true, tag: e.tag, nombre: e.nombre, cantidad: e.cantidad, precioUnit: e.precioUnit })))]),
+                fila.quote_estado
+            ]
         );
         await db.query('commit');
     } catch (error) {
@@ -564,7 +651,7 @@ cotizacionesRouter.post('/:id/finalizar', requireRole('administrador'), asyncHan
 
 // PDF de la cotización para descargar desde el panel.
 cotizacionesRouter.get('/:id/pdf', requireRole('administrador', 'secretaria'), asyncHandler(async (req, res) => {
-    const [fila, itemsGuardados] = await Promise.all([obtenerFilaCotizacion(req.params.id), obtenerItems(req.params.id)]);
+    const [fila, itemsGuardados, extrasGuardados] = await Promise.all([obtenerFilaCotizacion(req.params.id), obtenerItems(req.params.id), obtenerExtras(req.params.id)]);
     if (!fila) return res.status(404).json({ status: 'error', message: 'Cotización no encontrada' });
 
     const estado = derivarEstado(fila);
@@ -572,7 +659,8 @@ cotizacionesRouter.get('/:id/pdf', requireRole('administrador', 'secretaria'), a
         return res.status(403).json({ status: 'error', message: 'No tienes permiso para ver esta cotización' });
     }
 
-    const items: ItemCotizacionPdf[] = itemsGuardados.map((i) => ({
+    // Para el cliente un elemento adicional es un servicio más: nada indica que se consigue aparte.
+    const items: ItemCotizacionPdf[] = [...itemsGuardados, ...extrasGuardados].map((i) => ({
         tag: i.tag,
         nombre: i.cantidad > 1 ? `${i.cantidad} x ${i.nombre}` : i.nombre,
         descripcion: i.descripcion,

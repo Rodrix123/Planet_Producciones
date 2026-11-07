@@ -34,6 +34,8 @@ interface Cotizacion {
     lugar: string | null;
     fechaEvento: string | null;
     items: ItemSeleccionado[];
+    // Elementos adicionales: no salen de la bodega, se consiguen aparte; se muestran como un servicio más.
+    extras?: { tag: string; nombre: string; descripcion: string; cantidad: number; precioUnit: number; nota?: string | null }[];
     total: number;
     estado: string;
 }
@@ -108,7 +110,7 @@ async function abrirDetalle(id: string) {
         <div class="detail-row"><div class="detail-row-main"><strong>Fecha del evento:</strong> ${cotizacion.fechaEvento ? new Date(cotizacion.fechaEvento + 'T00:00:00').toLocaleDateString('es-CO') : 'Sin definir'}</div></div>
     `;
 
-    document.getElementById('listaItemsDetalle')!.innerHTML = cotizacion.items.map((item) => `
+    document.getElementById('listaItemsDetalle')!.innerHTML = [...cotizacion.items, ...(cotizacion.extras ?? [])].map((item) => `
         <div class="detail-row">
             <div>
                 <div class="detail-row-main"><strong>${esc(item.cantidad > 1 ? `${item.cantidad} x ${item.nombre}` : item.nombre)}</strong></div>

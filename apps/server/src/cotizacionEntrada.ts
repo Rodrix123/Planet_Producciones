@@ -8,6 +8,18 @@ export interface ItemEntrada {
     nota?: string;
 }
 
+/** Elemento adicional: no sale de la bodega, se alquila o se consigue aparte (tabla quote_extra_items). */
+export interface ExtraEntrada {
+    tag: string;
+    nombre: string;
+    descripcion?: string;
+    cantidad: number;
+    precioUnit: number;
+    proveedor?: string;
+    costoProveedor?: number;
+    nota?: string;
+}
+
 export interface CotizacionEntrada {
     cliente: { nombre: string; correo: string; telefono: string; documento: string | null };
     tipoEvento: string | null;
@@ -28,8 +40,18 @@ export const LIMITES = {
     documento: 50,
     tipoEvento: 100,
     lugar: 255,
-    cantidad: 100000
+    cantidad: 100000,
+    extraNombre: 150,
+    extraTag: 100,
+    extraTexto: 1000,
+    extraProveedor: 150,
+    extraCantidad: 100,
+    /** Tope de numeric(10,2): un precio más grande no cabe en la base. */
+    extraPrecio: 99999999.99
 } as const;
+
+/** Elementos adicionales que puede tener una cotización (límite razonable para no llenar el PDF). */
+export const MAX_EXTRAS = 50;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const FECHA_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -80,6 +102,55 @@ export function normalizarItems(items: unknown): ItemEntrada[] | null {
         if (vistos.has(variantId)) return null; // la tabla no admite el mismo servicio dos veces
         vistos.add(variantId);
         salida.push({ variantId, cantidad: cantidad as number, nota: limpiarTexto(it.nota) || undefined });
+    }
+    return salida;
+}
+
+/** Dinero en pesos: número finito, con a lo sumo dos decimales y dentro de lo que cabe en la base. */
+function aDinero(valor: unknown): number | undefined {
+    const n = typeof valor === 'string' && /^\d{1,10}(\.\d{1,2})?$/.test(valor.trim()) ? Number(valor.trim()) : valor;
+    if (typeof n !== 'number' || !Number.isFinite(n) || n < 0 || n > LIMITES.extraPrecio) return undefined;
+    return Math.abs(n * 100 - Math.round(n * 100)) < 1e-6 ? Math.round(n * 100) / 100 : undefined;
+}
+
+/**
+ * Valida los elementos adicionales de una cotización.
+ *  - undefined: no vinieron (la edición no los toca).
+ *  - null: lista inválida (hay que responder 400).
+ *  - arreglo: la lista completa, que reemplaza a la guardada.
+ */
+export function normalizarExtras(extras: unknown): ExtraEntrada[] | null | undefined {
+    if (extras === undefined) return undefined;
+    if (!Array.isArray(extras) || extras.length > MAX_EXTRAS) return null;
+    const salida: ExtraEntrada[] = [];
+    for (const crudo of extras) {
+        if (!crudo || typeof crudo !== 'object') return null;
+        const e = crudo as Record<string, unknown>;
+        const nombre = limpiarTexto(e.nombre);
+        const tag = limpiarTexto(e.tag) || 'ELEMENTO ADICIONAL';
+        const descripcion = limpiarTexto(e.descripcion);
+        const proveedor = limpiarTexto(e.proveedor);
+        const nota = limpiarTexto(e.nota);
+        const cantidad = e.cantidad;
+        const precioUnit = aDinero(e.precioUnit);
+        const sinCosto = e.costoProveedor === undefined || e.costoProveedor === null || e.costoProveedor === '';
+        const costoProveedor = sinCosto ? undefined : aDinero(e.costoProveedor);
+
+        if (!nombre || nombre.length > LIMITES.extraNombre || tag.length > LIMITES.extraTag) return null;
+        if (descripcion.length > LIMITES.extraTexto || nota.length > LIMITES.extraTexto || proveedor.length > LIMITES.extraProveedor) return null;
+        if (!Number.isSafeInteger(cantidad) || (cantidad as number) <= 0 || (cantidad as number) > LIMITES.extraCantidad) return null;
+        if (precioUnit === undefined || precioUnit <= 0) return null;
+        if (!sinCosto && costoProveedor === undefined) return null;
+        salida.push({
+            tag,
+            nombre,
+            descripcion: descripcion || undefined,
+            cantidad: cantidad as number,
+            precioUnit,
+            proveedor: proveedor || undefined,
+            costoProveedor,
+            nota: nota || undefined
+        });
     }
     return salida;
 }
