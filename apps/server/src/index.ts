@@ -14,6 +14,7 @@ import { inventarioRouter } from './routes/inventario.routes';
 import { cuentasAccesoRouter } from './routes/cuentasAcceso.routes';
 import { panelRouter } from './routes/panel.routes';
 import { eventosRouter } from './routes/eventos.routes';
+import { asignacionesRouter } from './routes/asignaciones.routes';
 
 // Red de seguridad: en Node 18+ un rechazo de promesa no manejado (fuera de una ruta
 // Express, p.ej. en un .then()/.catch() que se nos escapó) termina el proceso completo
@@ -44,6 +45,8 @@ app.use('/api/pqrs', pqrsRouter);
 app.use('/api/inventario', inventarioRouter);
 app.use('/api/cuentas-acceso', cuentasAccesoRouter);
 app.use('/api/panel', panelRouter);
+// Antes que /api/eventos: personal asignado a cada evento (historia de usuario 2)
+app.use('/api/eventos/:eventoId/personal', asignacionesRouter);
 app.use('/api/eventos', eventosRouter);
 
 // Manejador de errores central: toda ruta async usa asyncHandler() (ver src/asyncHandler.ts),
