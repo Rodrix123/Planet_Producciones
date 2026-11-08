@@ -11,7 +11,7 @@ import './inventario.css';
 import { api } from './api';
 import {
     $, ESTADOS, arrancarInventario, esc, formatearFecha, insigniaEstado, nombreVariante, normalizar,
-    plural, textoUnidades,
+    textoUnidades,
     type Elemento, type EstadoUnidad, type Tipo, type Unidad, type Variante
 } from './inventario-comun';
 
@@ -129,7 +129,7 @@ function tablaUnidades(visibles: Fila[]): string {
 }
 
 // Vuelve a dibujar la tabla, el resumen y los botones según el buscador y los filtros.
-function render(elemento: Elemento): void {
+function render(): void {
     const q = normalizar(buscador.value.trim());
     const hayFiltros = q !== '' || variantesElegidas.size > 0 || estadosElegidos.size > 0;
     const visibles = filas.filter(f => pasaFiltros(f, q));
@@ -138,16 +138,15 @@ function render(elemento: Elemento): void {
     textoEstado.textContent = textoBoton(menuEstado, 'Todos', 'seleccionados');
     limpiarFiltros.hidden = !hayFiltros;
 
-    const variantes = plural(elemento.variantes.length, 'variante', 'variantes');
     resumen.textContent = hayFiltros
-        ? `${visibles.length} de ${textoUnidades(filas.length)} · ${variantes}`
-        : `${textoUnidades(filas.length)} · ${variantes}`;
+        ? `${visibles.length} de ${textoUnidades(filas.length)}`
+        : textoUnidades(filas.length);
 
     tabla.innerHTML = tablaUnidades(visibles);
 }
 
 // Conecta las listas, el botón de limpiar y el buscador.
-function conectarFiltros(el: Elemento): void {
+function conectarFiltros(): void {
     // Abrir o cerrar una lista desde su botón.
     filtros.addEventListener('click', ev => {
         const btn = (ev.target as HTMLElement).closest<HTMLElement>('.multi-btn');
@@ -166,7 +165,7 @@ function conectarFiltros(el: Elemento): void {
         const elegidos = casilla.dataset.filtro === 'variante' ? variantesElegidas : estadosElegidos;
         if (casilla.checked) (elegidos as Set<string>).add(casilla.value);
         else (elegidos as Set<string>).delete(casilla.value);
-        render(el);
+        render();
     });
 
     // "Limpiar filtros" quita todo, búsqueda incluida.
@@ -176,7 +175,7 @@ function conectarFiltros(el: Elemento): void {
         buscador.value = '';
         filtros.querySelectorAll<HTMLInputElement>('input[type="checkbox"]').forEach(c => { c.checked = false; });
         cerrarMenus();
-        render(el);
+        render();
     });
 
     // Las listas se cierran al hacer clic fuera o con Escape.
@@ -187,7 +186,7 @@ function conectarFiltros(el: Elemento): void {
         if (ev.key === 'Escape') cerrarMenus();
     });
 
-    buscador.addEventListener('input', () => render(el));
+    buscador.addEventListener('input', () => render());
 }
 
 // ---------- Carga ----------
@@ -224,8 +223,8 @@ async function cargar(): Promise<void> {
 
         filas = el.variantes.flatMap(variante => variante.unidades.map(unidad => ({ variante, unidad })));
         armarFiltros(el);
-        conectarFiltros(el);
-        render(el);
+        conectarFiltros();
+        render();
     } catch (err) {
         mostrarError(`No se pudo cargar el inventario: ${esc((err as Error).message)}`);
     }
