@@ -454,7 +454,7 @@ function htmlTablaElementos(elementos: ElementoEvento[]): string {
         filas);
 }
 
-/** Vista "Por tipo": una tabla por tipo, solo con el elemento y la cantidad. */
+/** Vista "Por tipo": una tabla por tipo, con el tipo como encabezado del elemento y la cantidad. */
 function htmlElementosPorTipo(elementos: ElementoEvento[]): string {
     // El API los entrega ordenados por tipo: basta con agruparlos en orden de llegada.
     const porTipo = new Map<string, ElementoEvento[]>();
@@ -462,9 +462,8 @@ function htmlElementosPorTipo(elementos: ElementoEvento[]): string {
 
     return [...porTipo].map(([tipo, lista]) => `
         <div class="elementos-grupo">
-            <h3>${esc(tipo)}</h3>
             ${envolverTabla(
-                '<th scope="col">Elementos</th><th scope="col" class="num">Cantidad</th>',
+                `<th scope="col">${esc(tipo)}</th><th scope="col" class="num">Cantidad</th>`,
                 lista.map(el => `<tr><td>${esc(el.nombre)}</td><td class="num">${el.cantidad}</td></tr>`).join(''))}
         </div>`).join('');
 }
@@ -486,7 +485,7 @@ function htmlElementos(elementos: ElementoEvento[]): string {
                 ${botonVista('tabla', 'Tabla')}${botonVista('tipo', 'Por tipo')}
             </div>
         </div>
-        <div id="elementosVista">${htmlVistaElementos()}</div>`;
+        <div id="elementosVista" class="elementos-vista">${htmlVistaElementos()}</div>`;
 }
 
 /** Cambia de vista sin volver a pedir los elementos; solo se reemplaza la vista, el selector conserva el foco. */
