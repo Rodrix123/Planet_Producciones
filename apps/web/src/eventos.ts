@@ -443,7 +443,7 @@ function htmlElementos(elementos: ElementoEvento[]): string {
             <table class="elementos-tabla">
                 <thead>
                     <tr>
-                        <th scope="col">Variante</th>
+                        <th scope="col">Elementos</th>
                         <th scope="col">Tipo</th>
                         <th scope="col" class="num">Cantidad</th>
                     </tr>
@@ -461,10 +461,7 @@ async function abrirElementos(boton: HTMLElement): Promise<void> {
 
     modalContenido.innerHTML = `
         <div class="elementos-head">
-            <div>
-                <h2 id="elementosTitulo">Elementos del evento</h2>
-                <p>${esc(nombreTipo(evento))} · ${esc(evento.fecha ? formatearFechaLarga(evento.fecha) : 'Fecha por definir')}</p>
-            </div>
+            <h2 id="elementosTitulo">Elementos del evento</h2>
             <button type="button" class="modal-cerrar" id="elementosCerrar" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
         </div>
         <div id="elementosCuerpo"><p class="modal-texto"><i class="fa-solid fa-spinner fa-spin"></i> Cargando elementos...</p></div>`;
