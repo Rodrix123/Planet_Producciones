@@ -39,21 +39,19 @@ Esto instala las dependencias de todos los workspaces (`apps/server`,
 ## Desarrollo
 
 ```bash
-# API y web en http://localhost:5174
-npm run dev
-
-# Solo el servidor (API + web ya compilada)
+# Backend (http://localhost:3000)
 npm run dev:server
 
-# Solo recompilar la web al guardar
+# Frontend (Vite dev server)
 npm run dev:web
+
+# Ambos a la vez
+npm run dev
 ```
 
-Abrir la app en http://localhost:5174, el único puerto de desarrollo: Express
-sirve la API y la web compilada. Al guardar, la web se recompila y hay que
-recargar el navegador a mano. El navegador no ejecuta TypeScript directamente,
-por eso `apps/web/index.html` no funciona abierto con doble clic ni con Live
-Server sin compilar.
+Abrir la app en http://localhost:5173 (Vite). El navegador no ejecuta
+TypeScript directamente, por eso `apps/web/index.html` no funciona abierto
+con doble clic ni con Live Server sin compilar.
 
 ## Build de producción
 
@@ -63,7 +61,7 @@ npm start
 ```
 
 Tras el build, el servidor sirve también el frontend compilado en
-http://localhost:5174.
+http://localhost:3000.
 
 El servidor se compila en **un solo archivo** (`apps/server/dist/index.js`, con esbuild; ver
 `apps/server/scripts/build.mjs`) que ya incluye el paquete `@my-app/db` del monorepo. Antes se usaba
@@ -105,7 +103,7 @@ reales (usuario/clave SMTP, correo de destino, puerto).
 docker compose up --build
 ```
 
-Levanta el backend en `:5174` y el frontend (servido por Nginx) en `:8080`.
+Levanta el backend en `:3000` y el frontend (servido por Nginx) en `:8080`.
 
 Los contratos firmados se guardan en el volumen `contratos_firmados` (montado en `/app/uploads`), así
 que **sobreviven a volver a desplegar**. Haz copia de seguridad de ese volumen:
