@@ -157,9 +157,8 @@ const montosPendientes = (e: EventoPago): string =>
     `<span>Pagado ${formatearMoneda(e.totalPagado)} de ${formatearMoneda(e.total)}</span><strong class="pago-saldo">Saldo ${formatearMoneda(e.saldo)}</strong>`;
 
 function tarjeta(e: EventoPago, clave: ClaveColumna): string {
-    const accion = clave === 'sinPagar'
-        ? botonPago(e)
-        : `<span class="pago-sello" title="Pagado"><i class="fa-solid fa-circle-check"></i> Pagado</span>`;
+    // Los pagados no llevan nada a la derecha: la columna ya dice que están pagados.
+    const accion = clave === 'sinPagar' ? botonPago(e) : '';
     const montos = clave === 'sinPagar'
         ? montosPendientes(e)
         : `<span>Total ${formatearMoneda(e.total)}</span><span>Pagado ${formatearMoneda(e.totalPagado)}</span>`;
@@ -320,7 +319,7 @@ function pasoIngreso(e: EventoPago, borrador: BorradorPago): void {
         <h2>Registrar pago</h2>
         ${resumenEvento(e)}
         <label class="campo"><span>Monto a pagar</span>
-            <input type="text" inputmode="decimal" id="pagoMonto" value="${esc(borrador.monto)}">
+            <input type="text" inputmode="decimal" id="pagoMonto" autocomplete="off" value="${esc(borrador.monto)}">
         </label>
         <label class="campo"><span>Método de pago</span>
             <select id="pagoMetodo">
@@ -329,7 +328,7 @@ function pasoIngreso(e: EventoPago, borrador: BorradorPago): void {
             </select>
         </label>
         <label class="campo"><span>Referencia (opcional)</span>
-            <input type="text" id="pagoReferencia" maxlength="150" value="${esc(borrador.referencia)}">
+            <input type="text" id="pagoReferencia" maxlength="150" autocomplete="off" value="${esc(borrador.referencia)}">
         </label>
         <p class="form-error" id="pagoError" hidden></p>
         <div class="modal-acciones">

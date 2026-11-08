@@ -122,18 +122,19 @@
     outline-offset: 3px;
 }
 
-/* "Añadir pago" va a la derecha en la franja roja de "Eventos sin pagar": píldora sin sombra,
-   de 36px para que la franja mida lo mismo que la de "Eventos pagados". El fondo es el dorado
-   champaña de la página principal: resalta sobre el rojo (el naranja se perdería, es del mismo
-   tono) y la tinta se lee bien encima. */
+/* "Añadir pago" va a la derecha en la franja roja de "Eventos sin pagar": píldora sin sombra
+   con alto fijo de 40px, que cabe en la franja de 72px sin estirarla. */
 .pagos-btn-anadir {
     display: inline-flex;
     align-items: center;
     gap: 0.45rem;
     flex-shrink: 0;
-    min-height: 36px;
-    margin-left: auto;
-    padding: 0.4rem 1rem;
+    box-sizing: border-box;
+    height: 40px;
+    min-height: 0;
+    margin: 0 0 0 auto;
+    padding: 0 1rem;
+    line-height: 1;
     border: none;
     border-radius: 999px;
     background: #9cf494;
@@ -253,10 +254,15 @@
     color: #fff;
 }
 
-/* Esquinas de arriba con el mismo redondeo que el recuadro (8px menos 1px de su borde). */
+/* Esquinas de arriba con el mismo redondeo que el recuadro (8px menos 1px de su borde).
+   Alto fijo e igual en las dos columnas: con o sin el botón "Añadir pago", las franjas miden
+   lo mismo y todo lo de abajo (buscador, fechas, lista) queda a la misma altura. */
 .pagos-panel .deck-head {
+    box-sizing: border-box;
+    height: 72px;
+    min-height: 0;
     margin: -1.4rem -1.4rem 1.25rem;
-    padding: 1rem 1.4rem;
+    padding: 0 1.4rem;
     border-radius: 7px 7px 0 0;
 }
 
@@ -455,15 +461,6 @@
 .pago-agregar:focus-visible {
     outline: 2px solid var(--orange-main);
     outline-offset: 2px;
-}
-
-.pago-sello {
-    flex-shrink: 0;
-    align-self: center;
-    font-size: 0.8rem;
-    font-weight: 700;
-    color: #1d6b49;
-    white-space: nowrap;
 }
 
 /* ---------- Ventana de pago ---------- */
