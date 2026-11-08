@@ -11,7 +11,7 @@ import './inventario.css';
 import { api } from './api';
 import {
     $, ESTADOS, arrancarInventario, esc, formatearFecha, insigniaEstado, nombreVariante, normalizar,
-    plural, textoUnidades, vacio,
+    plural, textoUnidades,
     type Elemento, type EstadoUnidad, type Tipo, type Unidad, type Variante
 } from './inventario-comun';
 
@@ -96,9 +96,12 @@ function pasaFiltros(f: Fila, q: string): boolean {
 }
 
 // ---------- Tabla ----------
+// Fila vacía que se muestra cuando no hay unidades (con o sin filtros), en lugar de un aviso.
+const FILA_VACIA = `<tr class="inv-fila-vacia">${'<td></td>'.repeat(6)}</tr>`;
+
 // Tabla con una fila por unidad física; las características son las del menú, sin el ID.
 function tablaUnidades(visibles: Fila[]): string {
-    const cuerpo = visibles.map(({ variante: v, unidad: u }) => `
+    const cuerpo = visibles.length === 0 ? FILA_VACIA : visibles.map(({ variante: v, unidad: u }) => `
         <tr>
             <td>${esc(nombreVariante(v))}</td>
             <td class="inv-codigo">${u.codigoBarras ? esc(u.codigoBarras) : '<span class="inv-sin-dato">Sin código de barras</span>'}</td>
@@ -140,9 +143,7 @@ function render(elemento: Elemento): void {
         ? `${visibles.length} de ${textoUnidades(filas.length)} · ${variantes}`
         : `${textoUnidades(filas.length)} · ${variantes}`;
 
-    if (filas.length === 0) tabla.innerHTML = vacio('Sin unidades registradas.');
-    else if (visibles.length === 0) tabla.innerHTML = vacio('Ninguna unidad coincide con la búsqueda y los filtros.');
-    else tabla.innerHTML = tablaUnidades(visibles);
+    tabla.innerHTML = tablaUnidades(visibles);
 }
 
 // Conecta las listas, el botón de limpiar y el buscador.

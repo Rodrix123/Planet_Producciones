@@ -324,9 +324,13 @@
     color: var(--text-muted);
 }
 
-#tabla > .inv-vacio {
-    text-align: center;
-    padding: 2rem;
+/* Sin unidades (con o sin filtros) la tabla queda con una fila vacía. */
+.inv-tabla .inv-fila-vacia td {
+    height: 2.75rem;
+}
+
+.inv-tabla tbody tr.inv-fila-vacia:hover {
+    background: transparent;
 }
 
 /* Barra de filtros de la tabla: usa .filtros/.filtro-multi de panel.css con los mismos
