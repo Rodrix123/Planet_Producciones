@@ -41,8 +41,13 @@ function esPdf(ruta: string): boolean {
     }
 }
 
+// Se borra de forma síncrona para que el archivo ya no exista cuando sale la respuesta
+// (con fs.unlink asíncrono la respuesta podía llegar antes que el borrado). Si no existe, se ignora.
 function borrarArchivo(nombre: string | null | undefined): void {
-    if (nombre) fs.unlink(path.join(UPLOAD_DIR, path.basename(nombre)), () => undefined);
+    if (!nombre) return;
+    try {
+        fs.unlinkSync(path.join(UPLOAD_DIR, path.basename(nombre)));
+    } catch { /* ya no estaba: nada que borrar */ }
 }
 
 // Datos de la cotización y del evento que necesita el contrato.
