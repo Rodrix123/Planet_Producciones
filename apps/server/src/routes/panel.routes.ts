@@ -1,3 +1,5 @@
+// Contadores del menú lateral de los paneles (/api/panel).
+
 import { Router } from 'express';
 import { pool } from '../db';
 import { requireAuth } from '../auth';
@@ -44,5 +46,6 @@ panelRouter.get('/contadores', requireAuth, asyncHandler(async (req, res) => {
         });
     }
 
+    // Andrés (jefe de logística) no tiene señales por ahora.
     res.json({});
 }));

@@ -1,5 +1,9 @@
+// Encabezado común de los paneles: nombre y rol de quien está conectado, salir y las señales del menú.
+
+import { esc } from './panelShell';
 import { apiFetch, type SesionActual } from './api';
 
+// Cómo se muestra cada rol.
 const NOMBRE_ROL: Record<SesionActual['rol'], string> = {
     administrador: 'Administradora',
     secretaria: 'Secretaria',
@@ -11,7 +15,7 @@ const NOMBRE_ROL: Record<SesionActual['rol'], string> = {
 export function initPanelLayout(sesion: SesionActual): void {
     const nombreEl = document.getElementById('panelUserName');
     if (nombreEl) {
-        nombreEl.innerHTML = `<strong>${sesion.nombre}</strong> · ${NOMBRE_ROL[sesion.rol]}`;
+        nombreEl.innerHTML = `<strong>${esc(sesion.nombre)}</strong> · ${NOMBRE_ROL[sesion.rol]}`;
     }
 
     const btnLogout = document.getElementById('btnLogout');

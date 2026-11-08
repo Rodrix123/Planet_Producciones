@@ -1,3 +1,7 @@
+// Inventario (solo lectura) para la administradora y el jefe de logística: árbol de cuatro niveles
+// tipo > elemento > variante > unidad física, con buscador. El contenido de cada nivel se arma
+// solo cuando se abre, para que un inventario grande no haga lenta la página.
+
 import './style.css';
 import './panel.css';
 import './inventario.css';
@@ -5,8 +9,10 @@ import { api } from './api';
 import { exigirSesion, rutaPanelPorRol, type SesionActual } from './shared/api';
 import { initPanelLayout } from './shared/layout';
 
+// Estados posibles de una unidad física; deben coincidir con los de la base de datos.
 type EstadoUnidad = 'bueno' | 'danado' | 'en_reparacion' | 'dado_de_baja' | 'perdido';
 
+// Una pieza física concreta (con código de barras).
 interface Unidad {
     id: number;
     codigoBarras: string | null;
@@ -16,6 +22,7 @@ interface Unidad {
     actualizadoEn: string;
 }
 
+// Una versión de un elemento (por ejemplo, otro modelo o tamaño).
 interface Variante {
     id: number;
     nombre: string | null;
@@ -23,17 +30,20 @@ interface Variante {
     unidades: Unidad[];
 }
 
+// Un elemento del inventario (por ejemplo, un tipo de parlante).
 interface Elemento {
     id: number;
     nombre: string;
     variantes: Variante[];
 }
 
+// Una categoría del inventario; es el nivel más alto del árbol.
 interface Tipo {
     nombre: string;
     elementos: Elemento[];
 }
 
+// Cómo se nombra cada estado en pantalla.
 const ESTADOS: Record<EstadoUnidad, string> = {
     bueno: 'Bueno',
     danado: 'Dañado',
@@ -42,12 +52,14 @@ const ESTADOS: Record<EstadoUnidad, string> = {
     perdido: 'Perdido'
 };
 
+// Atajo para buscar un elemento de la página por su id.
 const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
 const arbol = $('arbol');
 const estado = $('estado');
 const resumen = $('resumen');
 const buscador = $<HTMLInputElement>('buscador');
 
+// Estado: árbol cargado del servidor y si ya terminó la carga.
 let tipos: Tipo[] = [];
 let cargado = false;
 // Posición de cada tipo en la lista completa: así su clave no cambia al filtrar.
@@ -60,11 +72,13 @@ const unidadesPorClave = new Map<string, Unidad>();
 // Niveles que la persona dejó abiertos (se conservan al buscar y al limpiar la búsqueda).
 const abiertos = new Set<string>();
 
+// Claves únicas de cada nivel ("t:", "e:", "v:", "u:"); identifican qué nivel está abierto.
 const claveTipo = (i: number): string => `t:${i}`;
 const claveElemento = (e: Elemento): string => `e:${e.id}`;
 const claveVariante = (v: Variante): string => `v:${v.id}`;
 const claveUnidad = (u: Unidad): string => `u:${u.id}`;
 
+// Escapa un texto antes de insertarlo como HTML.
 function esc(texto: string): string {
     const d = document.createElement('div');
     d.textContent = texto;
@@ -76,6 +90,7 @@ function normalizar(texto: string): string {
     return texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 }
 
+// "1 unidad" / "3 unidades".
 function plural(n: number, uno: string, varios: string): string {
     return `${n} ${n === 1 ? uno : varios}`;
 }
@@ -85,12 +100,14 @@ const unidadesDeElemento = (e: Elemento): number => e.variantes.reduce((n, v) =>
 const unidadesDeTipo = (t: Tipo): number => t.elementos.reduce((n, e) => n + unidadesDeElemento(e), 0);
 const textoUnidades = (n: number): string => plural(n, 'unidad', 'unidades');
 
+// Fecha y hora cortas en español; si no es válida, se muestra tal cual.
 function formatearFecha(iso: string): string {
     const d = new Date(iso);
     if (isNaN(d.getTime())) return esc(iso);
     return d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
+// Nombre de la variante, o "Variante #id" si no tiene.
 function nombreVariante(v: Variante): string {
     return v.nombre?.trim() || `Variante #${v.id}`;
 }
@@ -126,18 +143,22 @@ function nodoHtml(n: Nodo): string {
         </div>`;
 }
 
+// Mensaje para un nivel sin contenido.
 function vacio(texto: string): string {
     return `<p class="inv-vacio">${texto}</p>`;
 }
 
+// Una pareja etiqueta/valor del detalle de una unidad.
 function dato(etiqueta: string, valor: string): string {
     return `<div class="inv-dato"><dt>${etiqueta}</dt><dd>${valor}</dd></div>`;
 }
 
+// Etiqueta de color con el estado de la unidad.
 function insigniaEstado(e: EstadoUnidad): string {
     return `<span class="inv-estado inv-estado-${e}">${ESTADOS[e]}</span>`;
 }
 
+// Detalle de una unidad: ID, estado y fechas.
 function cuerpoUnidad(u: Unidad): string {
     return `<dl class="inv-datos">
         ${dato('ID', String(u.id))}
@@ -148,6 +169,7 @@ function cuerpoUnidad(u: Unidad): string {
     </dl>`;
 }
 
+// Nivel 4: la unidad física.
 function nodoUnidad(u: Unidad): string {
     const clave = claveUnidad(u);
     return nodoHtml({
@@ -162,6 +184,7 @@ function nodoUnidad(u: Unidad): string {
     });
 }
 
+// Contenido de una variante: su descripción y sus unidades.
 function cuerpoVariante(v: Variante): string {
     const detalle = v.descripcionDetallada?.trim()
         ? `<p class="inv-detalle">${esc(v.descripcionDetallada.trim())}</p>`
@@ -172,6 +195,7 @@ function cuerpoVariante(v: Variante): string {
     return detalle + unidades;
 }
 
+// Nivel 3: la variante.
 function nodoVariante(v: Variante, forzadas: Set<string>): string {
     const clave = claveVariante(v);
     return nodoHtml({
@@ -185,12 +209,14 @@ function nodoVariante(v: Variante, forzadas: Set<string>): string {
     });
 }
 
+// Contenido de un elemento: sus variantes.
 function cuerpoElemento(e: Elemento, forzadas: Set<string>): string {
     return e.variantes.length
         ? e.variantes.map(v => nodoVariante(v, forzadas)).join('')
         : vacio('Este elemento no tiene variantes.');
 }
 
+// Nivel 2: el elemento.
 function nodoElemento(e: Elemento, forzadas: Set<string>): string {
     const clave = claveElemento(e);
     return nodoHtml({
@@ -204,6 +230,7 @@ function nodoElemento(e: Elemento, forzadas: Set<string>): string {
     });
 }
 
+// Nivel 1: el tipo.
 function nodoTipo(t: Tipo, forzadas: Set<string>): string {
     const clave = claveTipo(tiposIndice.get(t.nombre)!);
     return nodoHtml({
@@ -217,6 +244,7 @@ function nodoTipo(t: Tipo, forzadas: Set<string>): string {
     });
 }
 
+// Reconstruye los índices por clave cada vez que llegan datos del servidor.
 function indexar(): void {
     tiposPorClave.clear();
     elementosPorClave.clear();
@@ -323,6 +351,7 @@ function cuerpoDe(clave: string): string {
     return unidad ? cuerpoUnidad(unidad) : '';
 }
 
+// Abre o cierra un nivel; el contenido se arma la primera vez que se abre.
 function alternar(cab: HTMLElement): void {
     const clave = cab.dataset.clave!;
     const cuerpo = $(cab.getAttribute('aria-controls')!);
@@ -334,6 +363,7 @@ function alternar(cab: HTMLElement): void {
     else abiertos.delete(clave);
 }
 
+// Trae el inventario completo del servidor y lo dibuja.
 async function cargar(): Promise<void> {
     try {
         const json = await api<{ tipos: Tipo[] }>('GET', '/api/inventario');
@@ -348,20 +378,24 @@ async function cargar(): Promise<void> {
     }
 }
 
+// Un solo oyente para todo el árbol: el clic en cualquier encabezado abre o cierra su nivel.
 arbol.addEventListener('click', ev => {
     const cab = (ev.target as HTMLElement).closest<HTMLElement>('.inv-cab');
     if (cab) alternar(cab);
 });
 
+// Cada letra del buscador vuelve a filtrar el árbol.
 buscador.addEventListener('input', () => {
     if (cargado) render();
 });
 
+// Menú lateral del jefe de logística (solo ve logística e inventario).
 const RAIL_LOGISTICA = `
     <a href="panel-logistica.html" class="rail-item"><i class="fa-solid fa-truck"></i><span>Logística</span></a>
     <a href="inventario.html" class="rail-item active"><i class="fa-solid fa-boxes-stacked"></i><span>Inventario</span></a>
 `;
 
+// Arranque: lo ven la administradora y el jefe de logística; cualquier otro rol va a su panel.
 document.addEventListener('DOMContentLoaded', async () => {
     const sesion = (await exigirSesion()) as SesionActual;
     if (sesion.rol !== 'administrador' && sesion.rol !== 'jefe_logistica') {

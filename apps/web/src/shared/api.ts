@@ -1,3 +1,8 @@
+// Comunicación con el servidor y control de sesión, compartidos por todas las pantallas:
+// apiFetch (peticiones con la cookie de sesión), exigirSesion (protege cada panel por rol) y
+// conManejoDeErrores (que una caída de red nunca quede en silencio).
+
+// Dirección del servidor. Vacía = el mismo sitio; en desarrollo se define con VITE_API_URL (apps/web/.env).
 const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 
 /** Construye una URL absoluta hacia el API a partir de una ruta relativa como '/api/x'. */
@@ -5,8 +10,10 @@ export function apiUrl(path: string): string {
     return `${API_BASE}${path}`;
 }
 
+// Roles del sistema; deben coincidir con los del servidor (apps/server/src/auth.ts).
 export type UsuarioRol = 'administrador' | 'secretaria' | 'jefe_logistica';
 
+// Datos de la sesión que devuelve /api/auth/me.
 export interface SesionActual {
     nombre: string;
     correo: string;
@@ -41,12 +48,16 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
     return res;
 }
 
+// Panel que corresponde a cada rol.
 const RUTA_POR_ROL: Record<UsuarioRol, string> = {
     administrador: 'panel-admin.html',
     secretaria: 'panel-secretaria.html',
     jefe_logistica: 'panel-logistica.html'
 };
 
+/**
+ * Página de inicio del panel de un rol.
+ */
 export function rutaPanelPorRol(rol: UsuarioRol): string {
     return RUTA_POR_ROL[rol];
 }

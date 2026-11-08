@@ -1,3 +1,5 @@
+// Inicio del panel de la administradora (Maritza): exige sesión de ese rol y arma el menú lateral.
+
 import './style.css';
 import './shared/panelRail.css';
 import { exigirSesion } from './shared/api';

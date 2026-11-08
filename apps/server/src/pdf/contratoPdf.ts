@@ -1,12 +1,19 @@
+// Contrato de prestación de servicios en PDF. Mariana lo envía por correo al cliente para que lo
+// firme; la firma de la representante legal (Maritza) ya va incrustada.
+// Texto legal fijo; solo cambian los datos del cliente, el evento, los servicios y el valor total.
+
 import PDFDocument from 'pdfkit';
 import path from 'path';
 import fs from 'fs';
+import { CARPETA_ASSETS } from '../rutas';
 
+// Un servicio del contrato: solo cantidad y nombre (sin precios por ítem).
 export interface ItemContratoPdf {
     cantidad: number;
     nombre: string;
 }
 
+// Datos que necesita el contrato; el módulo no consulta la base de datos.
 export interface ContratoParaPdf {
     numeroReferencia: string;
     clienteNombre: string;
@@ -19,12 +26,16 @@ export interface ContratoParaPdf {
     items: ItemContratoPdf[];
 }
 
+// AAAA-MM-DD -> "5 de diciembre de 2026".
 const formatearFechaLarga = (fecha: string) => {
     const [anio, mes, dia] = fecha.split('-');
     const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
     return `${parseInt(dia, 10)} de ${meses[parseInt(mes, 10) - 1]} de ${anio}`;
 };
 
+/**
+ * Genera el contrato en memoria y lo devuelve como Buffer.
+ */
 export function generarContratoPdfBuffer(contrato: ContratoParaPdf): Promise<Buffer> {
     return new Promise((resolve, reject) => {
         try {
@@ -33,8 +44,8 @@ export function generarContratoPdfBuffer(contrato: ContratoParaPdf): Promise<Buf
             doc.on('data', buffers.push.bind(buffers));
             doc.on('end', () => resolve(Buffer.concat(buffers)));
 
-            const logoPath = path.join(__dirname, '..', '..', 'assets', 'logo.png');
-            const firmaPath = path.join(__dirname, '..', '..', 'assets', 'firma-maritza.png');
+            const logoPath = path.join(CARPETA_ASSETS, 'logo.png');
+            const firmaPath = path.join(CARPETA_ASSETS, 'firma-maritza.png');
             const tieneLogo = fs.existsSync(logoPath);
             const tieneFirma = fs.existsSync(firmaPath);
             const ANCHO = doc.page.width;
@@ -74,11 +85,13 @@ export function generarContratoPdfBuffer(contrato: ContratoParaPdf): Promise<Buf
                 doc.moveDown(0.7);
             }
 
+            // Título de cada cláusula, en naranja y negrilla.
             function tituloClausula(texto: string) {
                 doc.fontSize(9).font('Helvetica-Bold').fillColor('#ea580c').text(texto, { width: ANCHO_UTIL });
                 doc.moveDown(0.35);
             }
 
+            // Lista con viñetas.
             function vinetas(items: string[]) {
                 if (items.length === 0) return;
                 doc.fontSize(9).font('Helvetica').fillColor('#334155');
@@ -86,6 +99,7 @@ export function generarContratoPdfBuffer(contrato: ContratoParaPdf): Promise<Buf
                 doc.moveDown(0.7);
             }
 
+            // Lista numerada.
             function numerada(items: string[]) {
                 doc.fontSize(9).font('Helvetica').fillColor('#334155');
                 doc.list(items, { listType: 'numbered', textIndent: 10, width: ANCHO_UTIL });

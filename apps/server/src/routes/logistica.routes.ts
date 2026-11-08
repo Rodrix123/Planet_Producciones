@@ -1,12 +1,17 @@
+// Panel del jefe de logística (/api/logistica): eventos confirmados con los equipos a cargar y
+// la lista de carga en PDF. Esta cuenta nunca ve precios ni datos de dinero.
+
 import { Router } from 'express';
 import { pool } from '../db';
 import { requireAuth, requireRole } from '../auth';
 import { asyncHandler } from '../asyncHandler';
+import { numeroReferencia } from '../referencia';
 import { generarListaCargaPdfBuffer } from '../pdf/listaCargaPdf';
 
 export const logisticaRouter = Router();
 logisticaRouter.use(requireAuth, requireRole('jefe_logistica'));
 
+// Datos del evento que necesita logística (sin precios).
 interface FilaEventoLogistica {
     event_id: string;
     quote_id: number;
@@ -19,6 +24,9 @@ interface FilaEventoLogistica {
     cliente_nombre: string | null;
 }
 
+/**
+ * Un evento CONFIRMADO por el id de su cotización; si no está confirmado devuelve null.
+ */
 async function obtenerEventoLogistica(quoteId: string): Promise<FilaEventoLogistica | null> {
     const { rows } = await pool.query<FilaEventoLogistica>(
         `select e.id as event_id, q.id as quote_id, q.created_at,
@@ -27,7 +35,7 @@ async function obtenerEventoLogistica(quoteId: string): Promise<FilaEventoLogist
                 coalesce(v.name, coalesce(e.venue_nombre_manual, q.venue_nombre_manual)) as venue_nombre,
                 coalesce(e.venue_direccion_manual, q.venue_direccion_manual) as venue_direccion_manual,
                 t.city as transportation_city,
-                u.name as cliente_nombre
+                coalesce(q.cliente_nombre, u.name) as cliente_nombre
          from events e
          join quote q on q.id = e.quote_id
          left join users u on u.id = q.client_id
@@ -39,6 +47,9 @@ async function obtenerEventoLogistica(quoteId: string): Promise<FilaEventoLogist
     return rows[0] || null;
 }
 
+/**
+ * Equipos de una cotización: tipo, nombre, descripción y cantidad. Sin precios.
+ */
 async function obtenerEquiposDeQuote(quoteId: string): Promise<{ tag: string; nombre: string; descripcion: string; cantidad: number }[]> {
     const { rows } = await pool.query(
         `select qi.quantity, iv.simple_description, iv.detailed_description, i.type
@@ -57,10 +68,28 @@ async function obtenerEquiposDeQuote(quoteId: string): Promise<{ tag: string; no
     }));
 }
 
-function numeroReferencia(id: number, creadaEn: string): string {
-    return `PL-${new Date(creadaEn).getFullYear()}-${String(id).padStart(4, '0')}`;
+/**
+ * Elementos externos de varias cotizaciones: los que se alquilan o se consiguen aparte y no salen de la
+ * bodega. Sin precios, proveedor ni costo (eso es solo para la administradora).
+ */
+async function obtenerExternosDeQuotes(quoteIds: (string | number)[]): Promise<Map<number, { nombre: string; descripcion: string; cantidad: number; nota: string | null }[]>> {
+    const { rows } = await pool.query(
+        `select quote_id, name, description, quantity, nota
+         from quote_extra_items
+         where quote_id = any($1::bigint[])
+         order by id`,
+        [quoteIds]
+    );
+    const porQuote = new Map<number, { nombre: string; descripcion: string; cantidad: number; nota: string | null }[]>();
+    for (const r of rows) {
+        const id = Number(r.quote_id);
+        if (!porQuote.has(id)) porQuote.set(id, []);
+        porQuote.get(id)!.push({ nombre: r.name, descripcion: r.description || '', cantidad: r.quantity, nota: r.nota });
+    }
+    return porQuote;
 }
 
+// Lista de eventos confirmados con sus equipos, del más próximo al más lejano.
 // Andrés nunca debe ver precios: la consulta ni siquiera selecciona inventory_variants.price.
 logisticaRouter.get('/eventos', asyncHandler(async (_req, res) => {
     const { rows: eventos } = await pool.query(
@@ -70,7 +99,7 @@ logisticaRouter.get('/eventos', asyncHandler(async (_req, res) => {
                 coalesce(v.name, coalesce(e.venue_nombre_manual, q.venue_nombre_manual)) as venue_nombre,
                 coalesce(e.venue_direccion_manual, q.venue_direccion_manual) as venue_direccion_manual,
                 t.city as transportation_city,
-                u.name as cliente_nombre
+                coalesce(q.cliente_nombre, u.name) as cliente_nombre
          from events e
          join quote q on q.id = e.quote_id
          left join users u on u.id = q.client_id
@@ -82,15 +111,19 @@ logisticaRouter.get('/eventos', asyncHandler(async (_req, res) => {
 
     if (eventos.length === 0) return res.json([]);
 
-    const { rows: items } = await pool.query(
-        `select qi.quote_id, qi.quantity, iv.simple_description, iv.detailed_description, i.type
-         from quote_items qi
-         join inventory_variants iv on iv.id = qi.variant_id
-         join inventory i on i.id = iv.inventory_id
-         where qi.quote_id = any($1)
-         order by i.type, iv.simple_description`,
-        [eventos.map((e) => e.quote_id)]
-    );
+    // Equipos de la bodega y elementos externos son consultas independientes: se piden a la vez.
+    const [{ rows: items }, externosPorQuote] = await Promise.all([
+        pool.query(
+            `select qi.quote_id, qi.quantity, iv.simple_description, iv.detailed_description, i.type
+             from quote_items qi
+             join inventory_variants iv on iv.id = qi.variant_id
+             join inventory i on i.id = iv.inventory_id
+             where qi.quote_id = any($1)
+             order by i.type, iv.simple_description`,
+            [eventos.map((e) => e.quote_id)]
+        ),
+        obtenerExternosDeQuotes(eventos.map((e) => e.quote_id))
+    ]);
 
     const equiposPorQuote = new Map<number, { tag: string; nombre: string; descripcion: string; cantidad: number }[]>();
     for (const item of items) {
@@ -105,23 +138,25 @@ logisticaRouter.get('/eventos', asyncHandler(async (_req, res) => {
 
     res.json(eventos.map((e) => ({
         id: e.quote_id,
-        numeroReferencia: `PL-${new Date(e.created_at).getFullYear()}-${String(e.quote_id).padStart(4, '0')}`,
+        numeroReferencia: numeroReferencia(e.quote_id, e.created_at),
         clienteNombre: e.cliente_nombre,
         tipoEvento: e.event_type,
         ciudad: e.transportation_city,
         lugar: e.venue_nombre,
         direccion: e.venue_direccion_manual,
         fechaEvento: e.fecha_evento,
-        equipos: equiposPorQuote.get(e.quote_id) || []
+        equipos: equiposPorQuote.get(e.quote_id) || [],
+        externos: externosPorQuote.get(e.quote_id) || []
     })));
 }));
 
 // Lista de carga en PDF para alistar el camión (sin precios).
+// Lista de carga en PDF de un evento (qué equipos cargar y para dónde).
 logisticaRouter.get('/eventos/:id/pdf', asyncHandler(async (req, res) => {
     const fila = await obtenerEventoLogistica(req.params.id);
     if (!fila) return res.status(404).json({ status: 'error', message: 'Evento no encontrado' });
 
-    const equipos = await obtenerEquiposDeQuote(req.params.id);
+    const [equipos, externosPorQuote] = await Promise.all([obtenerEquiposDeQuote(req.params.id), obtenerExternosDeQuotes([req.params.id])]);
 
     const buffer = await generarListaCargaPdfBuffer({
         numeroReferencia: numeroReferencia(fila.quote_id, fila.created_at),
@@ -131,7 +166,8 @@ logisticaRouter.get('/eventos/:id/pdf', asyncHandler(async (req, res) => {
         lugar: fila.venue_nombre,
         direccion: fila.venue_direccion_manual,
         fechaEvento: fila.fecha_evento,
-        equipos
+        equipos,
+        externos: externosPorQuote.get(Number(req.params.id)) || []
     });
 
     res.setHeader('Content-Type', 'application/pdf');
