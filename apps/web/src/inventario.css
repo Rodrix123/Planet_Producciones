@@ -307,6 +307,12 @@
     border-bottom: 0;
 }
 
+/* Divisiones verticales entre columnas. */
+.inv-tabla th + th,
+.inv-tabla td + td {
+    border-left: 1px solid var(--border-color);
+}
+
 .inv-tabla tbody tr:hover {
     background: var(--bg-input);
 }

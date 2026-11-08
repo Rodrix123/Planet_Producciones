@@ -116,7 +116,7 @@ function tablaUnidades(visibles: Fila[]): string {
             <td>${esc(nombreVariante(v))}</td>
             <td class="inv-codigo">${u.codigoBarras ? esc(u.codigoBarras) : '<span class="inv-sin-dato">Sin código de barras</span>'}</td>
             <td>${insigniaEstado(u.estado)}</td>
-            <td class="inv-detalle-estado">${u.descripcionEstado?.trim() ? esc(u.descripcionEstado.trim()) : '<span class="inv-sin-dato">—</span>'}</td>
+            <td class="inv-detalle-estado">${u.descripcionEstado?.trim() ? esc(u.descripcionEstado.trim()) : ''}</td>
             <td class="inv-fecha">${formatearFecha(u.creadoEn)}</td>
             <td class="inv-fecha">${formatearFecha(u.actualizadoEn)}</td>
         </tr>`).join('');
