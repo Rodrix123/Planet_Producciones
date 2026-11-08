@@ -66,7 +66,8 @@ async function cargar(): Promise<void> {
         let tipo: Tipo | undefined;
         let elemento: Elemento | undefined;
         for (const t of json.tipos) {
-            elemento = t.elementos.find(e => e.id === id);
+            // La base devuelve los ids bigint como texto ("110"); se comparan como número.
+            elemento = t.elementos.find(e => Number(e.id) === id);
             if (elemento) {
                 tipo = t;
                 break;
