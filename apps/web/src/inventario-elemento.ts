@@ -10,9 +10,9 @@ import './panel.css';
 import './inventario.css';
 import { api } from './api';
 import {
-    $, ESTADOS, arrancarInventario, esc, formatearFecha, insigniaEstado, nombreVariante, normalizar,
-    textoUnidades,
-    type Elemento, type EstadoUnidad, type Tipo, type Unidad, type Variante
+    $, ESTADOS, arrancarInventario, esc, formatearFecha, insigniaEstado, nombreEstado, nombreVariante,
+    normalizar, textoUnidades,
+    type Elemento, type Tipo, type Unidad, type Variante
 } from './inventario-comun';
 
 const titulo = $('titulo');
@@ -37,7 +37,7 @@ interface Fila {
 // Estado de la pantalla. Una lista sin opciones marcadas no filtra (muestra todo).
 let filas: Fila[] = [];
 const variantesElegidas = new Set<string>();
-const estadosElegidos = new Set<EstadoUnidad>();
+const estadosElegidos = new Set<string>();
 
 // Muestra un error en lugar de la tabla.
 function mostrarError(mensaje: string): void {
@@ -56,15 +56,16 @@ function opcion(filtro: 'variante' | 'estado', valor: string, texto: string, can
     </label>`;
 }
 
-// Llena las listas con las variantes del elemento y los estados que tienen sus unidades.
-function armarFiltros(e: Elemento): void {
+// Llena las listas con las variantes del elemento y con todos los estados posibles de una
+// unidad, que vienen de la base de datos (aunque ninguna unidad los tenga todavía).
+function armarFiltros(e: Elemento, estadosPosibles: string[]): void {
     menuVariante.innerHTML = e.variantes
         .map(v => opcion('variante', String(v.id), esc(nombreVariante(v)), v.unidades.length))
         .join('');
-    menuEstado.innerHTML = (Object.keys(ESTADOS) as EstadoUnidad[])
-        .map(es => ({ es, n: filas.filter(f => f.unidad.estado === es).length }))
-        .filter(({ n }) => n > 0)
-        .map(({ es, n }) => opcion('estado', es, ESTADOS[es], n))
+    // Si la base no devolvió la lista, se usan los estados conocidos por la página.
+    const estados = estadosPosibles.length ? estadosPosibles : Object.keys(ESTADOS);
+    menuEstado.innerHTML = estados
+        .map(es => opcion('estado', es, esc(nombreEstado(es)), filas.filter(f => f.unidad.estado === es).length))
         .join('');
     filtros.hidden = false;
 }
@@ -163,8 +164,8 @@ function conectarFiltros(): void {
         const casilla = ev.target as HTMLInputElement;
         if (casilla.type !== 'checkbox') return;
         const elegidos = casilla.dataset.filtro === 'variante' ? variantesElegidas : estadosElegidos;
-        if (casilla.checked) (elegidos as Set<string>).add(casilla.value);
-        else (elegidos as Set<string>).delete(casilla.value);
+        if (casilla.checked) elegidos.add(casilla.value);
+        else elegidos.delete(casilla.value);
         render();
     });
 
@@ -198,7 +199,8 @@ async function cargar(): Promise<void> {
         return;
     }
     try {
-        const json = await api<{ tipos: Tipo[] }>('GET', '/api/inventario');
+        // `estados`: todos los estados posibles de una unidad, leídos de la base de datos.
+        const json = await api<{ tipos: Tipo[]; estados?: string[] }>('GET', '/api/inventario');
         let tipo: Tipo | undefined;
         let elemento: Elemento | undefined;
         for (const t of json.tipos) {
@@ -222,7 +224,7 @@ async function cargar(): Promise<void> {
         estado.hidden = true;
 
         filas = el.variantes.flatMap(variante => variante.unidades.map(unidad => ({ variante, unidad })));
-        armarFiltros(el);
+        armarFiltros(el, json.estados ?? []);
         conectarFiltros();
         render();
     } catch (err) {

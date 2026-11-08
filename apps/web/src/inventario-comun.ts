@@ -83,9 +83,17 @@ export function nombreVariante(v: Variante): string {
     return v.nombre?.trim() || `Variante #${v.id}`;
 }
 
+// Nombre en pantalla de un estado. Si la base tiene un estado que aún no está en ESTADOS,
+// se muestra su valor legible ("nuevo_estado" -> "Nuevo estado").
+export function nombreEstado(e: string): string {
+    if (e in ESTADOS) return ESTADOS[e as EstadoUnidad];
+    const texto = e.replace(/_/g, ' ');
+    return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
 // Etiqueta de color con el estado de la unidad.
-export function insigniaEstado(e: EstadoUnidad): string {
-    return `<span class="inv-estado inv-estado-${e}">${ESTADOS[e]}</span>`;
+export function insigniaEstado(e: string): string {
+    return `<span class="inv-estado inv-estado-${esc(e)}">${esc(nombreEstado(e))}</span>`;
 }
 
 // Mensaje para un nivel o tabla sin contenido.
