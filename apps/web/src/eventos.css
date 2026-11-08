@@ -724,6 +724,11 @@
     word-break: break-word;
 }
 
+.elementos-tabla th:nth-child(2) {
+    width: 40%;
+    min-width: 10rem;
+}
+
 .elementos-tabla td:nth-child(2) {
     color: var(--text-muted);
 }
