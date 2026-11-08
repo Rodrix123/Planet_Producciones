@@ -1,8 +1,59 @@
 /* Estilos de pagos.html. Se apoya en panel.css (riel, filtros, modal, botones) y en
-   eventos.css (paneles, lista de eventos); aquí solo va lo propio del menú de Pagos. */
+   eventos.css (paneles, lista de eventos); aquí solo va lo propio del menú de Pagos.
+   El contenido usa el estilo de la página principal (porcelana, tinta café, naranja solo
+   para la acción, verde follaje); el riel lateral conserva el estilo del panel. */
 
-/* Estos <header> heredan la barra del cotizador ("header" en style.css): fondo oscuro,
-   borde y relleno que aquí se veían como un recuadro hundido alrededor del título. */
+/* ---------- Tema claro, solo en el contenido y en la ventana de pago ---------- */
+/* Mismos valores que la paleta de la página principal (style.css de la web pública). Los alias
+   hacen que las reglas compartidas de panel.css y eventos.css tomen estos colores. */
+.pagos-main,
+.pagos-modal {
+    --paper: #f4f5f0;
+    --surface: #fdfdfa;
+    --sunken: #eceee6;
+    --line: #d8dccf;
+    --ink: #1c1410;
+    --ink-soft: #5a5248;
+    --orange: #e5601a;
+    --orange-deep: #c2490b;
+    --orange-text: #a63e08;
+    --forest: #1f4a3a;
+    --danger: #b42318;
+
+    --display: 'Tenor Sans', 'Palatino Linotype', Georgia, serif;
+    --texto: 'Hanken Grotesk Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+    --bg-card: var(--surface);
+    --bg-input: var(--sunken);
+    --border-color: var(--line);
+    --orange-main: var(--orange-text);
+    --text-light: var(--ink);
+    --text-muted: var(--ink-soft);
+
+    color-scheme: light;
+    color: var(--ink);
+    font-family: var(--texto);
+}
+
+.pagos-main {
+    min-height: 100vh;
+    background: var(--paper);
+}
+
+/* panel.css pinta el error en un rosa pensado para fondo oscuro. */
+.pagos-main .panel-estado.error {
+    color: var(--danger);
+}
+
+.pagos-main ::selection,
+.pagos-modal ::selection {
+    background: rgba(229, 96, 26, 0.25);
+    color: var(--ink);
+}
+
+/* Estos <header> heredan la barra del cotizador ("header" en style.css): fondo, borde y
+   relleno que aquí se verían como un recuadro alrededor del título. */
 .pagos-topbar,
 .pagos-panel .deck-head,
 .pagos-modal-lista .deck-head {
@@ -13,23 +64,131 @@
     backdrop-filter: none;
 }
 
-.pagos-btn-anadir {
-    width: auto;
-    margin-top: 0;
-    padding: 0.7rem 1.25rem;
-    font-size: 0.88rem;
+/* Títulos con la letra de la página principal. */
+.pagos-topbar h1,
+.pagos-panel .deck-head h2,
+.pagos-modal h2 {
+    font-family: var(--display);
+    font-weight: 400;
+    letter-spacing: -0.012em;
+    line-height: 1.1;
 }
 
-.pagos-btn-anadir:disabled {
+/* Línea inferior del ancho exacto del texto: el h1 es un elemento flex de la barra, así que
+   mide lo que mide la palabra. */
+.pagos-topbar h1 {
+    padding-bottom: 0.3rem;
+    border-bottom: 3px solid var(--orange);
+    font-size: clamp(2.2rem, 4vw, 3rem);
+}
+
+.pagos-modal h2 {
+    font-size: 1.6rem;
+}
+
+/* ---------- Botones: píldoras como en la página principal ---------- */
+/* Acción principal: naranja del logo con tinta oscura. */
+.pagos-modal .btn-guardar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    width: auto;
+    min-height: 44px;
+    margin-top: 0;
+    padding: 0.8rem 1.5rem;
+    border: none;
+    border-radius: 999px;
+    background: var(--orange);
+    color: var(--ink);
+    font-family: var(--texto);
+    font-size: 0.95rem;
+    font-weight: 700;
+    box-shadow: 0 12px 22px -12px rgba(229, 96, 26, 0.85);
+    cursor: pointer;
+    transition: transform 0.35s var(--ease), background-color 0.25s, box-shadow 0.35s var(--ease);
+}
+
+.pagos-modal .btn-guardar:not(:disabled):hover {
+    opacity: 1;
+    background: #f27a38;
+    box-shadow: 0 16px 26px -12px rgba(229, 96, 26, 0.9);
+    transform: translateY(-2px);
+}
+
+.pagos-modal .btn-guardar:focus-visible,
+.pagos-modal .btn-secundario:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 3px;
+}
+
+/* "Añadir pago" va a la derecha en la franja roja de "Eventos sin pagar": píldora sin sombra,
+   de 36px para que la franja mida lo mismo que la de "Eventos pagados". El fondo es el dorado
+   champaña de la página principal: resalta sobre el rojo (el naranja se perdería, es del mismo
+   tono) y la tinta se lee bien encima. */
+.pagos-btn-anadir {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-shrink: 0;
+    min-height: 36px;
+    margin-left: auto;
+    padding: 0.4rem 1rem;
+    border: none;
+    border-radius: 999px;
+    background: #9cf494;
+    color: var(--ink);
+    font-family: var(--texto);
+    font-size: 0.88rem;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: transform 0.35s var(--ease), background-color 0.25s;
+}
+
+.pagos-btn-anadir:not(:disabled):hover {
+    background: #aedcf0;
+    transform: translateY(-1px);
+}
+
+.pagos-btn-anadir:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 3px;
+}
+
+.pagos-btn-anadir:disabled,
+.pagos-modal .btn-guardar:disabled {
     opacity: 0.45;
+    box-shadow: none;
     cursor: not-allowed;
+}
+
+.pagos-main .btn-secundario,
+.pagos-modal .btn-secundario {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 44px;
+    padding: 0.8rem 1.4rem;
+    border: 1.5px solid var(--ink);
+    border-radius: 999px;
+    color: var(--ink);
+    font-family: var(--texto);
+    font-weight: 700;
+    transition: background-color 0.25s, color 0.25s;
+}
+
+.pagos-main .btn-secundario:hover,
+.pagos-modal .btn-secundario:hover {
+    background: var(--ink);
+    color: var(--paper);
 }
 
 /* ---------- Dos columnas: sin pagar | pagados ---------- */
 .pagos-columnas {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1.25rem;
+    gap: 1.5rem;
 }
 
 .pagos-columnas[hidden] {
@@ -42,49 +201,71 @@
     width: auto;
     height: 700px;
     min-width: 0;
+    padding: 1.4rem;
+    border-radius: 8px;
+    box-shadow: 0 18px 40px -28px rgba(28, 20, 16, 0.35);
 }
 
+/* Tenor Sans solo tiene peso 400 (en negrita el navegador la deformaría), así que estos
+   títulos van en Hanken Grotesk negrita. */
 .pagos-panel .deck-head h2,
 .pagos-modal-lista .deck-head h2 {
     margin-bottom: 0;
-    font-size: 1.3rem;
+    font-family: var(--texto);
+    font-size: 1.35rem;
     font-weight: 700;
+    letter-spacing: -0.01em;
 }
 
 .pagos-modal-lista .modal-cerrar {
     margin-left: auto;
 }
 
-/* Cada recuadro tiene su propio color: rojo lo pendiente, verde lo pagado. Se redefinen aquí
-   las variables generales para que todo lo de adentro (tarjetas, campos, bordes y acentos,
-   incluido lo que usa --orange-main) tome el tono de su recuadro. */
+/* Cada recuadro tiene su propio color: rojo lo pendiente, verde follaje lo pagado. Se redefinen
+   las variables para que todo lo de adentro (tarjetas, campos, bordes y acentos) tome su tono. */
 [data-columna="sinPagar"],
 .pagos-modal-lista {
-    --bg-card: #2a1215;
-    --bg-input: #3b1a1e;
-    --border-color: #5f2a30;
-    --orange-main: #f87171;
-    --col-fuerte: #dc2626;
-    --col-suave: rgba(248, 113, 113, 0.14);
-    --col-activo: rgba(248, 113, 113, 0.5);
+    --bg-card: #fbefed;
+    --bg-input: #f6e2df;
+    --border-color: #ecc8c3;
+    --orange-main: var(--danger);
+    --col-fuerte: var(--danger);
+    --col-suave: rgba(180, 35, 24, 0.1);
+    --col-activo: rgba(180, 35, 24, 0.45);
 }
 
 [data-columna="pagados"] {
-    --bg-card: #0f261a;
-    --bg-input: #173626;
-    --border-color: #27573e;
-    --orange-main: #34d399;
-    --col-fuerte: #15803d;
-    --col-suave: rgba(52, 211, 153, 0.14);
-    --col-activo: rgba(52, 211, 153, 0.5);
+    --bg-card: #eef4ef;
+    --bg-input: #dbe7df;
+    --border-color: #bcd2c4;
+    --orange-main: #1d6b49;
+    --col-fuerte: var(--forest);
+    --col-suave: rgba(31, 74, 58, 0.1);
+    --col-activo: rgba(31, 74, 58, 0.45);
 }
 
-/* El título es la franja más intensa del recuadro. */
+/* El título es la franja más intensa del recuadro y cubre todo su borde superior: los márgenes
+   negativos anulan el relleno del recuadro (1.4rem en las columnas, 2rem en la ventana). */
 .pagos-panel .deck-head,
 .pagos-modal-lista .deck-head {
-    padding: 0.6rem 1rem;
     background: var(--col-fuerte);
-    border-radius: 14px;
+    border-radius: 0;
+    color: #fff;
+}
+
+/* Esquinas de arriba con el mismo redondeo que el recuadro (8px menos 1px de su borde). */
+.pagos-panel .deck-head {
+    margin: -1.4rem -1.4rem 1.25rem;
+    padding: 1rem 1.4rem;
+    border-radius: 7px 7px 0 0;
+}
+
+.pagos-modal-lista .deck-head {
+    margin: -2rem -2rem 1.25rem;
+    padding: 1.1rem 2rem;
+}
+
+.pagos-modal-lista .deck-head h2 {
     color: #fff;
 }
 
@@ -117,6 +298,17 @@
     width: 100%;
 }
 
+.pagos-filtros .panel-search input {
+    min-height: 44px;
+    font-family: var(--texto);
+}
+
+.pagos-filtros .panel-search input:focus,
+.pagos-fechas .filtro input[type="date"]:focus {
+    border-color: var(--orange-main);
+    box-shadow: 0 0 0 3px var(--col-suave);
+}
+
 /* Fechas y "Limpiar" en una sola fila. */
 .pagos-fechas {
     display: flex;
@@ -135,7 +327,8 @@
 .pagos-fechas .filtro input[type="date"] {
     width: 138px;
     min-width: 0;
-    padding: 0 0.6rem;
+    padding: 0 0.8rem;
+    border-radius: 999px;
 }
 
 /* Fecha visible como día/mes/año (la pinta pagos.ts) encima del campo nativo, cuyo texto se oculta. */
@@ -158,25 +351,38 @@
     opacity: 0;
 }
 
+/* Íconos de calendario en negro: el del título del filtro (panel.css lo pinta con el acento)
+   y el del campo nativo. panel.css le pone "color-scheme: dark" al campo de fecha, y con eso el
+   navegador dibuja el ícono en blanco; aquí vuelve al esquema claro. */
+.pagos-fechas .filtro input[type="date"] {
+    color-scheme: light;
+}
+
+.pagos-fechas .filtro > span i {
+    color: var(--ink);
+}
+
 .fecha-campo input[type="date"]::-webkit-calendar-picker-indicator {
     cursor: pointer;
-    opacity: 0.7;
+    opacity: 1;
 }
 
 .fecha-texto {
     position: absolute;
-    left: 0.6rem;
+    left: 0.8rem;
     top: 50%;
     transform: translateY(-50%);
     color: var(--text-light);
     font-size: 0.88rem;
+    font-variant-numeric: tabular-nums;
     pointer-events: none;
 }
 
 .pagos-filtros .filtro-limpiar {
+    min-height: 40px;
     height: 40px;
     margin-left: auto;
-    padding: 0 0.9rem;
+    padding: 0 1rem;
     font-size: 0.8rem;
     white-space: nowrap;
 }
@@ -188,6 +394,8 @@
     flex-shrink: 0;
     align-items: flex-start;
     padding: 0.95rem 1rem;
+    border-radius: 18px;
+    font-family: var(--texto);
 }
 
 .pago-item {
@@ -196,6 +404,11 @@
 
 .pago-item:hover {
     border-color: transparent;
+}
+
+.pagos-panel .lista-tipo,
+.pagos-modal-lista .lista-tipo {
+    color: var(--ink);
 }
 
 /* Sin recorte: el saldo es el dato principal y debe leerse completo aunque la columna sea angosta. */
@@ -211,7 +424,7 @@
 
 .pago-saldo {
     color: var(--orange-main);
-    font-weight: 600;
+    font-weight: 700;
 }
 
 .pago-montos .pago-saldo {
@@ -221,21 +434,22 @@
 .pago-agregar {
     flex-shrink: 0;
     align-self: center;
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
-    border: 1px solid var(--orange-main);
+    border: 1.5px solid var(--orange-main);
     background: var(--col-suave);
     color: var(--orange-main);
     font-size: 0.95rem;
     cursor: pointer;
-    transition: background 0.2s, color 0.2s;
+    transition: background 0.25s, color 0.25s, transform 0.35s var(--ease);
 }
 
 .pago-agregar:hover,
 .pago-agregar:focus-visible {
     background: var(--col-fuerte);
     color: #fff;
+    transform: translateY(-2px);
 }
 
 .pago-agregar:focus-visible {
@@ -246,9 +460,9 @@
 .pago-sello {
     flex-shrink: 0;
     align-self: center;
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: var(--emerald-green);
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #1d6b49;
     white-space: nowrap;
 }
 
@@ -256,6 +470,11 @@
 .pagos-modal {
     position: relative;
     width: min(100%, 480px);
+    padding: 2rem;
+    background: var(--bg-card);
+    border-color: var(--border-color);
+    border-radius: 28px;
+    box-shadow: 0 30px 60px -30px rgba(28, 20, 16, 0.5);
 }
 
 /* Menú "Añadir pago": como la columna "Sin pagar"; la lista hace scroll por dentro. */
@@ -273,15 +492,55 @@
     right: 1.25rem;
 }
 
+.pagos-modal .modal-cerrar {
+    width: 40px;
+    height: 40px;
+    background: var(--surface);
+    color: var(--ink-soft);
+}
+
+.pagos-modal .modal-cerrar:hover,
+.pagos-modal .modal-cerrar:focus-visible {
+    color: var(--ink);
+    border-color: var(--ink);
+}
+
+.pagos-modal .modal-texto {
+    color: var(--ink-soft);
+}
+
+.pagos-modal .campo span {
+    color: var(--ink-soft);
+    font-weight: 600;
+}
+
+.pagos-modal .campo input,
+.pagos-modal .campo select {
+    min-height: 44px;
+    font-family: var(--texto);
+}
+
+.pagos-modal .campo input:focus,
+.pagos-modal .campo select:focus {
+    border-color: var(--orange);
+    box-shadow: 0 0 0 3px rgba(229, 96, 26, 0.18);
+}
+
+.pagos-modal .form-error {
+    color: var(--danger);
+    font-weight: 600;
+}
+
 .pago-resumen {
     display: grid;
     gap: 0.45rem;
     margin-bottom: 1.25rem;
-    padding: 0.9rem 1rem;
+    padding: 1rem 1.1rem;
     background: var(--bg-input);
     border: 1px solid var(--border-color);
-    border-radius: 16px;
-    font-size: 0.88rem;
+    border-radius: 18px;
+    font-size: 0.9rem;
+    font-variant-numeric: tabular-nums;
 }
 
 .pago-resumen > div {
@@ -300,12 +559,13 @@
 }
 
 .pago-resumen-monto {
-    border-color: rgba(249, 115, 22, 0.5);
+    background: rgba(229, 96, 26, 0.08);
+    border-color: rgba(229, 96, 26, 0.4);
 }
 
 .pago-resumen-monto strong {
-    color: var(--orange-main);
-    font-size: 1.05rem;
+    color: var(--orange-text);
+    font-size: 1.1rem;
 }
 
 @media (max-width: 900px) {

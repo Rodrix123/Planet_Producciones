@@ -2,6 +2,10 @@ import './style.css';
 import './panel.css';
 import './eventos.css';
 import './pagos.css';
+// Letras de la página principal: Tenor Sans en títulos y Hanken Grotesk en el texto.
+import '@fontsource/tenor-sans/latin-400.css';
+import '@fontsource/tenor-sans/latin-ext-400.css';
+import '@fontsource-variable/hanken-grotesk/wght.css';
 import { api } from './api';
 import { exigirSesion } from './shared/api';
 import { initPanelLayout } from './shared/layout';
@@ -234,6 +238,33 @@ function resumenEvento(e: EventoPago): string {
 }
 
 /** Monto escrito a número (admite puntos de miles: "1.500.000"). */
+/**
+ * Monto escrito con puntos de miles mientras se digita: "1500000" -> "1.500.000". Una coma
+ * separa hasta dos decimales ("1.500,5"). leerMonto lo vuelve a número quitando los puntos.
+ */
+function formatearMontoEscrito(texto: string): string {
+    const [entero, ...resto] = texto.split(',');
+    const digitos = entero.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+    const miles = digitos.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    if (resto.length === 0) return miles;
+    return `${miles || '0'},${resto.join('').replace(/\D/g, '').slice(0, 2)}`;
+}
+
+/** Reformatea el campo y deja el cursor detrás del mismo dígito en el que estaba. */
+function formatearCampoMonto(input: HTMLInputElement): void {
+    const antes = input.value;
+    const cursor = input.selectionStart ?? antes.length;
+    const significativos = antes.slice(0, cursor).replace(/[^\d,]/g, '').length;
+    const nuevo = formatearMontoEscrito(antes);
+    if (nuevo === antes) return;
+    input.value = nuevo;
+    let pos = 0;
+    for (let vistos = 0; pos < nuevo.length && vistos < significativos; pos++) {
+        if (/[\d,]/.test(nuevo[pos])) vistos++;
+    }
+    input.setSelectionRange(pos, pos);
+}
+
 function leerMonto(texto: string): number {
     const limpio = texto.replace(/[^\d,]/g, '').replace(',', '.');
     return limpio ? Number(limpio) : NaN;
@@ -288,7 +319,7 @@ function pasoIngreso(e: EventoPago, borrador: BorradorPago): void {
         <button type="button" class="modal-cerrar pago-cerrar" id="pagoCerrar" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
         <h2>Registrar pago</h2>
         ${resumenEvento(e)}
-        <label class="campo"><span>Monto a pagar (máximo ${formatearMoneda(e.saldo)})</span>
+        <label class="campo"><span>Monto a pagar (máximo ${formatearMoneda(e.saldo)}, múltiplos de 50)</span>
             <input type="text" inputmode="decimal" id="pagoMonto" placeholder="Ej. 500000" value="${esc(borrador.monto)}">
         </label>
         <label class="campo"><span>Método de pago</span>
@@ -312,6 +343,7 @@ function pasoIngreso(e: EventoPago, borrador: BorradorPago): void {
     const referenciaEl = $<HTMLInputElement>('pagoReferencia');
     const errorEl = $('pagoError');
     montoEl.focus();
+    montoEl.addEventListener('input', () => formatearCampoMonto(montoEl));
 
     $('pagoCerrar').addEventListener('click', cerrarModal);
     $('pagoCancelar').addEventListener('click', cerrarModal);
@@ -325,6 +357,10 @@ function pasoIngreso(e: EventoPago, borrador: BorradorPago): void {
         let error = '';
         if (!Number.isFinite(monto) || monto <= 0) error = 'Ingresa un monto mayor que cero.';
         else if (Math.round(monto * 100) > Math.round(e.saldo * 100)) error = `El monto supera el saldo pendiente (${formatearMoneda(e.saldo)}).`;
+        // Múltiplo de 50, salvo el pago que cierra exactamente el saldo.
+        else if (Math.round(monto * 100) !== Math.round(e.saldo * 100) && Math.round(monto * 100) % 5000 !== 0) {
+            error = `El monto debe ser múltiplo de 50 (o igual al saldo pendiente, ${formatearMoneda(e.saldo)}).`;
+        }
         if (error) {
             errorEl.textContent = error;
             errorEl.hidden = false;

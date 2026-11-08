@@ -39,6 +39,8 @@ export class ErrorPago extends Error {
 const METODOS: MetodoPago[] = ["efectivo", "transferencia"];
 const MAX_REFERENCIA = 150;
 const MAX_MONTO = 99_999_999.99; // NUMERIC(10, 2)
+/** Los pagos deben ser múltiplos de este valor (salvo el que cierra el saldo exacto). */
+const MULTIPLO_PAGO = 50;
 
 /** Pesos a centavos enteros, para comparar montos sin errores de coma flotante. */
 const aCentavos = (valor: number): number => Math.round(valor * 100);
@@ -103,6 +105,11 @@ export async function registrarPago(supabase: SupabaseClient, datos: unknown): P
   const saldo = saldoDe(evento);
   if (saldo <= 0) throw new ErrorPago("Este evento ya está pagado.");
   if (aCentavos(pago.monto) > aCentavos(saldo)) throw new ErrorPago("El monto supera el saldo pendiente.");
+  // Múltiplo de 50, salvo el pago que cierra exactamente el saldo (si no, un total que no
+  // sea múltiplo de 50 nunca podría quedar pagado).
+  if (aCentavos(pago.monto) !== aCentavos(saldo) && aCentavos(pago.monto) % (MULTIPLO_PAGO * 100) !== 0) {
+    throw new ErrorPago(`El monto debe ser múltiplo de ${MULTIPLO_PAGO} (o igual al saldo pendiente).`);
+  }
 
   const insercion = await supabase.from("transactions").insert({
     event_id: pago.eventId,

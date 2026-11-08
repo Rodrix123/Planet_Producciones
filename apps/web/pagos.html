@@ -28,12 +28,9 @@
         </button>
     </aside>
 
-    <main class="panel-main">
+    <main class="panel-main pagos-main">
         <header class="panel-topbar pagos-topbar">
             <h1>Pagos</h1>
-            <button type="button" id="btnAnadirPago" class="submit-btn pagos-btn-anadir" disabled>
-                <i class="fa-solid fa-plus"></i> Añadir pago
-            </button>
         </header>
 
         <div id="estado" class="panel-estado">
@@ -44,6 +41,9 @@
             <article class="deck-panel pagos-panel" data-columna="sinPagar">
                 <header class="deck-head">
                     <h2>Eventos sin pagar</h2>
+                    <button type="button" id="btnAnadirPago" class="pagos-btn-anadir" disabled>
+                        <i class="fa-solid fa-plus"></i> Añadir pago
+                    </button>
                 </header>
                 <div class="pagos-filtros">
                     <label class="panel-search">
