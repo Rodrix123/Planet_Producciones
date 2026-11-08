@@ -319,8 +319,8 @@ function pasoIngreso(e: EventoPago, borrador: BorradorPago): void {
         <button type="button" class="modal-cerrar pago-cerrar" id="pagoCerrar" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
         <h2>Registrar pago</h2>
         ${resumenEvento(e)}
-        <label class="campo"><span>Monto a pagar (máximo ${formatearMoneda(e.saldo)}, múltiplos de 50)</span>
-            <input type="text" inputmode="decimal" id="pagoMonto" placeholder="Ej. 500000" value="${esc(borrador.monto)}">
+        <label class="campo"><span>Monto a pagar</span>
+            <input type="text" inputmode="decimal" id="pagoMonto" value="${esc(borrador.monto)}">
         </label>
         <label class="campo"><span>Método de pago</span>
             <select id="pagoMetodo">
@@ -329,7 +329,7 @@ function pasoIngreso(e: EventoPago, borrador: BorradorPago): void {
             </select>
         </label>
         <label class="campo"><span>Referencia (opcional)</span>
-            <input type="text" id="pagoReferencia" maxlength="150" placeholder="Ej. número de transferencia" value="${esc(borrador.referencia)}">
+            <input type="text" id="pagoReferencia" maxlength="150" value="${esc(borrador.referencia)}">
         </label>
         <p class="form-error" id="pagoError" hidden></p>
         <div class="modal-acciones">
