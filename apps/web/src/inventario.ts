@@ -156,6 +156,61 @@ function alternar(cab: HTMLElement): void {
     else abiertos.delete(clave);
 }
 
+// ---------- Recordar la página al ir a un elemento y volver ----------
+// Se guarda en sessionStorage (solo esta pestaña) qué tipos estaban abiertos, la búsqueda y
+// el desplazamiento, y se restaura al volver desde la página de un elemento.
+const CLAVE_ESTADO = 'inventario:estado';
+
+interface EstadoGuardado {
+    abiertos: string[];
+    busqueda: string;
+    scroll: number;
+}
+
+function guardarEstado(): void {
+    if (!cargado) return;
+    const guardado: EstadoGuardado = {
+        // Se guardan los nombres de los tipos: su posición puede cambiar si cambia el inventario.
+        abiertos: [...abiertos].map(clave => tiposPorClave.get(clave)?.nombre).filter((n): n is string => !!n),
+        busqueda: buscador.value,
+        scroll: window.scrollY
+    };
+    try {
+        sessionStorage.setItem(CLAVE_ESTADO, JSON.stringify(guardado));
+    } catch { /* sin almacenamiento disponible: simplemente no se recuerda */ }
+}
+
+/** ¿Se llegó aquí volviendo de la página de un elemento (enlace "Volver" o botón atrás)? */
+function vieneDeElemento(): boolean {
+    const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+    if (nav?.type === 'back_forward') return true;
+    try {
+        return new URL(document.referrer).pathname.endsWith('inventario-elemento.html');
+    } catch {
+        return false;
+    }
+}
+
+/** Restaura tipos abiertos y búsqueda; devuelve el desplazamiento a recuperar, si hay. */
+function restaurarEstado(): number | null {
+    if (!vieneDeElemento()) return null;
+    try {
+        const guardado = JSON.parse(sessionStorage.getItem(CLAVE_ESTADO) ?? 'null') as EstadoGuardado | null;
+        if (!guardado) return null;
+        for (const nombre of guardado.abiertos) {
+            const i = tiposIndice.get(nombre);
+            if (i !== undefined) abiertos.add(claveTipo(i));
+        }
+        buscador.value = guardado.busqueda;
+        return guardado.scroll;
+    } catch {
+        return null;
+    }
+}
+
+// Al salir de la página (a un elemento o a otra) se guarda cómo quedó.
+window.addEventListener('pagehide', guardarEstado);
+
 // Trae el inventario completo del servidor y lo dibuja.
 async function cargar(): Promise<void> {
     try {
@@ -164,7 +219,9 @@ async function cargar(): Promise<void> {
         indexar();
         cargado = true;
         estado.hidden = true;
+        const scroll = restaurarEstado();
         render();
+        if (scroll) window.scrollTo(0, scroll);
     } catch (err) {
         estado.classList.add('error');
         estado.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> No se pudo cargar el inventario: ${esc((err as Error).message)}`;
