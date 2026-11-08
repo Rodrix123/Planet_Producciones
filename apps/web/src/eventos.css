@@ -702,53 +702,46 @@
     color: var(--text-muted);
 }
 
-.elementos-grupo + .elementos-grupo {
-    margin-top: 1.25rem;
+.elementos-tabla-wrap {
+    overflow-x: auto;
 }
 
-.elementos-grupo h3 {
-    margin-bottom: 0.5rem;
+.elementos-tabla {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.elementos-tabla th {
+    padding: 0 0.75rem 0.5rem 0;
     font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.06em;
+    text-align: left;
     text-transform: uppercase;
     color: var(--text-muted);
 }
 
-.elemento-fila {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.75rem;
-    padding: 0.6rem 0;
+.elementos-tabla td {
+    padding: 0.6rem 0.75rem 0.6rem 0;
     border-top: 1px solid var(--border-color);
-}
-
-.elemento-cantidad {
-    flex-shrink: 0;
-    min-width: 2rem;
-    padding: 0.15rem 0.4rem;
-    font-size: 0.8rem;
-    font-weight: 700;
-    text-align: center;
-    color: var(--orange-main);
-    background: var(--bg-input);
-    border-radius: 8px;
-}
-
-.elemento-info {
-    min-width: 0;
-    font-size: 0.9rem;
+    vertical-align: top;
     word-break: break-word;
 }
 
-.elemento-info small {
-    display: block;
-    margin-top: 0.15rem;
-    font-size: 0.8rem;
+.elementos-tabla td:nth-child(2) {
     color: var(--text-muted);
 }
 
-.elemento-info .elemento-nota {
+.elementos-tabla .num {
+    padding-right: 0;
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.elementos-tabla td.num {
+    font-weight: 700;
     color: var(--orange-main);
 }
 

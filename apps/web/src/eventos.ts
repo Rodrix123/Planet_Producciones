@@ -430,23 +430,27 @@ function seleccionar(id: number): void {
 function htmlElementos(elementos: ElementoEvento[]): string {
     if (elementos.length === 0) return '<p class="modal-texto">Este evento no tiene elementos registrados.</p>';
 
-    // El API los entrega ordenados por categoría: basta con agruparlos.
-    const porTipo = new Map<string, ElementoEvento[]>();
-    for (const el of elementos) porTipo.set(el.tipo, [...(porTipo.get(el.tipo) ?? []), el]);
+    // Una fila por elemento, en el orden del API (tipo y nombre).
+    const filas = elementos.map(el => `
+        <tr>
+            <td>${esc(el.nombre)}</td>
+            <td>${esc(el.tipo)}</td>
+            <td class="num">${el.cantidad}</td>
+        </tr>`).join('');
 
-    return [...porTipo].map(([tipo, lista]) => `
-        <div class="elementos-grupo">
-            <h3>${esc(tipo)}</h3>
-            ${lista.map(el => `
-                <div class="elemento-fila">
-                    <span class="elemento-cantidad">${el.cantidad}</span>
-                    <div class="elemento-info">
-                        <p>${esc(el.nombre)}</p>
-                        ${el.descripcion ? `<small>${esc(el.descripcion)}</small>` : ''}
-                        ${el.nota ? `<small class="elemento-nota"><i class="fa-solid fa-note-sticky"></i> ${esc(el.nota)}</small>` : ''}
-                    </div>
-                </div>`).join('')}
-        </div>`).join('');
+    return `
+        <div class="elementos-tabla-wrap">
+            <table class="elementos-tabla">
+                <thead>
+                    <tr>
+                        <th scope="col">Variante</th>
+                        <th scope="col">Tipo</th>
+                        <th scope="col" class="num">Cantidad</th>
+                    </tr>
+                </thead>
+                <tbody>${filas}</tbody>
+            </table>
+        </div>`;
 }
 
 async function abrirElementos(boton: HTMLElement): Promise<void> {
