@@ -42,9 +42,26 @@
             </div>
         </header>
 
-        <p id="resumen" class="inv-resumen" hidden></p>
-
-        <div id="filtros" class="inv-filtros" hidden></div>
+        <div id="filtros" class="filtros inv-filtros" hidden>
+            <div class="filtro filtro-multi">
+                <span id="etiquetaVariante"><i class="fa-solid fa-tags"></i> Variante</span>
+                <button type="button" class="multi-btn" data-menu="menuVariante" aria-expanded="false" aria-controls="menuVariante" aria-labelledby="etiquetaVariante textoVariante">
+                    <strong id="textoVariante">Todas</strong><i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                </button>
+                <div class="multi-menu" id="menuVariante" role="group" aria-labelledby="etiquetaVariante" hidden></div>
+            </div>
+            <div class="filtro filtro-multi">
+                <span id="etiquetaEstado"><i class="fa-solid fa-circle-half-stroke"></i> Estado</span>
+                <button type="button" class="multi-btn" data-menu="menuEstado" aria-expanded="false" aria-controls="menuEstado" aria-labelledby="etiquetaEstado textoEstado">
+                    <strong id="textoEstado">Todos</strong><i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                </button>
+                <div class="multi-menu" id="menuEstado" role="group" aria-labelledby="etiquetaEstado" hidden></div>
+            </div>
+            <button type="button" id="limpiarFiltros" class="btn-secundario filtro-limpiar" hidden>
+                <i class="fa-solid fa-filter-circle-xmark"></i> Limpiar filtros
+            </button>
+            <span id="resumen" class="filtro-conteo"></span>
+        </div>
 
         <div id="estado" class="panel-estado">
             <i class="fa-solid fa-spinner fa-spin"></i> Cargando unidades...
