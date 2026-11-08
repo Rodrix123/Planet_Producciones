@@ -76,8 +76,7 @@ app.use('/api/pagos', pagosRouter);
 // Siempre al final: recoge los errores de todas las rutas anteriores.
 app.use(manejadorErrores);
 
-// Arranque del servidor.
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5174;
 app.listen(PORT, () => {
     console.log(`Servidor iniciado en http://localhost:${PORT}`);
     // Abre la primera conexión a la base ya, para que la primera persona que entre no espere el handshake.

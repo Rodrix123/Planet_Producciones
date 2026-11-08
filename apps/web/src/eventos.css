@@ -1,4 +1,4 @@
-/* Estilos de eventos.html. Se apoya en panel.css (riel, filtros, botones) y
+--text-muted/* Estilos de eventos.html. Se apoya en panel.css (riel, filtros, botones) y
    en las variables de style.css para conservar la identidad visual. */
 
 /* Barra de filtros compacta y pegada a los paneles de abajo (solo en eventos; empleados usa los tamaños de panel.css). */
@@ -279,6 +279,13 @@
 
 .lista-tipo {
     font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.evento-cliente {
+    font-weight: 400;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -665,6 +672,100 @@
     font-size: 0.8rem;
     background: var(--bg-input);
     border-radius: 999px;
+}
+
+.detalle-acciones {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1.25rem;
+}
+
+/* ---------- Menú de elementos del evento ---------- */
+.elementos-modal {
+    width: min(100%, 760px);
+}
+
+.elementos-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.elementos-head h2 {
+    margin-bottom: 0;
+}
+
+.elementos-vistas {
+    margin-bottom: 1rem;
+}
+
+/* Con muchos elementos se desplaza solo esta zona: título, X y selector quedan fijos
+   y la ventana deja de crecer. */
+.elementos-vista {
+    max-height: min(65vh, 600px);
+    overflow-y: auto;
+    padding-right: 0.5rem;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+}
+
+.elementos-grupo + .elementos-grupo {
+    margin-top: 1.5rem;
+}
+
+/* En la vista Por tipo el encabezado de la primera columna es el tipo: se destaca. */
+.elementos-grupo .elementos-tabla th:first-child {
+    color: var(--text-light);
+}
+
+.elementos-tabla-wrap {
+    overflow-x: auto;
+}
+
+.elementos-tabla {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.elementos-tabla th {
+    padding: 0 0.75rem 0.5rem 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-align: left;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.elementos-tabla td {
+    padding: 0.6rem 0.75rem 0.6rem 0;
+    border-top: 1px solid var(--border-color);
+    vertical-align: top;
+    word-break: break-word;
+}
+
+.elementos-tabla th.col-tipo {
+    width: 40%;
+    min-width: 10rem;
+}
+
+.elementos-tabla td.col-tipo {
+    color: var(--text-muted);
+}
+
+.elementos-tabla .num {
+    padding-right: 0;
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.elementos-tabla td.num {
+    font-weight: 700;
+    color: var(--orange-main);
 }
 
 /* ---------- Pantallas angostas: paneles apilados, sin hover ---------- */

@@ -31,5 +31,5 @@ RUN mkdir -p /app/uploads && chown -R node:node /app
 USER node
 ENV UPLOADS_DIR=/app/uploads
 
-EXPOSE 3000
+EXPOSE 5174
 CMD ["node", "dist/index.js"]

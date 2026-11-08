@@ -208,16 +208,9 @@ function aEvento(f: FilaEvento, nombrePorPerfil: Map<string, string>): Evento {
 const claveDeOrden = (e: Evento): string => `${e.fecha ?? "9999-99-99"} ${e.hora ?? "99:99:99"}`;
 
 /**
- * Fecha de hoy en Colombia (YYYY-MM-DD). Se usa la hora local y no la UTC para que
- * un evento de hoy siga vigente toda la tarde y la noche, cuando en UTC ya es mañana.
- */
-const hoyEnColombia = (): string => new Date().toLocaleDateString("en-CA", { timeZone: "America/Bogota" });
-
-/**
- * Solo lectura. Devuelve los eventos vigentes: los de hoy en adelante, más los que
- * todavía no tienen fecha (no se pueden dar por pasados). Un evento de hoy cuenta como
- * vigente todo el día, aunque su hora ya haya pasado, porque los eventos no guardan
- * duración y puede seguir en curso.
+ * Solo lectura. Devuelve todos los eventos, también los pasados y los que todavía no
+ * tienen fecha: el menú de eventos decide qué mostrar con su filtro de fechas, que
+ * arranca en el día de hoy.
  *
  * - public.events + public.quote (+ venue, users, transportation) -> datos del evento
  * - public.event_staff + auth.users (Admin API)                   -> personal asignado y su nombre
@@ -235,12 +228,7 @@ export async function listarEventos(supabase: SupabaseClient): Promise<{ eventos
   const eventosRes = await supabase.from("events").select(COLUMNAS);
   if (eventosRes.error) throw eventosRes.error;
 
-  const hoy = hoyEnColombia();
-  const filas = (eventosRes.data as unknown as FilaEvento[]).filter((f) => {
-    const { fecha } = datosDelEvento(f);
-    return fecha === null || fecha >= hoy;
-  });
-
+  const filas = eventosRes.data as unknown as FilaEvento[];
   const nombrePorPerfil = await nombresPorPerfil(supabase, idsDelPersonal(filas));
   const eventos = filas.map((f) => aEvento(f, nombrePorPerfil));
   eventos.sort((a, b) => claveDeOrden(a).localeCompare(claveDeOrden(b)));
@@ -269,6 +257,62 @@ export async function cargarEvento(supabase: SupabaseClient, id: number): Promis
   const fila = eventoRes.data as unknown as FilaEvento;
   const nombrePorPerfil = await nombresPorPerfil(supabase, idsDelPersonal([fila]));
   return aEvento(fila, nombrePorPerfil);
+}
+
+// ---------------------------------------------------------------------------
+// Elementos del evento
+// ---------------------------------------------------------------------------
+
+/** Un elemento cotizado para el evento (public.quote_items), sin precios. */
+export interface ElementoEvento {
+  /** Categoría del elemento (inventory.type). */
+  tipo: string;
+  nombre: string;
+  descripcion: string;
+  cantidad: number;
+  nota: string | null;
+}
+
+interface FilaElemento {
+  quantity: number;
+  nota: string | null;
+  inventory_variants: {
+    simple_description: string | null;
+    detailed_description: string | null;
+    inventory: { type: string } | null;
+  } | null;
+}
+
+/**
+ * Solo lectura. Lo que lleva el evento según su cotización, por categoría y nombre.
+ * Son los elementos cotizados, no unidades físicas: ningún flujo asigna todavía stock a un evento.
+ */
+export async function listarElementosEvento(
+  supabase: SupabaseClient,
+  id: unknown,
+): Promise<{ elementos: ElementoEvento[] }> {
+  const eventoId = idOpcional(id, "El evento");
+  if (eventoId === null) throw new ErrorEvento("El evento no es válido.");
+
+  const eventoRes = await supabase.from("events").select("quote_id").eq("id", eventoId).maybeSingle();
+  if (eventoRes.error) throw eventoRes.error;
+  if (!eventoRes.data) throw new ErrorEvento("El evento no existe.", 404);
+
+  const { data, error } = await supabase
+    .from("quote_items")
+    .select("quantity, nota, inventory_variants(simple_description, detailed_description, inventory(type))")
+    .eq("quote_id", eventoRes.data.quote_id);
+  if (error) throw error;
+
+  const elementos = (data as unknown as FilaElemento[]).map((f) => ({
+    tipo: f.inventory_variants?.inventory?.type ?? "Sin categoría",
+    nombre: f.inventory_variants?.simple_description ?? "Sin nombre",
+    descripcion: f.inventory_variants?.detailed_description ?? "",
+    cantidad: f.quantity,
+    nota: f.nota,
+  }));
+  elementos.sort((a, b) => ALFABETICO.compare(a.tipo, b.tipo) || ALFABETICO.compare(a.nombre, b.nombre));
+  return { elementos };
 }
 
 // ---------------------------------------------------------------------------

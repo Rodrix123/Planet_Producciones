@@ -3,7 +3,7 @@
 // exponen esas funciones como rutas y se traducen sus errores de negocio a respuestas HTTP.
 
 import { Router } from 'express';
-import { crearEvento, listarEventos, listarOpcionesEvento, validarFechaEvento, ErrorEvento } from '@my-app/db/eventos';
+import { crearEvento, listarElementosEvento, listarEventos, listarOpcionesEvento, validarFechaEvento, ErrorEvento } from '@my-app/db/eventos';
 import { supabaseAdmin as clienteAdmin } from '../supabaseAdmin';
 import { requireAuth, requireRole } from '../auth';
 import { asyncHandler } from '../asyncHandler';
@@ -47,6 +47,9 @@ eventosRouter.get('/opciones', (req, res, next) =>
 eventosRouter.get('/fecha', (req, res, next) =>
     conEventos(() => validarFechaEvento(supabaseAdmin, req.query.fecha, req.query.hora))(req, res, next));
 
-// Crea un evento nuevo junto con su cotización y sus servicios (todo o nada).
+// Elementos cotizados del evento: los pide el menú sobrepuesto del detalle al abrirse.
+eventosRouter.get('/:id/elementos', (req, res, next) =>
+    conEventos(() => listarElementosEvento(supabaseAdmin, req.params.id))(req, res, next));
+
 eventosRouter.post('/', (req, res, next) =>
     conEventos(async () => ({ evento: await crearEvento(supabaseAdmin, req.body) }), 201)(req, res, next));
