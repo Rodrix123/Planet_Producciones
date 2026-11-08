@@ -68,6 +68,10 @@ let toastTimer: number | undefined;
 // Cambia al abrir o cerrar el menú de elementos: una respuesta de un pedido anterior se descarta.
 let pedidoElementos = 0;
 let botonElementos: HTMLElement | null = null;
+// Vista del menú de elementos; se recuerda entre aperturas mientras la página esté abierta.
+type VistaElementos = 'tabla' | 'tipo';
+let vistaElementos: VistaElementos = 'tabla';
+let elementosActuales: ElementoEvento[] = [];
 const filtrosEstado: Record<ClaveToggle, ValorFiltro> = { confirmado: 'todos', pagoInicial: 'todos', firmado: 'todos' };
 const CLAVES_ESTADO = Object.keys(filtrosEstado) as ClaveToggle[];
 
@@ -427,30 +431,70 @@ function seleccionar(id: number): void {
 }
 
 // ---------- Menú de elementos del evento ----------
-function htmlElementos(elementos: ElementoEvento[]): string {
-    if (elementos.length === 0) return '<p class="modal-texto">Este evento no tiene elementos registrados.</p>';
-
-    // Una fila por elemento, en el orden del API (tipo y nombre).
-    const filas = elementos.map(el => `
-        <tr>
-            <td>${esc(el.nombre)}</td>
-            <td>${esc(el.tipo)}</td>
-            <td class="num">${el.cantidad}</td>
-        </tr>`).join('');
-
+function envolverTabla(encabezados: string, filas: string): string {
     return `
         <div class="elementos-tabla-wrap">
             <table class="elementos-tabla">
-                <thead>
-                    <tr>
-                        <th scope="col">Elementos</th>
-                        <th scope="col">Tipo</th>
-                        <th scope="col" class="num">Cantidad</th>
-                    </tr>
-                </thead>
+                <thead><tr>${encabezados}</tr></thead>
                 <tbody>${filas}</tbody>
             </table>
         </div>`;
+}
+
+/** Vista "Tabla": una fila por elemento, en el orden del API (tipo y nombre). */
+function htmlTablaElementos(elementos: ElementoEvento[]): string {
+    const filas = elementos.map(el => `
+        <tr>
+            <td>${esc(el.nombre)}</td>
+            <td class="col-tipo">${esc(el.tipo)}</td>
+            <td class="num">${el.cantidad}</td>
+        </tr>`).join('');
+    return envolverTabla(
+        '<th scope="col">Elementos</th><th scope="col" class="col-tipo">Tipo</th><th scope="col" class="num">Cantidad</th>',
+        filas);
+}
+
+/** Vista "Por tipo": una tabla por tipo, solo con el elemento y la cantidad. */
+function htmlElementosPorTipo(elementos: ElementoEvento[]): string {
+    // El API los entrega ordenados por tipo: basta con agruparlos en orden de llegada.
+    const porTipo = new Map<string, ElementoEvento[]>();
+    for (const el of elementos) porTipo.set(el.tipo, [...(porTipo.get(el.tipo) ?? []), el]);
+
+    return [...porTipo].map(([tipo, lista]) => `
+        <div class="elementos-grupo">
+            <h3>${esc(tipo)}</h3>
+            ${envolverTabla(
+                '<th scope="col">Elementos</th><th scope="col" class="num">Cantidad</th>',
+                lista.map(el => `<tr><td>${esc(el.nombre)}</td><td class="num">${el.cantidad}</td></tr>`).join(''))}
+        </div>`).join('');
+}
+
+function htmlVistaElementos(): string {
+    return vistaElementos === 'tipo'
+        ? htmlElementosPorTipo(elementosActuales)
+        : htmlTablaElementos(elementosActuales);
+}
+
+function htmlElementos(elementos: ElementoEvento[]): string {
+    if (elementos.length === 0) return '<p class="modal-texto">Este evento no tiene elementos registrados.</p>';
+
+    const botonVista = (vista: VistaElementos, texto: string) =>
+        `<button type="button" class="segmento" data-vista="${vista}" aria-pressed="${vistaElementos === vista}">${texto}</button>`;
+    return `
+        <div class="elementos-vistas">
+            <div class="segmentos" role="group" aria-label="Vista de los elementos">
+                ${botonVista('tabla', 'Tabla')}${botonVista('tipo', 'Por tipo')}
+            </div>
+        </div>
+        <div id="elementosVista">${htmlVistaElementos()}</div>`;
+}
+
+/** Cambia de vista sin volver a pedir los elementos; solo se reemplaza la vista, el selector conserva el foco. */
+function cambiarVista(vista: VistaElementos): void {
+    vistaElementos = vista;
+    modal.querySelectorAll<HTMLElement>('[data-vista]').forEach(b =>
+        b.setAttribute('aria-pressed', String(b.dataset.vista === vista)));
+    $('elementosVista').innerHTML = htmlVistaElementos();
 }
 
 async function abrirElementos(boton: HTMLElement): Promise<void> {
@@ -472,15 +516,19 @@ async function abrirElementos(boton: HTMLElement): Promise<void> {
     let cuerpo: string;
     try {
         const json = await api<{ elementos: ElementoEvento[] }>('GET', `/api/eventos/${evento.id}/elementos`);
+        if (pedido !== pedidoElementos) return;
+        elementosActuales = json.elementos;
         cuerpo = htmlElementos(json.elementos);
     } catch (err) {
+        if (pedido !== pedidoElementos) return;
         cuerpo = `<p class="modal-texto"><i class="fa-solid fa-triangle-exclamation"></i> No se pudieron cargar los elementos: ${esc((err as Error).message)}</p>`;
     }
-    if (pedido === pedidoElementos) $('elementosCuerpo').innerHTML = cuerpo;
+    $('elementosCuerpo').innerHTML = cuerpo;
 }
 
 function cerrarElementos(): void {
     pedidoElementos++;
+    elementosActuales = [];
     modal.classList.remove('open');
     modal.setAttribute('aria-hidden', 'true');
     modalContenido.innerHTML = '';
@@ -622,7 +670,12 @@ detalleContenido.addEventListener('click', ev => {
 // Cerrar el menú de elementos con la X o al hacer click en el fondo.
 modal.addEventListener('click', ev => {
     const objetivo = ev.target as HTMLElement;
-    if (objetivo === modal || objetivo.closest('#elementosCerrar')) cerrarElementos();
+    if (objetivo === modal || objetivo.closest('#elementosCerrar')) {
+        cerrarElementos();
+        return;
+    }
+    const vista = objetivo.closest<HTMLElement>('[data-vista]');
+    if (vista) cambiarVista(vista.dataset.vista as VistaElementos);
 });
 
 // El calendario cambia de ancho al hacer hover (se extiende y la lista se retrae) y al redimensionar la

@@ -697,6 +697,23 @@
     margin-bottom: 0;
 }
 
+.elementos-vistas {
+    margin-bottom: 1rem;
+}
+
+.elementos-grupo + .elementos-grupo {
+    margin-top: 1.25rem;
+}
+
+.elementos-grupo h3 {
+    margin-bottom: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
 .elementos-tabla-wrap {
     overflow-x: auto;
 }
@@ -724,12 +741,12 @@
     word-break: break-word;
 }
 
-.elementos-tabla th:nth-child(2) {
+.elementos-tabla th.col-tipo {
     width: 40%;
     min-width: 10rem;
 }
 
-.elementos-tabla td:nth-child(2) {
+.elementos-tabla td.col-tipo {
     color: var(--text-muted);
 }
 
