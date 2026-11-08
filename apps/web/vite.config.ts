@@ -38,6 +38,7 @@ export default defineConfig({
                 cotizacionesDefinitivas: 'cotizaciones-definitivas.html',
                 pqrsAdmin: 'pqrs-admin.html',
                 inventario: 'inventario.html',
+                inventarioElemento: 'inventario-elemento.html',
                 galeria: 'galeria.html',
                 servicios: 'servicios.html',
                 nosotros: 'nosotros.html',
