@@ -34,7 +34,6 @@
     width: auto;
     max-width: 60px;
     object-fit: contain;
-    filter: drop-shadow(0 0 10px rgba(249, 115, 22, 0.5));
 }
 
 .rail-nav {
@@ -73,8 +72,8 @@
 }
 
 .rail-item.active {
-    color: var(--orange-main);
-    background: rgba(249, 115, 22, 0.12);
+    color: var(--orange-text);
+    background: rgba(229, 96, 26, 0.12);
 }
 
 .rail-item[aria-disabled="true"] {
@@ -156,7 +155,7 @@
 }
 
 .panel-estado.error {
-    color: #f87171;
+    color: var(--danger);
 }
 
 .panel-estado[hidden] {
@@ -192,9 +191,9 @@
 .rol-count {
     font-size: 0.75rem;
     font-weight: 700;
-    color: var(--orange-main);
-    background: rgba(249, 115, 22, 0.12);
-    border: 1px solid rgba(249, 115, 22, 0.3);
+    color: var(--orange-text);
+    background: rgba(229, 96, 26, 0.12);
+    border: 1px solid rgba(229, 96, 26, 0.3);
     padding: 0.2rem 0.7rem;
     border-radius: 20px;
 }
@@ -239,8 +238,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, var(--orange-main), var(--orange-hover));
-    color: #fff;
+    background: var(--orange-main);
+    color: var(--ink);
     font-weight: 700;
     overflow: hidden;
 }
@@ -280,7 +279,7 @@
 .drawer-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.55);
+    background: rgba(28, 20, 16, 0.45);
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.25s;
@@ -329,7 +328,7 @@
 }
 
 .drawer-close:hover {
-    color: var(--orange-main);
+    color: var(--orange-text);
     border-color: var(--orange-main);
 }
 
@@ -388,9 +387,9 @@
     font-weight: 600;
     padding: 0.4rem 0.8rem;
     border-radius: 20px;
-    color: #f87171;
-    background: rgba(248, 113, 113, 0.1);
-    border: 1px solid rgba(248, 113, 113, 0.3);
+    color: var(--danger);
+    background: rgba(180, 35, 24, 0.1);
+    border: 1px solid rgba(180, 35, 24, 0.3);
 }
 
 .dias-vacio {
@@ -404,9 +403,9 @@
     width: 30px;
     height: 30px;
     border-radius: 50%;
-    border: 1px solid rgba(249, 115, 22, 0.4);
-    background: rgba(249, 115, 22, 0.1);
-    color: var(--orange-main);
+    border: 1px solid rgba(229, 96, 26, 0.4);
+    background: rgba(229, 96, 26, 0.1);
+    color: var(--orange-text);
     font-size: 0.8rem;
     cursor: pointer;
     transition: background 0.2s, color 0.2s;
@@ -414,7 +413,7 @@
 
 .btn-mini:hover {
     background: var(--orange-main);
-    color: #fff;
+    color: var(--ink);
 }
 
 .drawer-delete {
@@ -435,8 +434,8 @@
 }
 
 .drawer-delete:hover {
-    color: #f87171;
-    border-color: #f87171;
+    color: var(--danger);
+    border-color: var(--danger);
 }
 
 .campo {
@@ -472,7 +471,7 @@
 }
 
 .form-error {
-    color: #f87171;
+    color: var(--danger);
     font-size: 0.85rem;
     margin-bottom: 0.9rem;
 }
@@ -493,8 +492,8 @@
     cursor: pointer;
     font-family: inherit;
     font-weight: 700;
-    color: #fff;
-    background: linear-gradient(to right, var(--orange-main), var(--orange-hover));
+    color: var(--ink);
+    background: var(--orange-main);
 }
 
 .btn-guardar {
@@ -510,12 +509,13 @@
 }
 
 .btn-peligro {
-    background: #dc2626;
+    background: #b42318;
+    color: #fff;
     box-shadow: none;
 }
 
 .btn-peligro:not(:disabled):hover {
-    background: #b91c1c;
+    background: #8f1c12;
 }
 
 .btn-secundario {
@@ -542,7 +542,7 @@
     align-items: center;
     justify-content: center;
     padding: 1rem;
-    background: rgba(0, 0, 0, 0.65);
+    background: rgba(28, 20, 16, 0.45);
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.2s;
@@ -607,7 +607,7 @@
 
 .modal-cerrar:hover,
 .modal-cerrar:focus-visible {
-    color: var(--orange-main);
+    color: var(--orange-text);
     border-color: var(--orange-main);
 }
 
@@ -634,8 +634,8 @@
 }
 
 .toast.toast-error {
-    border-color: #f87171;
-    color: #f87171;
+    border-color: var(--danger);
+    color: var(--danger);
 }
 
 /* ---------- Filtros ---------- */
@@ -673,7 +673,7 @@
 }
 
 .filtro > span i {
-    color: var(--orange-main);
+    color: var(--orange-text);
     margin-right: 0.3rem;
 }
 
@@ -690,7 +690,7 @@
     border-radius: 12px;
     color: var(--text-light);
     font-size: 0.88rem;
-    color-scheme: dark;
+    color-scheme: light;
     line-height: normal;
     box-sizing: border-box;
 }
@@ -759,9 +759,9 @@
 }
 
 .toggle-chip[aria-pressed="true"] {
-    color: var(--orange-main);
+    color: var(--orange-text);
     border-color: var(--orange-main);
-    background: rgba(249, 115, 22, 0.12);
+    background: rgba(229, 96, 26, 0.12);
 }
 
 /* ---------- Contenido de página "clásico" (listas/detalle) reutilizado dentro
@@ -777,7 +777,7 @@
 
 .page-header h2 {
     font-size: 2rem;
-    color: #fff;
+    color: var(--ink);
     margin-bottom: 0.4rem;
 }
 
@@ -812,9 +812,9 @@
 }
 
 .tab-btn.active {
-    background: linear-gradient(to right, var(--orange-main), var(--orange-hover));
+    background: var(--orange-main);
     border-color: transparent;
-    color: #fff;
+    color: var(--ink);
 }
 
 .btn {
@@ -844,9 +844,9 @@
 }
 
 .btn-primary {
-    background: linear-gradient(to right, var(--orange-main), var(--orange-hover));
-    color: #fff;
-    box-shadow: 0 4px 15px rgba(249, 115, 22, 0.3);
+    background: var(--orange-main);
+    color: var(--ink);
+    box-shadow: 0 4px 15px rgba(229, 96, 26, 0.3);
 }
 
 .btn-secondary {
@@ -856,9 +856,9 @@
 }
 
 .btn-danger {
-    background-color: rgba(248, 113, 113, 0.12);
-    color: #f87171;
-    border: 1px solid rgba(248, 113, 113, 0.35);
+    background-color: rgba(180, 35, 24, 0.12);
+    color: var(--danger);
+    border: 1px solid rgba(180, 35, 24, 0.35);
 }
 
 .btn-sm {
@@ -894,7 +894,7 @@
 
 .item-card-main h3 {
     font-size: 1.15rem;
-    color: #fff;
+    color: var(--ink);
     margin-bottom: 0.3rem;
 }
 
@@ -939,7 +939,7 @@
 
 .detail-section h4 {
     font-size: 1.05rem;
-    color: var(--orange-main);
+    color: var(--orange-text);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     margin-bottom: 1.1rem;
@@ -951,7 +951,7 @@
     align-items: center;
     gap: 1rem;
     padding: 0.9rem 0;
-    border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+    border-bottom: 1px dashed var(--line);
 }
 
 .detail-row:last-child {
@@ -960,7 +960,7 @@
 
 .detail-row-main {
     font-size: 0.95rem;
-    color: #e5e7eb;
+    color: var(--ink);
 }
 
 .detail-row-sub {
@@ -972,13 +972,13 @@
 .detail-row-price {
     font-size: 1rem;
     font-weight: 700;
-    color: #fff;
+    color: var(--ink);
     white-space: nowrap;
 }
 
 .comment-item {
     padding: 0.9rem 0;
-    border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+    border-bottom: 1px dashed var(--line);
     font-size: 0.9rem;
 }
 
@@ -1011,13 +1011,13 @@
     aspect-ratio: 1;
     border-radius: 10px;
     border: 1px solid var(--border-color);
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: var(--sunken);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     font-size: 0.9rem;
-    color: #d1d5db;
+    color: var(--ink-soft);
     gap: 0.25rem;
 }
 
@@ -1028,14 +1028,14 @@
 
 .calendar-day.has-event {
     border-color: var(--orange-main);
-    background-color: rgba(249, 115, 22, 0.12);
+    background-color: rgba(229, 96, 26, 0.12);
     cursor: pointer;
     font-weight: 700;
-    color: #fff;
+    color: var(--ink);
 }
 
 .calendar-day.has-event:hover {
-    background-color: rgba(249, 115, 22, 0.22);
+    background-color: rgba(229, 96, 26, 0.22);
 }
 
 .calendar-day-dot {

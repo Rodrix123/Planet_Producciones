@@ -24,7 +24,8 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # Misma versión mayor que el entorno de desarrollo (Node 24).
+          node-version: 24
           cache: "npm"
 
       # npm ci respeta exactamente package-lock.json (más rápido y reproducible).
@@ -34,7 +35,7 @@ jobs:
       - name: Verificar que no se suban archivos .env
         run: |
           if git ls-files | grep -E '(^|/)\.env(\.local)?$'; then
-            echo "::error::Hay archivos .env versionados. Quitalos del repositorio."
+            echo "::error::Hay archivos .env versionados. Quitalos del repos  itorio."
             exit 1
           fi
 
