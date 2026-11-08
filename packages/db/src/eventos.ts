@@ -248,9 +248,21 @@ export async function listarEventos(supabase: SupabaseClient): Promise<{ eventos
 }
 
 /**
- * Un evento por id, ya listo para la web.
+ * Solo lectura. Todos los eventos confirmados (events.confirmed = true), sin importar
+ * su fecha: un evento ya realizado puede seguir debiendo dinero. Lo usa el menú de Pagos.
  */
-async function cargarEvento(supabase: SupabaseClient, id: number): Promise<Evento> {
+export async function listarEventosConfirmados(supabase: SupabaseClient): Promise<Evento[]> {
+  const eventosRes = await supabase.from("events").select(COLUMNAS).eq("confirmed", true);
+  if (eventosRes.error) throw eventosRes.error;
+
+  const filas = eventosRes.data as unknown as FilaEvento[];
+  const nombrePorPerfil = await nombresPorPerfil(supabase, idsDelPersonal(filas));
+  const eventos = filas.map((f) => aEvento(f, nombrePorPerfil));
+  eventos.sort((a, b) => claveDeOrden(a).localeCompare(claveDeOrden(b)));
+  return eventos;
+}
+
+export async function cargarEvento(supabase: SupabaseClient, id: number): Promise<Evento> {
   const eventoRes = await supabase.from("events").select(COLUMNAS).eq("id", id).single();
   if (eventoRes.error) throw eventoRes.error;
 

@@ -19,6 +19,7 @@ import { inventarioRouter } from './routes/inventario.routes';
 import { cuentasAccesoRouter } from './routes/cuentasAcceso.routes';
 import { panelRouter } from './routes/panel.routes';
 import { eventosRouter } from './routes/eventos.routes';
+import { pagosRouter } from './routes/pagos.routes';
 import { manejadorErrores } from './manejadorErrores';
 import { CARPETA_ASSETS, CARPETA_WEB } from './rutas';
 
@@ -70,6 +71,7 @@ app.use('/api/inventario', inventarioRouter);
 app.use('/api/cuentas-acceso', cuentasAccesoRouter);
 app.use('/api/panel', panelRouter);
 app.use('/api/eventos', eventosRouter);
+app.use('/api/pagos', pagosRouter);
 
 // Siempre al final: recoge los errores de todas las rutas anteriores.
 app.use(manejadorErrores);

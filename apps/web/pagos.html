@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pagos | Planet Producciones</title>
+
+    <link rel="icon" type="image/png" href="logo.png?v=2">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="panel-body">
+
+    <aside class="panel-rail">
+        <a href="index.html" class="rail-logo" title="Inicio">
+            <img src="logo.png?v=2" alt="Planet Producciones">
+        </a>
+        <nav class="rail-nav">
+            <a href="cotizaciones.html" class="rail-item" data-contador="cotizaciones"><i class="fa-solid fa-file-invoice-dollar"></i><span>Cotizaciones</span></a>
+            <a href="eventos-proceso.html" class="rail-item" data-contador="eventosProceso"><i class="fa-solid fa-truck-ramp-box"></i><span>En proceso</span></a>
+            <a href="eventos.html" class="rail-item"><i class="fa-solid fa-calendar-days"></i><span>Eventos</span></a>
+            <a href="pagos.html" class="rail-item active"><i class="fa-solid fa-money-bill-wave"></i><span>Pagos</span></a>
+            <a href="empleados.html" class="rail-item"><i class="fa-solid fa-users"></i><span>Empleados</span></a>
+            <a href="inventario.html" class="rail-item"><i class="fa-solid fa-boxes-stacked"></i><span>Inventario</span></a>
+        </nav>
+        <a href="cambiar-password.html" class="rail-item"><i class="fa-solid fa-key"></i><span>Contraseña</span></a>
+        <button type="button" id="btnLogout" class="rail-item rail-logout">
+            <i class="fa-solid fa-right-from-bracket"></i><span>Salir</span>
+        </button>
+    </aside>
+
+    <main class="panel-main pagos-main">
+        <header class="panel-topbar pagos-topbar">
+            <h1>Pagos</h1>
+        </header>
+
+        <div id="estado" class="panel-estado">
+            <i class="fa-solid fa-spinner fa-spin"></i> Cargando eventos...
+        </div>
+
+        <section class="pagos-columnas" id="columnas" hidden>
+            <article class="deck-panel pagos-panel" data-columna="sinPagar">
+                <header class="deck-head">
+                    <h2>Eventos sin pagar</h2>
+                    <button type="button" id="btnAnadirPago" class="pagos-btn-anadir" disabled>
+                        <i class="fa-solid fa-plus"></i> Añadir pago
+                    </button>
+                </header>
+                <div class="pagos-filtros">
+                    <label class="panel-search">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="search" data-filtro="texto" placeholder="Buscar por cliente, tipo o lugar">
+                    </label>
+                    <div class="pagos-fechas">
+                        <label class="filtro">
+                            <span><i class="fa-regular fa-calendar"></i> Fecha inicio</span>
+                            <input type="date" data-filtro="desde">
+                        </label>
+                        <label class="filtro">
+                            <span><i class="fa-regular fa-calendar-minus"></i> Fecha final</span>
+                            <input type="date" data-filtro="hasta">
+                        </label>
+                        <button type="button" class="btn-secundario filtro-limpiar" data-limpiar hidden title="Quitar la búsqueda y la fecha final; la fecha de inicio vuelve a hoy">
+                            <i class="fa-solid fa-filter-circle-xmark"></i> Limpiar
+                        </button>
+                    </div>
+                </div>
+                <div class="lista-eventos" data-lista></div>
+            </article>
+
+            <article class="deck-panel pagos-panel" data-columna="pagados">
+                <header class="deck-head">
+                    <h2>Eventos pagados</h2>
+                </header>
+                <div class="pagos-filtros">
+                    <label class="panel-search">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="search" data-filtro="texto" placeholder="Buscar por cliente, tipo o lugar">
+                    </label>
+                    <div class="pagos-fechas">
+                        <label class="filtro">
+                            <span><i class="fa-regular fa-calendar"></i> Fecha inicio</span>
+                            <input type="date" data-filtro="desde">
+                        </label>
+                        <label class="filtro">
+                            <span><i class="fa-regular fa-calendar-minus"></i> Fecha final</span>
+                            <input type="date" data-filtro="hasta">
+                        </label>
+                        <button type="button" class="btn-secundario filtro-limpiar" data-limpiar hidden title="Quitar la búsqueda y la fecha final; la fecha de inicio vuelve a hoy">
+                            <i class="fa-solid fa-filter-circle-xmark"></i> Limpiar
+                        </button>
+                    </div>
+                </div>
+                <div class="lista-eventos" data-lista></div>
+            </article>
+        </section>
+    </main>
+
+    <div id="modal" class="modal" aria-hidden="true">
+        <div class="modal-card pagos-modal" role="dialog" aria-modal="true" id="modalContenido"></div>
+    </div>
+
+    <div id="toast" class="toast" role="status"></div>
+
+    <script type="module" src="/src/pagos.ts"></script>
+</body>
+</html>
