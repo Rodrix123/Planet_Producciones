@@ -1,3 +1,5 @@
+// Inicio del panel de la secretaria (Mariana): exige sesión de ese rol y arma el encabezado.
+
 import './style.css';
 import './landing.css';
 import './shared/panel.css';

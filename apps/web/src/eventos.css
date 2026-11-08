@@ -55,7 +55,7 @@
 }
 
 .filtro-estado:has(.segmento:not([data-valor="todos"])[aria-pressed="true"]) {
-    border-color: rgba(249, 115, 22, 0.5);
+    border-color: rgba(229, 96, 26, 0.5);
 }
 
 .filtro-estado-nombre {
@@ -72,7 +72,7 @@
     display: inline-flex;
     gap: 2px;
     padding: 2px;
-    background: rgba(0, 0, 0, 0.25);
+    background-color: var(--sunken);
     border-radius: 999px;
 }
 
@@ -99,7 +99,7 @@
 }
 
 .segmento[aria-pressed="true"] {
-    color: #fff;
+    color: var(--ink);
     background: var(--orange-main);
 }
 
@@ -152,7 +152,7 @@
 .deck-cal:hover,
 .deck-cal.fijado {
     width: var(--deck-hover);
-    border-color: rgba(249, 115, 22, 0.45);
+    border-color: rgba(229, 96, 26, 0.45);
 }
 
 .deck-lista:has(~ .deck-cal:hover),
@@ -192,7 +192,7 @@
 }
 
 .lista-eventos:hover {
-    scrollbar-color: rgba(249, 115, 22, 0.55) transparent;
+    scrollbar-color: rgba(229, 96, 26, 0.55) transparent;
 }
 
 .lista-eventos::-webkit-scrollbar {
@@ -209,7 +209,7 @@
 }
 
 .lista-eventos:hover::-webkit-scrollbar-thumb {
-    background: rgba(249, 115, 22, 0.55);
+    background: rgba(229, 96, 26, 0.55);
 }
 
 .lista-eventos::-webkit-scrollbar-thumb:hover {
@@ -242,12 +242,12 @@
 .lista-item:hover,
 .lista-item:focus-visible {
     outline: none;
-    border-color: rgba(249, 115, 22, 0.5);
+    border-color: rgba(229, 96, 26, 0.5);
 }
 
 .lista-item.seleccionado {
     border-color: var(--orange-main);
-    background: rgba(249, 115, 22, 0.1);
+    background: rgba(229, 96, 26, 0.1);
 }
 
 .lista-fecha {
@@ -255,7 +255,7 @@
     width: 48px;
     padding: 0.35rem 0;
     text-align: center;
-    background: rgba(249, 115, 22, 0.12);
+    background: rgba(229, 96, 26, 0.12);
     border-radius: 12px;
     line-height: 1.1;
 }
@@ -263,7 +263,7 @@
 .lista-fecha strong {
     display: block;
     font-size: 1.15rem;
-    color: var(--orange-main);
+    color: var(--orange-text);
 }
 
 .lista-fecha span {
@@ -350,7 +350,7 @@
 }
 
 .cal-flecha:hover {
-    color: var(--orange-main);
+    color: var(--orange-text);
     border-color: var(--orange-main);
 }
 
@@ -365,8 +365,8 @@
 }
 
 .cal-pin[aria-pressed="true"] {
-    color: var(--orange-main);
-    background: rgba(249, 115, 22, 0.12);
+    color: var(--orange-text);
+    background: rgba(229, 96, 26, 0.12);
     border-color: var(--orange-main);
 }
 
@@ -425,7 +425,7 @@
 
 .cal-dia.hoy {
     border: 2px solid var(--orange-main);
-    background: rgba(249, 115, 22, 0.1);
+    background: rgba(229, 96, 26, 0.1);
 }
 
 .cal-num {
@@ -440,7 +440,7 @@
 }
 
 .cal-dia.hoy .cal-num {
-    color: #fff;
+    color: var(--ink);
     background: var(--orange-main);
     border-radius: 999px;
 }
@@ -456,25 +456,25 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: #e0a878;
-    background: rgba(249, 115, 22, 0.14);
-    border: 1px solid rgba(249, 115, 22, 0.25);
+    color: var(--orange-text);
+    background: rgba(229, 96, 26, 0.14);
+    border: 1px solid rgba(229, 96, 26, 0.25);
     border-radius: 5px;
     cursor: pointer;
     flex-shrink: 0;
 }
 
 .cal-evt[data-confirmado="true"] {
-    color: #7fd6b3;
+    color: var(--emerald-green);
     background: rgba(52, 211, 153, 0.12);
     border-color: rgba(52, 211, 153, 0.28);
 }
 
 .cal-evt:hover,
 .cal-evt.seleccionado {
-    color: #fff;
+    color: var(--ink);
     border-color: var(--orange-main);
-    background: rgba(249, 115, 22, 0.4);
+    background: rgba(229, 96, 26, 0.4);
 }
 
 .cal-mas {
@@ -491,7 +491,7 @@
 }
 
 .cal-mas:hover {
-    color: var(--orange-main);
+    color: var(--orange-text);
 }
 
 /* Cuadro que se sobrepone al grid, en la casilla del día elegido. */
@@ -506,7 +506,7 @@
     background: var(--bg-card);
     border: 1px solid var(--orange-main);
     border-radius: 12px;
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65);
+    box-shadow: 0 16px 40px rgba(28, 20, 16, 0.45);
     animation: popover-in 0.18s ease-out;
 }
 
@@ -543,7 +543,7 @@
 }
 
 .pop-head button:hover {
-    color: var(--orange-main);
+    color: var(--orange-text);
 }
 
 .cal-popover .cal-evt {

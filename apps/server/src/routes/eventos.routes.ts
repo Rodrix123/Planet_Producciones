@@ -1,3 +1,7 @@
+// Menú de eventos de la administradora (/api/eventos). La lógica (consultas, reglas de fecha y
+// creación del evento junto con su cotización) vive en packages/db/src/eventos.ts; aquí solo se
+// exponen esas funciones como rutas y se traducen sus errores de negocio a respuestas HTTP.
+
 import { Router } from 'express';
 import { crearEvento, listarEventos, listarOpcionesEvento, validarFechaEvento, ErrorEvento } from '@my-app/db/eventos';
 import { supabaseAdmin as clienteAdmin } from '../supabaseAdmin';
@@ -30,9 +34,11 @@ function conEventos(operacion: () => Promise<unknown>, status = 200) {
     });
 }
 
+// Eventos de hoy en adelante (los pasados no se listan) con su cliente, lugar, personal y estado de pagos y contrato.
 eventosRouter.get('/', (req, res, next) =>
     conEventos(() => listarEventos(supabaseAdmin))(req, res, next));
 
+// Opciones del formulario de nuevo evento: las sedes y los transportes (con su precio), en orden alfabético.
 eventosRouter.get('/opciones', (req, res, next) =>
     conEventos(() => listarOpcionesEvento(supabaseAdmin))(req, res, next));
 
@@ -41,5 +47,6 @@ eventosRouter.get('/opciones', (req, res, next) =>
 eventosRouter.get('/fecha', (req, res, next) =>
     conEventos(() => validarFechaEvento(supabaseAdmin, req.query.fecha, req.query.hora))(req, res, next));
 
+// Crea un evento nuevo junto con su cotización y sus servicios (todo o nada).
 eventosRouter.post('/', (req, res, next) =>
     conEventos(async () => ({ evento: await crearEvento(supabaseAdmin, req.body) }), 201)(req, res, next));
