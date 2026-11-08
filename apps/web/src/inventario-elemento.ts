@@ -38,6 +38,8 @@ interface Fila {
 let filas: Fila[] = [];
 const variantesElegidas = new Set<string>();
 const estadosElegidos = new Set<string>();
+// Estado que viene marcado al abrir la página ("Limpiar filtros" lo quita también).
+const ESTADO_POR_DEFECTO = 'bueno';
 
 // Muestra un error en lugar de la tabla.
 function mostrarError(mensaje: string): void {
@@ -67,6 +69,13 @@ function armarFiltros(e: Elemento, estadosPosibles: string[]): void {
     menuEstado.innerHTML = estados
         .map(es => opcion('estado', es, esc(nombreEstado(es)), filas.filter(f => f.unidad.estado === es).length))
         .join('');
+
+    // Por defecto se muestran solo las unidades en buen estado.
+    const bueno = menuEstado.querySelector<HTMLInputElement>(`input[value="${ESTADO_POR_DEFECTO}"]`);
+    if (bueno) {
+        bueno.checked = true;
+        estadosElegidos.add(ESTADO_POR_DEFECTO);
+    }
     filtros.hidden = false;
 }
 
