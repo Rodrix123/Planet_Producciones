@@ -111,6 +111,11 @@
     font-size: 1.1rem;
 }
 
+/* Nivel 2: el icono del elemento va en azul para distinguirlo del tipo. */
+.inv-n2 > .inv-cab .inv-icono {
+    color: #2f6fb5;
+}
+
 /* Nivel 4: unidad física, más compacto. */
 .inv-n4 > .inv-cab {
     padding: 0.45rem 0.8rem;
