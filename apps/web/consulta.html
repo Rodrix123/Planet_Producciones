@@ -35,39 +35,42 @@
     </aside>
 
     <main class="panel-main panel-main-wide">
-        <div class="page-header">
-            <div>
-                <h2>Clientes y eventos</h2>
-                <p>Consulta los clientes, sus eventos agendados y el detalle de cada cotización. Desde aquí no se modifica ningún dato.</p>
+        <!-- Encabezado de la lista (título, filtros y búsqueda): queda fijo al desplazarse -->
+        <div class="consulta-cabecera">
+            <div class="page-header">
+                <div>
+                    <h2>Clientes y eventos</h2>
+                    <p>Consulta los clientes, sus eventos agendados y el detalle de cada cotización. Desde aquí no se modifica ningún dato.</p>
+                </div>
+                <a href="panel-admin.html" class="back-home-btn"><i class="fa-solid fa-arrow-left"></i> Volver al panel</a>
             </div>
-            <a href="panel-admin.html" class="back-home-btn"><i class="fa-solid fa-arrow-left"></i> Volver al panel</a>
-        </div>
 
-        <div class="filtros consulta-filtros" id="filtros" hidden>
-            <label class="filtro filtro-nombre">
-                <span><i class="fa-solid fa-magnifying-glass"></i> Cliente</span>
-                <input type="search" id="fNombre" placeholder="Buscar por nombre" autocomplete="off">
-            </label>
-            <label class="filtro">
-                <span><i class="fa-solid fa-flag"></i> Estado</span>
-                <select id="fEstado">
-                    <option value="">Todos los estados</option>
-                </select>
-            </label>
-            <div class="filtro-grupo">
-                <label class="filtro">
-                    <span><i class="fa-regular fa-calendar"></i> Fecha inicio</span>
-                    <input type="date" id="fDesde">
+            <div class="filtros consulta-filtros" id="filtros" hidden>
+                <label class="filtro filtro-nombre">
+                    <span><i class="fa-solid fa-magnifying-glass"></i> Cliente</span>
+                    <input type="search" id="fNombre" placeholder="Buscar por nombre" autocomplete="off">
                 </label>
                 <label class="filtro">
-                    <span><i class="fa-regular fa-calendar-minus"></i> Fecha final</span>
-                    <input type="date" id="fHasta">
+                    <span><i class="fa-solid fa-flag"></i> Estado</span>
+                    <select id="fEstado">
+                        <option value="">Todos los estados</option>
+                    </select>
                 </label>
+                <div class="filtro-grupo">
+                    <label class="filtro">
+                        <span><i class="fa-regular fa-calendar"></i> Fecha inicio</span>
+                        <input type="date" id="fDesde">
+                    </label>
+                    <label class="filtro">
+                        <span><i class="fa-regular fa-calendar-minus"></i> Fecha final</span>
+                        <input type="date" id="fHasta">
+                    </label>
+                </div>
+                <button type="button" id="fLimpiar" class="btn-secundario filtro-limpiar" hidden>
+                    <i class="fa-solid fa-filter-circle-xmark"></i> Limpiar filtros
+                </button>
+                <span class="filtro-conteo" id="conteo" role="status"></span>
             </div>
-            <button type="button" id="fLimpiar" class="btn-secundario filtro-limpiar" hidden>
-                <i class="fa-solid fa-filter-circle-xmark"></i> Limpiar filtros
-            </button>
-            <span class="filtro-conteo" id="conteo" role="status"></span>
         </div>
 
         <div id="estado" class="panel-estado">
@@ -116,5 +119,6 @@
     <div id="toast" class="toast" role="status"></div>
 
     <script type="module" src="/src/consulta.ts"></script>
+    <script type="module" src="/src/consultaCabeceraFija.ts"></script>
 </body>
 </html>
