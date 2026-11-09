@@ -371,11 +371,6 @@
     border-radius: 16px;
 }
 
-/* Documentos e historial son listas de lectura: no se estiran en pantallas muy anchas. */
-.consulta-panel-angosto {
-    max-width: 960px;
-}
-
 .consulta-resumen-grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr);

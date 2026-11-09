@@ -347,9 +347,9 @@ function conectarDesplegarTodo(panel: HTMLElement): void {
 }
 
 // ---------- Panel completo ----------
-function panel(pestana: Pestana, contenido: string, angosto = false): string {
+function panel(pestana: Pestana, contenido: string): string {
     return `
-        <div class="consulta-panel${angosto ? ' consulta-panel-angosto' : ''}" role="tabpanel" id="panel-${pestana}"
+        <div class="consulta-panel" role="tabpanel" id="panel-${pestana}"
              aria-labelledby="tab-${pestana}" data-pestana="${pestana}" tabindex="0" hidden>${contenido}</div>`;
 }
 
@@ -368,8 +368,8 @@ export function pintarDetalle(contenedor: HTMLElement, datos: DatosDetalle, irA:
                 <div>${seccionCotizacion(items, registro)}${seccionCliente(cliente)}</div>
             </div>`) +
         panel('servicios', seccionServicios(items, registro)) +
-        panel('documentos', seccionDocumentos(cliente, registro, contrato), true) +
-        panel('historial', seccionHistorial(historial), true);
+        panel('documentos', seccionDocumentos(cliente, registro, contrato)) +
+        panel('historial', seccionHistorial(historial));
 
     const tabla = contenedor.querySelector<HTMLElement>('[data-rol="tablaServicios"]');
     if (tabla) montarTablaServicios(tabla, items);
