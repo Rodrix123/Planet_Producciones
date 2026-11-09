@@ -78,14 +78,35 @@
 
         <!-- Vista de detalle: ocupa el lugar de la lista, como en "Eventos en proceso" -->
         <section id="detalleConsulta" class="consulta-detalle" aria-labelledby="detalleTitulo" hidden>
-            <div class="consulta-detalle-barra">
-                <button type="button" id="btnVolverLista" class="btn btn-secondary btn-sm" aria-label="Volver a la lista">
-                    <i class="fa-solid fa-arrow-left"></i> Volver
-                </button>
-                <span class="badge" id="detalleEstado"></span>
-                <div class="consulta-detalle-titulos">
-                    <h2 id="detalleTitulo" tabindex="-1"></h2>
-                    <p id="detalleSubtitulo"></p>
+            <!-- Encabezado fijo: sigue visible al desplazarse, en cualquier pestaña -->
+            <div class="consulta-detalle-fijo">
+                <div class="consulta-detalle-barra">
+                    <button type="button" id="btnVolverLista" class="btn btn-secondary btn-sm" aria-label="Volver a la lista">
+                        <i class="fa-solid fa-arrow-left"></i> Volver
+                    </button>
+                    <span class="badge" id="detalleEstado"></span>
+                    <div class="consulta-detalle-titulos">
+                        <h2 id="detalleTitulo" tabindex="-1"></h2>
+                        <p id="detalleSubtitulo"></p>
+                    </div>
+                    <div class="consulta-detalle-total">
+                        <span>Total cotizado</span>
+                        <strong class="item-card-total" id="detalleTotal"></strong>
+                    </div>
+                </div>
+                <div class="tabs consulta-pestanas" role="tablist" aria-label="Secciones del detalle">
+                    <button type="button" class="tab-btn active" role="tab" id="tab-resumen" data-pestana="resumen" aria-controls="panel-resumen" aria-selected="true">
+                        <i class="fa-solid fa-circle-info" aria-hidden="true"></i> Resumen
+                    </button>
+                    <button type="button" class="tab-btn" role="tab" id="tab-servicios" data-pestana="servicios" aria-controls="panel-servicios" aria-selected="false" tabindex="-1">
+                        <i class="fa-solid fa-list-ul" aria-hidden="true"></i> Servicios <span class="consulta-pestana-cuenta" data-cuenta="servicios"></span>
+                    </button>
+                    <button type="button" class="tab-btn" role="tab" id="tab-documentos" data-pestana="documentos" aria-controls="panel-documentos" aria-selected="false" tabindex="-1">
+                        <i class="fa-solid fa-folder-open" aria-hidden="true"></i> Documentos
+                    </button>
+                    <button type="button" class="tab-btn" role="tab" id="tab-historial" data-pestana="historial" aria-controls="panel-historial" aria-selected="false" tabindex="-1">
+                        <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> Historial <span class="consulta-pestana-cuenta" data-cuenta="historial"></span>
+                    </button>
                 </div>
             </div>
             <div id="detalleContenido"></div>

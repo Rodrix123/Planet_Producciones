@@ -20,7 +20,10 @@ export interface DatosClienteExcel {
     lugar: string;
 }
 
-export function formatearItemsParaMostrar(formatterCOP: Intl.NumberFormat, items: ItemSeleccionado[]): ItemParaMostrar[] {
+/** Solo lo que el PDF/Excel necesita de cada ítem: sirve igual para el cotizador y para el panel. */
+export type ItemParaFormatear = Pick<ItemSeleccionado, 'tag' | 'nombre' | 'descripcion' | 'cantidad' | 'precioUnit'>;
+
+export function formatearItemsParaMostrar(formatterCOP: Intl.NumberFormat, items: ItemParaFormatear[]): ItemParaMostrar[] {
     return items.map((item) => ({
         tag: item.tag,
         nombre: item.cantidad > 1 ? `${item.cantidad} x ${item.nombre} (${formatterCOP.format(item.precioUnit)} c/u)` : item.nombre,

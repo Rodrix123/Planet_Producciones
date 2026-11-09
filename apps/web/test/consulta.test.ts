@@ -6,8 +6,15 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
+    categoriasDeServicios,
     contarResultados,
     filtrarClientes,
+    filtrarServicios,
+    historialReciente,
+    paginar,
+    paginasVisibles,
+    plural,
+    type ServicioCotizado,
     formatearFechaCorta,
     formatearHora,
     hayFiltros,
@@ -324,5 +331,149 @@ describe('Excel compartido con el cotizador', () => {
         const filas = construirFilasExcel({ ...datos, tipoEvento: '', lugar: '' }, [], 0, 'PL', 'hoy');
         assert.equal(filas[4]?.[3], 'N/A');
         assert.equal(filas[5]?.[3], 'Por definir');
+    });
+});
+
+// ---------- Servicios del detalle (tabla con búsqueda, categorías y páginas) ----------
+
+function servicio(nombre: string, tag: string, extra: Partial<ServicioCotizado> = {}): ServicioCotizado {
+    return { variantId: siguienteId++, cantidad: 1, tag, nombre, descripcion: '', precioUnit: 100000, ...extra };
+}
+
+const SERVICIOS = [
+    servicio('Par LED', 'ILUMINACIÓN', { descripcion: 'Control DMX', cantidad: 8 }),
+    servicio('Cabeza móvil', 'ILUMINACIÓN'),
+    servicio('Sistema line array', 'SONIDO PROFESIONAL', { descripcion: 'Consola digital y micrófonos' }),
+    servicio('Cabina activa', 'SONIDO PROFESIONAL', { nota: 'El cliente pide color negro' }),
+    servicio('Máquina de humo', 'EFECTOS ESPECIALES')
+];
+
+describe('Categorías de los servicios', () => {
+    it('cuenta los servicios por categoría en orden alfabético', () => {
+        assert.deepEqual(categoriasDeServicios(SERVICIOS), [
+            { categoria: 'EFECTOS ESPECIALES', cantidad: 1 },
+            { categoria: 'ILUMINACIÓN', cantidad: 2 },
+            { categoria: 'SONIDO PROFESIONAL', cantidad: 2 }
+        ]);
+    });
+
+    it('sin servicios no hay categorías', () => {
+        assert.deepEqual(categoriasDeServicios([]), []);
+    });
+});
+
+describe('Búsqueda de servicios', () => {
+    const buscar = (texto: string, categoria = '') => filtrarServicios(SERVICIOS, { texto, categoria }).map((s) => s.nombre);
+
+    it('sin filtros devuelve todos', () => {
+        assert.equal(buscar('').length, SERVICIOS.length);
+    });
+
+    it('busca sin importar tildes ni mayúsculas', () => {
+        assert.deepEqual(buscar('MAQUINA'), ['Máquina de humo']);
+        assert.deepEqual(buscar('móvil'), ['Cabeza móvil']);
+    });
+
+    it('busca en la descripción, la categoría y la nota', () => {
+        assert.deepEqual(buscar('dmx'), ['Par LED']);
+        assert.deepEqual(buscar('efectos'), ['Máquina de humo']);
+        assert.deepEqual(buscar('negro'), ['Cabina activa']);
+    });
+
+    it('con varias palabras, todas deben aparecer en cualquier orden', () => {
+        assert.deepEqual(buscar('led par'), ['Par LED']);
+        assert.deepEqual(buscar('cabina azul'), []);
+    });
+
+    it('filtra por categoría', () => {
+        assert.deepEqual(buscar('', 'ILUMINACIÓN'), ['Par LED', 'Cabeza móvil']);
+    });
+
+    it('combina búsqueda y categoría', () => {
+        assert.deepEqual(buscar('cab', 'SONIDO PROFESIONAL'), ['Cabina activa']);
+        assert.deepEqual(buscar('cab', 'ILUMINACIÓN'), ['Cabeza móvil']);
+    });
+
+    it('no altera la lista original', () => {
+        const antes = JSON.stringify(SERVICIOS);
+        filtrarServicios(SERVICIOS, { texto: 'led', categoria: 'ILUMINACIÓN' });
+        assert.equal(JSON.stringify(SERVICIOS), antes);
+    });
+});
+
+describe('Paginación de 10 en 10', () => {
+    const cientos = Array.from({ length: 253 }, (_, i) => servicio(`Servicio ${i + 1}`, `CAT ${i % 6}`));
+
+    it('cientos de servicios: la primera página trae 10', () => {
+        const p = paginar(cientos, 1);
+        assert.equal(p.elementos.length, 10);
+        assert.equal(p.totalPaginas, 26);
+        assert.deepEqual([p.desde, p.hasta, p.total], [1, 10, 253]);
+    });
+
+    it('la última página trae lo que sobra', () => {
+        const p = paginar(cientos, 26);
+        assert.equal(p.elementos.length, 3);
+        assert.deepEqual([p.desde, p.hasta], [251, 253]);
+        assert.equal(p.elementos[0]?.nombre, 'Servicio 251');
+    });
+
+    it('una página fuera de rango se ajusta', () => {
+        assert.equal(paginar(cientos, 99).pagina, 26);
+        assert.equal(paginar(cientos, 0).pagina, 1);
+        assert.equal(paginar(cientos, Number.NaN).pagina, 1);
+    });
+
+    it('sin elementos hay una sola página vacía', () => {
+        const p = paginar([], 3);
+        assert.deepEqual([p.pagina, p.totalPaginas, p.total, p.desde, p.hasta], [1, 1, 0, 0, 0]);
+    });
+
+    it('filtrar y paginar juntos', () => {
+        const filtrados = filtrarServicios(cientos, { texto: '', categoria: 'CAT 0' });
+        const p = paginar(filtrados, 5);
+        assert.equal(filtrados.length, 43);
+        assert.equal(p.totalPaginas, 5);
+        assert.equal(p.elementos.length, 3);
+    });
+});
+
+describe('Botones de página', () => {
+    it('con pocas páginas se muestran todas', () => {
+        assert.deepEqual(paginasVisibles(1, 1), [1]);
+        assert.deepEqual(paginasVisibles(3, 7), [1, 2, 3, 4, 5, 6, 7]);
+    });
+
+    it('al inicio: primeras páginas, salto y la última', () => {
+        assert.deepEqual(paginasVisibles(1, 26), [1, 2, 3, 4, null, 26]);
+    });
+
+    it('en medio: la primera, las vecinas y la última', () => {
+        assert.deepEqual(paginasVisibles(12, 26), [1, null, 11, 12, 13, null, 26]);
+    });
+
+    it('al final: la primera, salto y las últimas', () => {
+        assert.deepEqual(paginasVisibles(26, 26), [1, null, 23, 24, 25, 26]);
+    });
+
+    it('un hueco de una sola página muestra el número en vez del salto', () => {
+        assert.deepEqual(paginasVisibles(4, 26), [1, 2, 3, 4, 5, null, 26]);
+    });
+});
+
+describe('Historial', () => {
+    it('ordena de lo más reciente a lo más antiguo sin cambiar el original', () => {
+        const historial = [
+            { creadoEn: '2026-10-02T15:00:00Z', id: 'a' },
+            { creadoEn: '2026-10-05T15:00:00Z', id: 'b' },
+            { creadoEn: '2026-10-03T15:00:00Z', id: 'c' }
+        ];
+        assert.deepEqual(historialReciente(historial).map((h) => h.id), ['b', 'c', 'a']);
+        assert.deepEqual(historial.map((h) => h.id), ['a', 'b', 'c']);
+    });
+
+    it('plural', () => {
+        assert.equal(plural(1, 'servicio', 'servicios'), '1 servicio');
+        assert.equal(plural(0, 'servicio', 'servicios'), '0 servicios');
     });
 });

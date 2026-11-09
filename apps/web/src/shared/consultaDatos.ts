@@ -55,6 +55,10 @@ export const ESTADO_LABEL: Record<EstadoCotizacion, string> = {
     cancelada: 'Cancelada'
 };
 
+export function plural(n: number, uno: string, varios: string): string {
+    return `${n} ${n === 1 ? uno : varios}`;
+}
+
 /** Sin tildes, mayúsculas ni espacios de más: "  MARÍA  josé" y "maria jose" son lo mismo. */
 export function normalizarTexto(texto: string): string {
     return texto.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -125,6 +129,97 @@ export function revisarTotal(items: { precioUnit: number; cantidad: number }[], 
     if (items.length === 0) return total > 0 && precioTransporte < total ? 'sin_servicios' : 'cuadra';
     const suma = items.reduce((acc, i) => acc + i.precioUnit * i.cantidad, 0) + precioTransporte;
     return Math.abs(suma - total) < 1 ? 'cuadra' : 'no_cuadra';
+}
+
+// ---------- Servicios de una cotización (tabla del detalle) ----------
+
+export interface ServicioCotizado {
+    variantId: number;
+    cantidad: number;
+    tag: string;
+    nombre: string;
+    descripcion: string;
+    precioUnit: number;
+    nota?: string | null;
+}
+
+export interface FiltroServicios {
+    texto: string;
+    categoria: string;
+}
+
+export const SERVICIOS_POR_PAGINA = 10;
+
+const ALFABETICO = new Intl.Collator('es', { sensitivity: 'base', numeric: true });
+
+/** Categorías presentes en la cotización, en orden alfabético y con cuántos servicios tiene cada una. */
+export function categoriasDeServicios(items: ServicioCotizado[]): { categoria: string; cantidad: number }[] {
+    const cuenta = new Map<string, number>();
+    for (const item of items) cuenta.set(item.tag, (cuenta.get(item.tag) ?? 0) + 1);
+    return [...cuenta]
+        .map(([categoria, cantidad]) => ({ categoria, cantidad }))
+        .sort((a, b) => ALFABETICO.compare(a.categoria, b.categoria));
+}
+
+/**
+ * Búsqueda sin tildes ni mayúsculas en nombre, descripción, categoría y nota. Con varias
+ * palabras, cada una debe aparecer (en cualquier orden): "led par" encuentra "Par LED".
+ */
+export function filtrarServicios(items: ServicioCotizado[], f: FiltroServicios): ServicioCotizado[] {
+    const palabras = normalizarTexto(f.texto).split(' ').filter(Boolean);
+    return items.filter((item) => {
+        if (f.categoria && item.tag !== f.categoria) return false;
+        if (palabras.length === 0) return true;
+        const texto = normalizarTexto(`${item.nombre} ${item.descripcion} ${item.tag} ${item.nota ?? ''}`);
+        return palabras.every((p) => texto.includes(p));
+    });
+}
+
+export interface Pagina<T> {
+    elementos: T[];
+    /** Página mostrada, ya ajustada a las que existen. */
+    pagina: number;
+    totalPaginas: number;
+    total: number;
+    /** Posición (desde 1) del primer y el último elemento mostrados; 0 si no hay ninguno. */
+    desde: number;
+    hasta: number;
+}
+
+/** Corta la página pedida; una página fuera de rango se ajusta a la primera o a la última. */
+export function paginar<T>(items: T[], pagina: number, porPagina = SERVICIOS_POR_PAGINA): Pagina<T> {
+    const total = items.length;
+    const totalPaginas = Math.max(1, Math.ceil(total / porPagina));
+    const actual = Math.min(Math.max(1, Math.floor(pagina) || 1), totalPaginas);
+    const inicio = (actual - 1) * porPagina;
+    const elementos = items.slice(inicio, inicio + porPagina);
+    return { elementos, pagina: actual, totalPaginas, total, desde: total ? inicio + 1 : 0, hasta: inicio + elementos.length };
+}
+
+/**
+ * Botones de página a mostrar: la primera, la última y las vecinas de la actual; `null` marca
+ * un salto ("…"). Con pocas páginas se muestran todas.
+ */
+export function paginasVisibles(actual: number, total: number): (number | null)[] {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const elegidas = new Set([1, total, actual - 1, actual, actual + 1]);
+    if (actual <= 3) [2, 3, 4].forEach((p) => elegidas.add(p));
+    if (actual >= total - 2) [total - 3, total - 2, total - 1].forEach((p) => elegidas.add(p));
+    const orden = [...elegidas].filter((p) => p >= 1 && p <= total).sort((a, b) => a - b);
+
+    const resultado: (number | null)[] = [];
+    orden.forEach((p, i) => {
+        const anterior = orden[i - 1];
+        if (anterior !== undefined && p - anterior === 2) resultado.push(anterior + 1); // un hueco de una sola página se muestra
+        else if (anterior !== undefined && p - anterior > 2) resultado.push(null);
+        resultado.push(p);
+    });
+    return resultado;
+}
+
+/** Más recientes primero, sin cambiar el arreglo original. */
+export function historialReciente<T extends { creadoEn: string }>(historial: T[]): T[] {
+    return [...historial].sort((a, b) => new Date(b.creadoEn).getTime() - new Date(a.creadoEn).getTime());
 }
 
 // ---------- Presentación ----------

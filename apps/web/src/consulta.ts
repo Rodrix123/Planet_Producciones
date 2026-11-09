@@ -1,72 +1,39 @@
 import './style.css';
 import './shared/panelRail.css';
 import './consulta.css';
-import { apiFetch, apiUrl, exigirSesion } from './shared/api';
+import { apiFetch, exigirSesion } from './shared/api';
 import { initPanelLayout } from './shared/layout';
-import { avisar, esc } from './shared/panelShell';
+import { esc } from './shared/panelShell';
 import {
-    excelDisponible,
-    formatearItemsParaMostrar,
-    generarExcelEjecutivo,
-    type ItemParaMostrar
-} from './shared/cotizacionExcel';
-import type { ItemSeleccionado } from './shared/catalogoCotizacion';
+    PESTANAS,
+    pintarDetalle,
+    type ContratoInfo,
+    type DetalleCotizacion,
+    type EntradaHistorial,
+    type Pestana
+} from './consultaDetalle';
 import {
     ESTADO_LABEL,
     contarResultados,
     filtrarClientes,
     formatearCOP,
     formatearFechaCorta,
-    formatearFechaLarga,
     formatearHora,
-    formatearMomento,
     hayFiltros,
     hayFiltrosDeRegistro,
     hoyEnColombia,
     iniciales,
     lugarTexto,
     nombreEvento,
-    obtenerFormatterCOP,
     partesDeFecha,
+    plural,
     proximoEvento,
-    revisarTotal,
     separarRegistros,
     type ClienteConsulta,
     type EstadoCotizacion,
     type FiltrosConsulta,
     type RegistroConsulta
 } from './shared/consultaDatos';
-
-interface DetalleCotizacion {
-    items: (ItemSeleccionado & { nota?: string | null })[];
-}
-
-/** Una versión del historial: items_despues guarda lo que llegó al editar, sin garantía de forma. */
-interface ItemVersion {
-    variantId?: number;
-    cantidad?: number;
-    nombre?: string;
-    precioUnit?: number;
-}
-
-interface EntradaHistorial {
-    id: string;
-    tipo: 'comentario' | 'edicion' | 'cambio_estado';
-    comentario: string | null;
-    estadoAntes: string | null;
-    estadoDespues: string | null;
-    itemsAntes: ItemVersion[] | null;
-    itemsDespues: ItemVersion[] | null;
-    usuarioNombre: string | null;
-    creadoEn: string;
-}
-
-interface ContratoInfo {
-    enviadoEn: string | null;
-    firmadoSubidoEn: string | null;
-    tieneFirmado: boolean;
-    archivoFirmadoDisponible: boolean;
-}
 
 const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
 
@@ -84,6 +51,8 @@ const detalleContenido = $('detalleContenido');
 const detalleEstado = $('detalleEstado');
 const detalleTitulo = $('detalleTitulo');
 const detalleSubtitulo = $('detalleSubtitulo');
+const detalleTotal = $('detalleTotal');
+const pestanas = [...document.querySelectorAll<HTMLButtonElement>('[role="tab"][data-pestana]')];
 
 let clientes: ClienteConsulta[] = [];
 /** Cada cotización con su cliente, para abrir el detalle desde una fila. */
@@ -95,9 +64,9 @@ let cargaDetalle = 0;
 let filaOrigen: HTMLElement | null = null;
 /** Dónde estaba la lista al abrir un detalle, para volver al mismo punto. */
 let scrollDeLista = 0;
+let pestanaActual: Pestana = 'resumen';
 
 const claveCliente = (c: ClienteConsulta): string => (c.id === null ? 'sin-cliente' : String(c.id));
-const plural = (n: number, uno: string, varios: string): string => `${n} ${n === 1 ? uno : varios}`;
 
 // ---------- Filtros ----------
 function leerFiltros(): FiltrosConsulta {
@@ -233,208 +202,48 @@ async function cargarClientes(): Promise<void> {
     renderLista();
 }
 
-// ---------- Detalle de una cotización ----------
-function dato(etiqueta: string, valor: string): string {
-    return `<div class="dato-fila"><span>${esc(etiqueta)}</span><span>${esc(valor)}</span></div>`;
-}
-
-function textoContrato(r: RegistroConsulta): string {
-    const e = r.evento!;
-    if (e.tieneContratoFirmado) {
-        return e.contratoFirmadoSubidoEn ? `Firmado, subido el ${formatearMomento(e.contratoFirmadoSubidoEn)}` : 'Firmado';
+// ---------- Pestañas del detalle ----------
+/**
+ * Muestra una pestaña (patrón ARIA de pestañas). Si el detalle estaba desplazado, vuelve a su
+ * inicio para que el contenido nuevo empiece justo bajo el encabezado fijo.
+ */
+function activarPestana(pestana: Pestana, enfocar = false): void {
+    pestanaActual = pestana;
+    for (const boton of pestanas) {
+        const activa = boton.dataset.pestana === pestana;
+        boton.classList.toggle('active', activa);
+        boton.setAttribute('aria-selected', String(activa));
+        boton.tabIndex = activa ? 0 : -1;
+        if (activa) {
+            boton.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+            if (enfocar) boton.focus({ preventScroll: true });
+        }
     }
-    return e.contratoEnviadoEn ? `Enviado el ${formatearMomento(e.contratoEnviadoEn)}, sin firmar` : 'Sin enviar';
+    detalleContenido.querySelectorAll<HTMLElement>('[role="tabpanel"]').forEach((panel) => {
+        panel.hidden = panel.dataset.pestana !== pestana;
+    });
+
+    const inicioDetalle = detalleEl.getBoundingClientRect().top + window.scrollY;
+    if (window.scrollY > inicioDetalle) window.scrollTo(0, inicioDetalle);
 }
 
-function seccionEvento(r: RegistroConsulta): string {
-    const filas = [
-        dato('Fecha', formatearFechaLarga(r.fecha)),
-        dato('Hora', formatearHora(r.hora)),
-        dato('Lugar', lugarTexto(r)),
-        ...(r.direccion ? [dato('Dirección', r.direccion)] : [])
-    ];
-
-    if (r.evento) {
-        const saldo = Math.max(r.total - r.evento.totalPagado, 0);
-        filas.push(
-            dato('Contrato', textoContrato(r)),
-            dato('Pago inicial', r.evento.pagoInicial ? 'Hecho' : 'Pendiente'),
-            dato('Pagado', formatearCOP(r.evento.totalPagado)),
-            dato('Saldo', formatearCOP(saldo))
-        );
-    }
-
-    return `
-        <section class="detail-section">
-            <h3>${r.evento ? 'Evento' : 'Datos para el evento (aún sin agendar)'}</h3>
-            ${filas.join('')}
-        </section>`;
+/** Flechas, Inicio y Fin recorren las pestañas, como en cualquier lista de pestañas. */
+function moverEntrePestanas(evento: KeyboardEvent): void {
+    const actual = PESTANAS.indexOf(pestanaActual);
+    const destino: Record<string, number> = {
+        ArrowRight: (actual + 1) % PESTANAS.length,
+        ArrowLeft: (actual - 1 + PESTANAS.length) % PESTANAS.length,
+        Home: 0,
+        End: PESTANAS.length - 1
+    };
+    if (!(evento.key in destino)) return;
+    evento.preventDefault();
+    activarPestana(PESTANAS[destino[evento.key]!]!, true);
 }
 
-function seccionCliente(c: ClienteConsulta): string {
-    return `
-        <section class="detail-section">
-            <h3>Cliente</h3>
-            ${dato('Nombre', c.nombre)}
-            ${dato('Correo', c.correo || 'Sin registrar')}
-            ${dato('Teléfono', c.telefono || 'Sin registrar')}
-            ${dato('Documento', c.documento || 'Sin registrar')}
-        </section>`;
-}
-
-function avisoTotal(items: DetalleCotizacion['items'], r: RegistroConsulta): string {
-    const transporte = r.transporte?.precio ?? 0;
-    const cuadre = revisarTotal(items, transporte, r.total);
-    if (cuadre === 'cuadra') return '';
-
-    if (cuadre === 'sin_servicios') {
-        return `<p class="consulta-aviso"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
-            <span>Esta cotización no tiene servicios guardados. Solo se conserva el total registrado.</span></p>`;
-    }
-    const suma = items.reduce((acc, i) => acc + i.precioUnit * i.cantidad, 0) + transporte;
-    const quienes = r.transporte ? 'Los servicios y el transporte suman' : 'Los servicios suman';
-    return `<p class="consulta-aviso"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
-        <span>${quienes} ${esc(formatearCOP(suma))}. El valor de cada servicio se lee del catálogo vigente; el total es el que quedó registrado en la cotización.</span></p>`;
-}
-
-function seccionServicios(items: DetalleCotizacion['items'], r: RegistroConsulta): string {
-    const filas = items.map((item) => `
-        <div class="detail-row">
-            <div>
-                <div class="detail-row-main"><strong>${esc(item.cantidad > 1 ? `${item.cantidad} x ${item.nombre}` : item.nombre)}</strong></div>
-                <div class="detail-row-sub">${esc(item.tag)}${item.descripcion ? ` · Incluye: ${esc(item.descripcion)}` : ''}</div>
-                ${item.nota ? `<div class="detail-row-sub consulta-nota"><i class="fa-solid fa-note-sticky" aria-hidden="true"></i> ${esc(item.nota)}</div>` : ''}
-            </div>
-            <div class="detail-row-price">${esc(formatearCOP(item.precioUnit * item.cantidad))}</div>
-        </div>`).join('');
-
-    const transporte = r.transporte ? `
-        <div class="detail-row">
-            <div>
-                <div class="detail-row-main"><strong>Transporte (${esc(r.transporte.ciudad)})</strong></div>
-                <div class="detail-row-sub">TRANSPORTE Y LOGÍSTICA</div>
-            </div>
-            <div class="detail-row-price">${esc(formatearCOP(r.transporte.precio))}</div>
-        </div>` : '';
-
-    return `
-        <section class="detail-section">
-            <h3>Servicios cotizados</h3>
-            ${avisoTotal(items, r)}
-            ${filas}${transporte}
-            <div class="consulta-total">
-                <span>Total registrado</span>
-                <strong class="item-card-total">${esc(formatearCOP(r.total))}</strong>
-            </div>
-            <p class="consulta-pie">Cotización creada el ${esc(formatearMomento(r.creadaEn))}.</p>
-        </section>`;
-}
-
-function filaDocumento(icono: string, titulo: string, nota: string, accion: string): string {
-    return `
-        <div class="consulta-documento">
-            <i class="${icono}" aria-hidden="true"></i>
-            <div class="consulta-documento-info">
-                <strong>${esc(titulo)}</strong>
-                <span>${esc(nota)}</span>
-            </div>
-            ${accion}
-        </div>`;
-}
-
-const enlaceDocumento = (ruta: string, texto: string): string =>
-    `<a class="btn btn-secondary btn-sm" href="${apiUrl(ruta)}" target="_blank" rel="noopener">${esc(texto)}</a>`;
-
-function documentosDeContrato(c: ClienteConsulta, r: RegistroConsulta, contrato: ContratoInfo): string {
-    const faltan = [!c.documento && 'el documento del cliente', !r.fecha && 'la fecha del evento'].filter(Boolean);
-    const generado = faltan.length > 0
-        ? filaDocumento('fa-solid fa-file-contract', 'Contrato', `No se puede generar: falta ${faltan.join(' y ')}.`, '')
-        : filaDocumento('fa-solid fa-file-contract', 'Contrato', 'Se genera de nuevo con los datos actuales.',
-            enlaceDocumento(`/api/contratos/${r.cotizacionId}/pdf`, 'Ver PDF'));
-
-    let firmado: string;
-    if (contrato.archivoFirmadoDisponible) {
-        const nota = contrato.firmadoSubidoEn ? `Archivo original, subido el ${formatearMomento(contrato.firmadoSubidoEn)}.` : 'Archivo original.';
-        firmado = filaDocumento('fa-solid fa-file-signature', 'Contrato firmado', nota,
-            enlaceDocumento(`/api/contratos/${r.cotizacionId}/firmado`, 'Ver original'));
-    } else if (contrato.tieneFirmado) {
-        firmado = filaDocumento('fa-solid fa-file-circle-exclamation', 'Contrato firmado',
-            'Consta como firmado, pero el archivo no está en este servidor.', '');
-    } else {
-        firmado = filaDocumento('fa-solid fa-file-signature', 'Contrato firmado', 'Todavía no se ha subido.', '');
-    }
-    return generado + firmado;
-}
-
-function seccionDocumentos(c: ClienteConsulta, r: RegistroConsulta, contrato: ContratoInfo): string {
-    return `
-        <section class="detail-section">
-            <h3>Documentos</h3>
-            ${filaDocumento('fa-solid fa-file-pdf', 'Cotización en PDF', 'Se genera de nuevo con los datos actuales.',
-                enlaceDocumento(`/api/cotizaciones/${r.cotizacionId}/pdf`, 'Ver PDF'))}
-            ${filaDocumento('fa-solid fa-file-excel', 'Cotización en Excel', 'Se genera de nuevo con los datos actuales.',
-                '<button type="button" class="btn btn-secondary btn-sm" id="btnExcel">Descargar Excel</button>')}
-            ${r.evento ? documentosDeContrato(c, r, contrato) : ''}
-            <p class="consulta-pie">El PDF y el Excel que se descargaron al cotizar no se guardan en el sistema. Generarlos otra vez no cambia ningún dato ni archivo.</p>
-        </section>`;
-}
-
-function listaVersion(titulo: string, items: ItemVersion[] | null): string {
-    if (!items || items.length === 0) return '';
-    const filas = items.map((i) => {
-        const cantidad = i.cantidad ?? 1;
-        const nombre = i.nombre || `Servicio #${i.variantId ?? '?'}`;
-        const valor = typeof i.precioUnit === 'number' ? formatearCOP(i.precioUnit * cantidad) : '—';
-        return `<li><span>${esc(cantidad > 1 ? `${cantidad} x ${nombre}` : nombre)}</span><span>${esc(valor)}</span></li>`;
-    }).join('');
-    return `<p class="consulta-version-titulo">${esc(titulo)}</p><ul>${filas}</ul>`;
-}
-
-function entradaHistorial(h: EntradaHistorial): string {
-    const etiqueta = (estado: string | null) => (estado && ESTADO_LABEL[estado as EstadoCotizacion]) || estado || '—';
-    let texto = h.comentario || '';
-    if (h.tipo === 'edicion') texto = 'Se editaron los servicios de la cotización.';
-    if (h.tipo === 'cambio_estado') texto = `Cambio de estado: ${etiqueta(h.estadoAntes)} → ${etiqueta(h.estadoDespues)}`;
-
-    const version = h.tipo === 'edicion'
-        ? listaVersion('Antes de este cambio', h.itemsAntes) + listaVersion('Después de este cambio', h.itemsDespues)
-        : '';
-
-    return `
-        <div class="comment-item">
-            <div class="comment-meta">${esc(h.usuarioNombre || 'Sistema')} · ${esc(new Date(h.creadoEn).toLocaleString('es-CO'))}</div>
-            <div>${esc(texto)}</div>
-            ${version ? `<details class="consulta-version"><summary>Ver esta versión de los servicios</summary>${version}</details>` : ''}
-        </div>`;
-}
-
-function seccionHistorial(historial: EntradaHistorial[]): string {
-    const cuerpo = historial.length === 0
-        ? '<p class="consulta-vacio">Todavía no hay comentarios ni cambios registrados.</p>'
-        : historial.map(entradaHistorial).join('');
-    return `<section class="detail-section"><h3>Historial y versiones</h3>${cuerpo}</section>`;
-}
-
-function descargarExcel(c: ClienteConsulta, r: RegistroConsulta, items: DetalleCotizacion['items']): void {
-    if (!excelDisponible()) {
-        avisar('No se pudo cargar el generador de Excel. Revisa tu conexión y recarga la página.', true);
-        return;
-    }
-
-    const itemsParaMostrar: ItemParaMostrar[] = formatearItemsParaMostrar(obtenerFormatterCOP(), items);
-    if (r.transporte && r.transporte.precio > 0) {
-        itemsParaMostrar.unshift({ tag: 'TRANSPORTE Y LOGÍSTICA', nombre: r.transporte.ciudad, descripcion: '', precio: r.transporte.precio });
-    }
-
-    const fecha = new Date(r.creadaEn).toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    generarExcelEjecutivo(
-        { nombre: c.nombre, correo: c.correo || '', telefono: c.telefono || '', tipoEvento: r.tipoEvento || '', lugar: r.lugar || '' },
-        itemsParaMostrar,
-        r.total,
-        r.numeroReferencia,
-        fecha
-    );
-    avisar('Excel generado con los datos actuales.');
+function ponerCuenta(pestana: Pestana, cantidad: number | null): void {
+    const cuenta = document.querySelector<HTMLElement>(`[data-cuenta="${pestana}"]`);
+    if (cuenta) cuenta.textContent = cantidad === null ? '' : String(cantidad);
 }
 
 async function leerJson<T>(res: Response): Promise<T> {
@@ -449,11 +258,15 @@ function mostrarDetalle(cliente: ClienteConsulta, registro: RegistroConsulta): v
     detalleEstado.textContent = ESTADO_LABEL[registro.estado] ?? registro.estado;
     detalleTitulo.textContent = nombreEvento(registro);
     detalleSubtitulo.textContent = `${cliente.nombre} · ${registro.numeroReferencia}`;
+    detalleTotal.textContent = formatearCOP(registro.total);
+    ponerCuenta('servicios', null);
+    ponerCuenta('historial', null);
 
     filtrosEl.hidden = true;
     listaEl.hidden = true;
     detalleEl.hidden = false;
     window.scrollTo(0, 0);
+    activarPestana('resumen');
     detalleTitulo.focus({ preventScroll: true });
 }
 
@@ -502,20 +315,10 @@ async function abrirDetalle(id: number, apilar = true): Promise<void> {
         ]);
         if (carga !== cargaDetalle) return;
 
-        // Dos columnas en pantallas anchas; en una sola, el mismo orden de lectura.
-        detalleContenido.innerHTML = `
-            <div class="consulta-detalle-grid">
-                <div class="consulta-detalle-columna">
-                    ${seccionEvento(registro)}
-                    ${seccionServicios(detalle.items, registro)}
-                </div>
-                <div class="consulta-detalle-columna">
-                    ${seccionDocumentos(cliente, registro, contrato)}
-                    ${seccionCliente(cliente)}
-                    ${seccionHistorial(historial)}
-                </div>
-            </div>`;
-        $('btnExcel').addEventListener('click', () => descargarExcel(cliente, registro, detalle.items));
+        pintarDetalle(detalleContenido, { cliente, registro, detalle, historial, contrato }, (p) => activarPestana(p, true));
+        ponerCuenta('servicios', detalle.items.length);
+        ponerCuenta('historial', historial.length);
+        activarPestana(pestanaActual);
     } catch (err) {
         console.error(err);
         if (carga !== cargaDetalle) return;
@@ -536,6 +339,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     initPanelLayout(sesion);
 
     $('btnVolverLista').addEventListener('click', volverALista);
+    for (const boton of pestanas) {
+        boton.addEventListener('click', () => activarPestana(boton.dataset.pestana as Pestana));
+        boton.addEventListener('keydown', moverEntrePestanas);
+    }
     document.addEventListener('keydown', (evento) => {
         if (evento.key === 'Escape' && !detalleEl.hidden) volverALista();
     });
