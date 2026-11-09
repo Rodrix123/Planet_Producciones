@@ -386,10 +386,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     await cargarClientes();
 
-    // Al recargar estando en un detalle, el navegador conserva esa entrada del historial.
-    const pendiente = (history.state as { cotizacion?: unknown } | null)?.cotizacion;
-    if (typeof pendiente === 'number') {
-        if (registrosPorId.has(pendiente)) void abrirDetalle(pendiente, false);
-        else history.replaceState(null, '');
-    }
+    const pendiente = detalleARestaurar();
+    if (pendiente !== null) void abrirDetalle(pendiente, false);
 });
+
+/**
+ * Detalle que había abierto al recargar la página o al volver a ella con atrás/adelante.
+ *
+ * El navegador conserva `history.state` también al navegar a la misma URL desde un enlace
+ * (p. ej. "Consulta" en el menú lateral): en ese caso se descarta, porque quien pulsa el
+ * enlace quiere la vista general y no el último detalle abierto.
+ */
+function detalleARestaurar(): number | null {
+    const id = (history.state as { cotizacion?: unknown } | null)?.cotizacion;
+    if (typeof id !== 'number') return null;
+
+    const navegacion = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+    const vuelveAlDetalle = navegacion?.type === 'reload' || navegacion?.type === 'back_forward';
+    if (vuelveAlDetalle && registrosPorId.has(id)) return id;
+
+    history.replaceState(null, '');
+    return null;
+}
