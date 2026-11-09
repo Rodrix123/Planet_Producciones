@@ -1,5 +1,5 @@
-/* Panel de consulta. Solo lo propio de esta página: filtros, drawer, botones y tarjetas
-   base vienen de shared/panelRail.css; colores y tipografía, de los tokens de style.css.
+/* Panel de consulta. Solo lo propio de esta página: filtros, botones, tarjetas y secciones
+   de detalle base vienen de shared/panelRail.css; colores y tipografía, de los tokens de style.css.
 
    En el build, Vite separa el CSS compartido y puede enlazarlo después de este archivo:
    para ajustar una clase compartida, usa un selector más específico, no solo uno posterior. */
@@ -238,36 +238,84 @@
     outline-offset: 2px;
 }
 
-/* ---------- Detalle (drawer) ---------- */
-.drawer {
-    color-scheme: dark;
+/* ---------- Detalle: ocupa el lugar de la lista ---------- */
+.consulta-detalle[hidden] {
+    display: none;
 }
 
-.drawer:focus-visible,
-.drawer-close:focus-visible {
-    outline: 2px solid var(--orange-main);
-    outline-offset: 2px;
-}
-
-.consulta-detalle-cabecera {
+/* Barra con "Volver" y el encabezado del evento: queda fija arriba al desplazarse.
+   Mismo fondo translúcido y desenfoque que el encabezado fijo del sitio (style.css). */
+.consulta-detalle-barra {
+    position: sticky;
+    top: 0;
+    z-index: 20;
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-    margin: 0.25rem 2.5rem 1.75rem 0;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding: 0.9rem 0;
+    background-color: rgba(10, 10, 12, 0.95);
+    border-bottom: 1px solid var(--border-color);
+    backdrop-filter: blur(8px);
 }
 
-.consulta-detalle-cabecera h2 {
+.consulta-detalle-barra .btn {
+    flex-shrink: 0;
+}
+
+.consulta-detalle-barra .badge {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.consulta-detalle-titulos {
+    min-width: 0;
+}
+
+.consulta-detalle-titulos h2 {
     font-size: 1.35rem;
     line-height: 1.25;
+    color: #fff;
 }
 
-.consulta-detalle-cabecera p {
+.consulta-detalle-titulos h2:focus {
+    outline: none;
+}
+
+.consulta-detalle-titulos p {
+    margin-top: 0.15rem;
     font-size: 0.88rem;
     color: var(--text-muted);
 }
 
-.drawer .dato-fila span:last-child {
+.consulta-detalle-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+}
+
+@media (min-width: 1100px) {
+    .consulta-detalle-grid {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        column-gap: 1.5rem;
+    }
+}
+
+.consulta-detalle-columna {
+    min-width: 0;
+}
+
+/* Mismo título de sección que .detail-section h4 de "Eventos en proceso", pero como h3
+   para no saltar niveles de encabezado después del h2 del evento. */
+.consulta-detalle .detail-section > h3 {
+    font-size: 1.05rem;
+    color: var(--orange-main);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 1.1rem;
+}
+
+.consulta-detalle .dato-fila span:last-child {
     font-variant-numeric: tabular-nums;
 }
 
@@ -294,7 +342,7 @@
     color: var(--orange-main);
 }
 
-.drawer .detail-row-price {
+.consulta-detalle .detail-row-price {
     font-variant-numeric: tabular-nums;
 }
 
@@ -365,9 +413,10 @@
     cursor: pointer;
 }
 
-.consulta-version h4 {
+.consulta-version-titulo {
     margin-top: 0.75rem;
     font-size: 0.78rem;
+    font-weight: 700;
     color: var(--text-muted);
 }
 
@@ -457,6 +506,31 @@
 
     .consulta-fila {
         padding: 0.7rem;
+    }
+
+    /* En el móvil, la barra fija: "Volver" y el estado en una línea, el título debajo. */
+    .consulta-detalle-barra {
+        flex-wrap: wrap;
+        gap: 0.6rem 0.75rem;
+        margin-bottom: 1.25rem;
+        padding: 0.75rem 0;
+    }
+
+    .consulta-detalle-barra .badge {
+        margin-left: auto;
+    }
+
+    .consulta-detalle-titulos {
+        flex-basis: 100%;
+    }
+
+    .consulta-detalle-titulos h2 {
+        font-size: 1.1rem;
+        overflow-wrap: anywhere;
+    }
+
+    .consulta-detalle .detail-section {
+        padding: 1.25rem 1rem;
     }
 
     .consulta-filtros .filtro,

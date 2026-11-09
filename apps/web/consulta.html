@@ -75,13 +75,22 @@
         </div>
 
         <div id="listaClientes" class="consulta-lista" hidden></div>
-    </main>
 
-    <div class="drawer-overlay" id="drawerOverlay"></div>
-    <aside class="drawer drawer-ancho" id="drawer" role="dialog" aria-modal="true" aria-label="Detalle de la cotización" inert>
-        <button type="button" class="drawer-close" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
-        <div id="drawerContenido"></div>
-    </aside>
+        <!-- Vista de detalle: ocupa el lugar de la lista, como en "Eventos en proceso" -->
+        <section id="detalleConsulta" class="consulta-detalle" aria-labelledby="detalleTitulo" hidden>
+            <div class="consulta-detalle-barra">
+                <button type="button" id="btnVolverLista" class="btn btn-secondary btn-sm" aria-label="Volver a la lista">
+                    <i class="fa-solid fa-arrow-left"></i> Volver
+                </button>
+                <span class="badge" id="detalleEstado"></span>
+                <div class="consulta-detalle-titulos">
+                    <h2 id="detalleTitulo" tabindex="-1"></h2>
+                    <p id="detalleSubtitulo"></p>
+                </div>
+            </div>
+            <div id="detalleContenido"></div>
+        </section>
+    </main>
 
     <div id="toast" class="toast" role="status"></div>
 

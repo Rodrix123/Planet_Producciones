@@ -3,7 +3,7 @@ import './shared/panelRail.css';
 import './consulta.css';
 import { apiFetch, apiUrl, exigirSesion } from './shared/api';
 import { initPanelLayout } from './shared/layout';
-import { abrirDrawer, avisar, esc, initPanelShellGlobal } from './shared/panelShell';
+import { avisar, esc } from './shared/panelShell';
 import {
     excelDisponible,
     formatearItemsParaMostrar,
@@ -79,8 +79,11 @@ const fEstado = $<HTMLSelectElement>('fEstado');
 const fDesde = $<HTMLInputElement>('fDesde');
 const fHasta = $<HTMLInputElement>('fHasta');
 const fLimpiar = $('fLimpiar');
-const drawerEl = $('drawer');
-const drawerContenido = $('drawerContenido');
+const detalleEl = $('detalleConsulta');
+const detalleContenido = $('detalleContenido');
+const detalleEstado = $('detalleEstado');
+const detalleTitulo = $('detalleTitulo');
+const detalleSubtitulo = $('detalleSubtitulo');
 
 let clientes: ClienteConsulta[] = [];
 /** Cada cotización con su cliente, para abrir el detalle desde una fila. */
@@ -90,6 +93,8 @@ const desplegados = new Set<string>();
 /** Si se abre otra fila antes de que llegue la anterior, la respuesta vieja se descarta. */
 let cargaDetalle = 0;
 let filaOrigen: HTMLElement | null = null;
+/** Dónde estaba la lista al abrir un detalle, para volver al mismo punto. */
+let scrollDeLista = 0;
 
 const claveCliente = (c: ClienteConsulta): string => (c.id === null ? 'sin-cliente' : String(c.id));
 const plural = (n: number, uno: string, varios: string): string => `${n} ${n === 1 ? uno : varios}`;
@@ -260,7 +265,7 @@ function seccionEvento(r: RegistroConsulta): string {
     }
 
     return `
-        <section class="drawer-seccion">
+        <section class="detail-section">
             <h3>${r.evento ? 'Evento' : 'Datos para el evento (aún sin agendar)'}</h3>
             ${filas.join('')}
         </section>`;
@@ -268,7 +273,7 @@ function seccionEvento(r: RegistroConsulta): string {
 
 function seccionCliente(c: ClienteConsulta): string {
     return `
-        <section class="drawer-seccion">
+        <section class="detail-section">
             <h3>Cliente</h3>
             ${dato('Nombre', c.nombre)}
             ${dato('Correo', c.correo || 'Sin registrar')}
@@ -313,7 +318,7 @@ function seccionServicios(items: DetalleCotizacion['items'], r: RegistroConsulta
         </div>` : '';
 
     return `
-        <section class="drawer-seccion">
+        <section class="detail-section">
             <h3>Servicios cotizados</h3>
             ${avisoTotal(items, r)}
             ${filas}${transporte}
@@ -363,7 +368,7 @@ function documentosDeContrato(c: ClienteConsulta, r: RegistroConsulta, contrato:
 
 function seccionDocumentos(c: ClienteConsulta, r: RegistroConsulta, contrato: ContratoInfo): string {
     return `
-        <section class="drawer-seccion">
+        <section class="detail-section">
             <h3>Documentos</h3>
             ${filaDocumento('fa-solid fa-file-pdf', 'Cotización en PDF', 'Se genera de nuevo con los datos actuales.',
                 enlaceDocumento(`/api/cotizaciones/${r.cotizacionId}/pdf`, 'Ver PDF'))}
@@ -382,7 +387,7 @@ function listaVersion(titulo: string, items: ItemVersion[] | null): string {
         const valor = typeof i.precioUnit === 'number' ? formatearCOP(i.precioUnit * cantidad) : '—';
         return `<li><span>${esc(cantidad > 1 ? `${cantidad} x ${nombre}` : nombre)}</span><span>${esc(valor)}</span></li>`;
     }).join('');
-    return `<h4>${esc(titulo)}</h4><ul>${filas}</ul>`;
+    return `<p class="consulta-version-titulo">${esc(titulo)}</p><ul>${filas}</ul>`;
 }
 
 function entradaHistorial(h: EntradaHistorial): string {
@@ -407,7 +412,7 @@ function seccionHistorial(historial: EntradaHistorial[]): string {
     const cuerpo = historial.length === 0
         ? '<p class="consulta-vacio">Todavía no hay comentarios ni cambios registrados.</p>'
         : historial.map(entradaHistorial).join('');
-    return `<section class="drawer-seccion"><h3>Historial y versiones</h3>${cuerpo}</section>`;
+    return `<section class="detail-section"><h3>Historial y versiones</h3>${cuerpo}</section>`;
 }
 
 function descargarExcel(c: ClienteConsulta, r: RegistroConsulta, items: DetalleCotizacion['items']): void {
@@ -437,13 +442,52 @@ async function leerJson<T>(res: Response): Promise<T> {
     return (await res.json()) as T;
 }
 
-async function abrirDetalle(id: number): Promise<void> {
+/** Cambia la lista por el detalle en el mismo espacio, como en "Eventos en proceso". */
+function mostrarDetalle(cliente: ClienteConsulta, registro: RegistroConsulta): void {
+    if (detalleEl.hidden) scrollDeLista = window.scrollY;
+
+    detalleEstado.textContent = ESTADO_LABEL[registro.estado] ?? registro.estado;
+    detalleTitulo.textContent = nombreEvento(registro);
+    detalleSubtitulo.textContent = `${cliente.nombre} · ${registro.numeroReferencia}`;
+
+    filtrosEl.hidden = true;
+    listaEl.hidden = true;
+    detalleEl.hidden = false;
+    window.scrollTo(0, 0);
+    detalleTitulo.focus({ preventScroll: true });
+}
+
+/** Vuelve a la lista tal como estaba: mismos filtros, clientes desplegados y posición. */
+function cerrarDetalle(): void {
+    cargaDetalle++; // descarta una respuesta que todavía no llegó
+    detalleEl.hidden = true;
+    filtrosEl.hidden = false;
+    listaEl.hidden = false;
+    window.scrollTo(0, scrollDeLista);
+    if (filaOrigen?.isConnected) filaOrigen.focus({ preventScroll: true });
+}
+
+/** Si el detalle se abrió con una entrada en el historial, "Volver" equivale al botón atrás. */
+function volverALista(): void {
+    if (typeof history.state?.cotizacion === 'number') history.back();
+    else cerrarDetalle();
+}
+
+/** `apilar` crea una entrada en el historial para que el botón atrás del navegador vuelva a la lista. */
+async function abrirDetalle(id: number, apilar = true): Promise<void> {
     const entrada = registrosPorId.get(id);
     if (!entrada) return;
     const { cliente, registro } = entrada;
 
+    if (apilar) {
+        // Una sola entrada por detalle: así "Volver" y el botón atrás llevan siempre a la lista.
+        const yaEnDetalle = typeof history.state?.cotizacion === 'number';
+        if (yaEnDetalle) history.replaceState({ cotizacion: id }, '');
+        else history.pushState({ cotizacion: id }, '');
+    }
     const carga = ++cargaDetalle;
-    abrirDrawer('<div class="panel-estado"><i class="fa-solid fa-spinner fa-spin"></i> Cargando detalle...</div>');
+    mostrarDetalle(cliente, registro);
+    detalleContenido.innerHTML = '<div class="panel-estado"><i class="fa-solid fa-spinner fa-spin"></i> Cargando detalle...</div>';
 
     try {
         const [resDetalle, resHistorial, resContrato] = await Promise.all([
@@ -458,51 +502,49 @@ async function abrirDetalle(id: number): Promise<void> {
         ]);
         if (carga !== cargaDetalle) return;
 
-        drawerContenido.innerHTML = `
-            <div class="consulta-detalle-cabecera">
-                <span class="badge">${esc(ESTADO_LABEL[registro.estado] ?? registro.estado)}</span>
-                <h2>${esc(nombreEvento(registro))}</h2>
-                <p>${esc(cliente.nombre)} · ${esc(registro.numeroReferencia)}</p>
-            </div>
-            ${seccionEvento(registro)}
-            ${seccionServicios(detalle.items, registro)}
-            ${seccionDocumentos(cliente, registro, contrato)}
-            ${seccionCliente(cliente)}
-            ${seccionHistorial(historial)}`;
-        drawerEl.scrollTop = 0;
+        // Dos columnas en pantallas anchas; en una sola, el mismo orden de lectura.
+        detalleContenido.innerHTML = `
+            <div class="consulta-detalle-grid">
+                <div class="consulta-detalle-columna">
+                    ${seccionEvento(registro)}
+                    ${seccionServicios(detalle.items, registro)}
+                </div>
+                <div class="consulta-detalle-columna">
+                    ${seccionDocumentos(cliente, registro, contrato)}
+                    ${seccionCliente(cliente)}
+                    ${seccionHistorial(historial)}
+                </div>
+            </div>`;
         $('btnExcel').addEventListener('click', () => descargarExcel(cliente, registro, detalle.items));
     } catch (err) {
         console.error(err);
         if (carga !== cargaDetalle) return;
-        drawerContenido.innerHTML = `
+        detalleContenido.innerHTML = `
             <div class="panel-estado error">
                 <p>No se pudo cargar el detalle de esta cotización. Verifica tu conexión e intenta de nuevo.</p>
                 <button type="button" class="btn btn-secondary btn-sm consulta-reintentar" id="btnReintentarDetalle">
                     <i class="fa-solid fa-rotate-right"></i> Reintentar
                 </button>
             </div>`;
-        $('btnReintentarDetalle').addEventListener('click', () => void abrirDetalle(id));
+        $('btnReintentarDetalle').addEventListener('click', () => void abrirDetalle(id, false));
     }
 }
 
 // ---------- Inicio ----------
-/** Al abrir el drawer, el foco entra en él; al cerrarlo, vuelve a la fila desde la que se abrió. */
-function conectarFocoDelDrawer(): void {
-    const cerrar = drawerEl.querySelector<HTMLElement>('.drawer-close');
-    new MutationObserver(() => {
-        const abierto = drawerEl.classList.contains('open');
-        if (abierto === !drawerEl.inert) return;
-        drawerEl.inert = !abierto;
-        if (abierto) cerrar?.focus();
-        else if (filaOrigen?.isConnected) filaOrigen.focus();
-    }).observe(drawerEl, { attributes: true, attributeFilter: ['class'] });
-}
-
 document.addEventListener('DOMContentLoaded', async () => {
     const sesion = await exigirSesion('administrador');
     initPanelLayout(sesion);
-    initPanelShellGlobal();
-    conectarFocoDelDrawer();
+
+    $('btnVolverLista').addEventListener('click', volverALista);
+    document.addEventListener('keydown', (evento) => {
+        if (evento.key === 'Escape' && !detalleEl.hidden) volverALista();
+    });
+    // Botón atrás/adelante del navegador: abre o cierra el detalle sin salir de la página.
+    window.addEventListener('popstate', (evento) => {
+        const id = (evento.state as { cotizacion?: unknown } | null)?.cotizacion;
+        if (typeof id === 'number' && registrosPorId.has(id)) void abrirDetalle(id, false);
+        else if (!detalleEl.hidden) cerrarDetalle();
+    });
 
     (Object.keys(ESTADO_LABEL) as EstadoCotizacion[]).forEach((estado) => {
         fEstado.add(new Option(ESTADO_LABEL[estado], estado));
@@ -536,4 +578,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     await cargarClientes();
+
+    // Al recargar estando en un detalle, el navegador conserva esa entrada del historial.
+    const pendiente = (history.state as { cotizacion?: unknown } | null)?.cotizacion;
+    if (typeof pendiente === 'number') {
+        if (registrosPorId.has(pendiente)) void abrirDetalle(pendiente, false);
+        else history.replaceState(null, '');
+    }
 });
