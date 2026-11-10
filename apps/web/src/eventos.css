@@ -726,7 +726,192 @@
     outline-offset: 2px;
 }
 
-/* El bloque de personal ocupa todo el ancho del detalle: una columna por etapa. */
+/* El detalle es un contenedor: la composición y las tarjetas se acomodan a su ancho real. */
+.detalle-contenido {
+    container: detalle / inline-size;
+}
+
+/* Colores por modalidad de contratación */
+.contrato-con {
+    --contrato: #34d399;
+    --contrato-fondo: rgba(52, 211, 153, 0.1);
+    --contrato-borde: rgba(52, 211, 153, 0.45);
+}
+
+.contrato-fijo {
+    --contrato: #60a5fa;
+    --contrato-fondo: rgba(96, 165, 250, 0.1);
+    --contrato-borde: rgba(96, 165, 250, 0.5);
+}
+
+.contrato-no-fijo {
+    --contrato: #c084fc;
+    --contrato-fondo: rgba(192, 132, 252, 0.1);
+    --contrato-borde: rgba(192, 132, 252, 0.5);
+}
+
+.contrato-sin {
+    --contrato: var(--text-muted);
+    --contrato-fondo: rgba(156, 163, 175, 0.08);
+    --contrato-borde: rgba(156, 163, 175, 0.35);
+}
+
+/* ----- Composición del personal: a la derecha de "Logística y contrato" ----- */
+.detalle-composicion {
+    container: composicion / inline-size;
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.9rem 1.25rem;
+    align-self: start;
+    padding: 0.9rem 1.2rem;
+    background: linear-gradient(90deg, rgba(249, 115, 22, 0.07), rgba(249, 115, 22, 0.02));
+    border: 1px solid rgba(249, 115, 22, 0.65);
+    border-radius: 16px;
+}
+
+.composicion-titulo {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.composicion-titulo > i {
+    font-size: 1.6rem;
+    color: var(--orange-main);
+}
+
+.composicion-titulo h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-light);
+}
+
+.composicion-titulo p {
+    margin-top: 0.1rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.composicion-divisor {
+    align-self: stretch;
+    width: 1px;
+    background: var(--border-color);
+}
+
+.composicion-tipos {
+    display: flex;
+    flex: 1;
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* Las modalidades se reparten el ancho por igual y nunca parten su nombre. */
+.composicion-tipo {
+    display: flex;
+    flex: 1 1 0;
+    min-width: max-content;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+    padding: 0.55rem 0.9rem;
+    background: var(--contrato-fondo);
+    border: 1px solid var(--contrato-borde);
+    border-radius: 12px;
+}
+
+.composicion-icono {
+    flex-shrink: 0;
+    font-size: 1.2rem;
+    color: var(--contrato);
+}
+
+.composicion-dato {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.15;
+}
+
+.composicion-dato strong {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: var(--text-light);
+}
+
+.composicion-dato span {
+    font-size: 0.82rem;
+    white-space: nowrap;
+    color: var(--text-light);
+}
+
+/* Resumen de ancho mediano: el título arriba y las modalidades con el total en una fila. */
+@container composicion (max-width: 1000px) {
+    .composicion-titulo {
+        flex-basis: 100%;
+    }
+
+    .composicion-titulo + .composicion-divisor {
+        display: none;
+    }
+}
+
+/* Resumen angosto (celular): modalidades en dos columnas y el total en una línea. */
+@container composicion (max-width: 560px) {
+    .composicion-tipos {
+        flex-wrap: wrap;
+    }
+
+    .composicion-tipo {
+        flex: 1 1 calc(50% - 0.75rem);
+        min-width: 0;
+    }
+
+    .composicion-divisor {
+        display: none;
+    }
+
+    .composicion-total {
+        flex-direction: row;
+        align-items: center;
+        gap: 0.6rem;
+    }
+}
+
+.composicion-total {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+}
+
+.composicion-total > span {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.composicion-total strong {
+    padding: 0.35rem 0.9rem;
+    font-size: 1rem;
+    font-weight: 700;
+    white-space: nowrap;
+    color: var(--text-light);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+}
+
+.composicion-total b {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--orange-main);
+}
+
+/* ----- Personal por etapa: a todo el ancho del detalle ----- */
 .detalle-personal {
     grid-column: 1 / -1;
 }
@@ -739,55 +924,154 @@
 
 .personal-etapas {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: 0.85rem;
 }
 
 .personal-etapa {
+    container: etapa / inline-size;
     min-width: 0;
-    padding: 0.85rem 0.95rem;
+    padding: 0.8rem 1rem;
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid var(--border-color);
     border-radius: 14px;
 }
 
-.personal-etapa h4 {
+.personal-etapa-head {
     display: flex;
     align-items: center;
-    gap: 0.45rem;
-    margin-bottom: 0.6rem;
-    font-size: 0.85rem;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
+}
+
+.personal-etapa-head i {
+    font-size: 1.05rem;
+    color: var(--orange-main);
+}
+
+.personal-sin-etapa .personal-etapa-head i {
+    color: var(--text-muted);
+}
+
+.personal-etapa-head h4 {
+    font-size: 0.95rem;
     font-weight: 700;
     color: var(--text-light);
 }
 
-.personal-etapa h4 i {
-    color: var(--orange-main);
-}
-
 .personal-conteo {
     margin-left: auto;
-    min-width: 1.6rem;
-    padding: 0.05rem 0.5rem;
-    font-size: 0.72rem;
+    min-width: 1.9rem;
+    padding: 0.1rem 0.55rem;
+    font-size: 0.78rem;
+    font-weight: 700;
     text-align: center;
-    color: var(--text-muted);
+    color: var(--text-light);
     background: var(--bg-input);
     border-radius: 999px;
+}
+
+.personal-filas {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* Una fila por persona: ícono, nombre y su etiqueta de contrato. */
+.personal-fila {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.personal-fila:last-child {
+    border-bottom: none;
+}
+
+.personal-fila-icono {
+    flex-shrink: 0;
+    margin-top: 0.15rem;
+    font-size: 1rem;
+    color: var(--text-muted);
+}
+
+/* En tarjetas angostas la etiqueta va debajo del nombre; en anchas, a la derecha. */
+.personal-fila-datos {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
+    min-width: 0;
+}
+
+.personal-fila-nombre {
+    font-size: 0.88rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--text-light);
+    overflow-wrap: break-word;
+}
+
+.personal-fila-nombre .fa-whatsapp {
+    margin-left: 0.2rem;
+    color: var(--emerald-green);
+}
+
+.contrato-tag {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.15rem 0.6rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--contrato);
+    background: var(--contrato-fondo);
+    border: 1px solid var(--contrato-borde);
+    border-radius: 8px;
+}
+
+@container etapa (min-width: 380px) {
+    .personal-fila {
+        align-items: center;
+    }
+
+    .personal-fila-icono {
+        margin-top: 0;
+    }
+
+    .personal-fila-datos {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.4rem 0.75rem;
+    }
 }
 
 .personal-sin-etapa {
     border-style: dashed;
 }
 
-.personal-sin-etapa h4 i {
-    color: var(--text-muted);
-}
-
 .personal-vacio,
 .personal-nota {
     font-size: 0.82rem;
     color: var(--text-muted);
+}
+
+.personal-vacio {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.5rem 0 0.6rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.personal-vacio i {
+    font-size: 1rem;
 }
 
 .personal-nota {
@@ -797,6 +1081,28 @@
 .personal-lista .fa-whatsapp {
     margin-left: 0.2rem;
     color: var(--emerald-green);
+}
+
+/* Detalle ancho: la composición sube junto a "Logística y contrato" (cuarta columna en adelante) y
+   las cuatro tarjetas van en una fila, con "Sin etapa" más ancha. */
+@container detalle (min-width: 560px) {
+    .personal-etapas {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@container detalle (min-width: 1056px) {
+    .detalle-composicion {
+        grid-column: 2 / -1;
+    }
+
+    .personal-etapas {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .personal-etapas.con-sin-etapa {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.5fr);
+    }
 }
 
 /* ---------- Panel "Asignar personal" (src/asignacion-personal.ts) ---------- */

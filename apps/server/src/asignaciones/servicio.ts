@@ -106,6 +106,11 @@ export interface AsignadoDto {
     puedeQuitarse: boolean;
     /** Etapas en las que trabaja (en orden); null = asignado sin etapa. */
     etapas: Etapa[] | null;
+    /**
+     * Tipo de contrato de su ficha de la nómina (empleados.tipo_contrato, enlazada por el celular):
+     * con_contrato, freelance_fijo o freelance_no_fijo. null si su cuenta no está en la nómina.
+     */
+    tipoContrato: string | null;
     /** Choques con otros eventos según la hora de finalización evaluada (vacío = sin problema). */
     motivos: MotivoPersona[];
 }
@@ -203,6 +208,7 @@ interface FilaDelEvento {
     etapas: string[] | null;
     conv_inicio: string | null;
     conv_fin: string | null;
+    tipo_contrato: string | null;
 }
 
 /** Filas de event_staff de este evento (asignadas, convocadas o que rechazaron). */
@@ -214,10 +220,22 @@ async function filasDelEvento(c: Conexion, eventoId: number): Promise<FilaDelEve
                 s.estado_respuesta,
                 s.etapas,
                 to_char(cv.hora_inicio, 'HH24:MI') as conv_inicio,
-                to_char(cv.hora_fin, 'HH24:MI') as conv_fin
+                to_char(cv.hora_fin, 'HH24:MI') as conv_fin,
+                nom.tipo_contrato
            from public.event_staff s
            join public.profiles p on p.id = s.profile_id
            left join public.convocatorias cv on cv.id = s.convocatoria_id
+           left join auth.users u on u.id = s.profile_id
+           -- Su ficha de la nómina: mismo celular (normalizado como en listarCandidatos), la activa primero
+           left join lateral (
+               select em.tipo_contrato
+                 from public.empleados em
+                cross join lateral (select regexp_replace(coalesce(em.telefono, ''), '[^0-9]', '', 'g') as d) x
+                where u.phone is not null
+                  and (case when x.d ~ '^3[0-9]{9}$' then '57' || x.d else nullif(x.d, '') end) = u.phone
+                order by em.activo desc
+                limit 1
+           ) nom on true
           where s.event_id = $1`,
         [eventoId]
     );
@@ -455,6 +473,7 @@ export async function consultarPersonal(
             horaFin: f.de_whatsapp ? f.conv_fin : horaFin,
             puedeQuitarse: evento.asignable && !f.de_whatsapp,
             etapas: ordenarEtapas(f.etapas),
+            tipoContrato: f.tipo_contrato,
             motivos: motivosAsignados.get(f.perfil_id) ?? []
         }))
         .sort((a, b) => ALFABETICO.compare(a.nombre, b.nombre));

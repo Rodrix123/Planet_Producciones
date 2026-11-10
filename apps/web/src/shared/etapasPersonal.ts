@@ -47,6 +47,8 @@ export interface AsignadoDto {
     puedeQuitarse: boolean;
     /** null = asignado sin etapa (antes de existir las etapas, o confirmado por WhatsApp). */
     etapas: Etapa[] | null;
+    /** Tipo de contrato de su ficha de la nómina; null si su cuenta no está en la nómina. */
+    tipoContrato: TipoContrato | null;
     motivos: Motivo[];
 }
 
@@ -57,6 +59,19 @@ export const TIPOS_CONTRATO = [
     { valor: 'freelance_no_fijo', nombre: 'Freelance no fijo' }
 ] as const;
 export type TipoContrato = (typeof TIPOS_CONTRATO)[number]['valor'];
+
+/** Cómo se muestra cada modalidad: verde con contrato, azul freelance fijo, morado freelance no fijo. */
+export const CONTRATO_INFO: Record<TipoContrato | 'sin', { nombre: string; icono: string; clase: string }> = {
+    con_contrato: { nombre: 'Con contrato', icono: 'fa-file-contract', clase: 'contrato-con' },
+    freelance_fijo: { nombre: 'Freelance fijo', icono: 'fa-user', clase: 'contrato-fijo' },
+    freelance_no_fijo: { nombre: 'Freelance no fijo', icono: 'fa-users', clase: 'contrato-no-fijo' },
+    sin: { nombre: 'Sin contrato registrado', icono: 'fa-circle-question', clase: 'contrato-sin' }
+};
+
+/** Clave de CONTRATO_INFO para un tipo (lo que no sea un tipo conocido cuenta como "sin"). */
+export function claveContrato(tipo: string | null | undefined): TipoContrato | 'sin' {
+    return TIPOS_CONTRATO.some((t) => t.valor === tipo) ? (tipo as TipoContrato) : 'sin';
+}
 
 export interface PersonaDto {
     clave: string;

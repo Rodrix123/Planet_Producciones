@@ -475,7 +475,10 @@ describe('API de asignación de personal', () => {
         assert.equal(r.json.cuentasCreadas, 1);
         assert.deepEqual(r.json.asignados.map((a: { nombre: string }) => a.nombre),
             ['Ana Torres', 'Bruno Díaz', 'Diego Trabajador', 'Sara Secretaria']);
-        perfil.bruno = (await uno(e.pg, `select id::text as id from auth.users where phone = '573000000004'`)).id;
+        // Cada asignado trae el tipo de contrato de su ficha de la nómina (enlazada por el celular)
+        assert.deepEqual(r.json.asignados.map((a: { tipoContrato: string | null }) => a.tipoContrato),
+            ['con_contrato', 'freelance_fijo', null, 'con_contrato']);
+        perfil.bruno =(await uno(e.pg, `select id::text as id from auth.users where phone = '573000000004'`)).id;
         // Sara conserva su cuenta y su rol
         assert.equal((await uno(e.pg, `select r.name from profiles p join role r on r.id = p.role_id where p.id = $1`, [perfil.sara])).name, 'secretaria');
     });
