@@ -1,9 +1,14 @@
+// Panel del jefe de logística (Andrés): lista de eventos confirmados y, al abrir uno, los equipos a
+// cargar con un botón para la lista de carga en PDF. Nunca muestra precios.
+
+import { esc } from './shared/panelShell';
 import './style.css';
 import './landing.css';
 import './shared/panel.css';
 import { apiFetch, apiUrl, conManejoDeErrores, exigirSesion } from './shared/api';
 import { initPanelLayout } from './shared/layout';
 
+// Un equipo que hay que cargar para el evento.
 interface Equipo {
     tag: string;
     nombre: string;
@@ -11,6 +16,15 @@ interface Equipo {
     cantidad: number;
 }
 
+// Un elemento que no sale de la bodega: se alquila o se consigue aparte. Sin precios ni proveedor.
+interface ElementoExterno {
+    nombre: string;
+    descripcion: string;
+    cantidad: number;
+    nota: string | null;
+}
+
+// Un evento confirmado tal como lo devuelve /api/logistica/eventos.
 interface EventoLogistica {
     id: string;
     numeroReferencia: string;
@@ -21,15 +35,22 @@ interface EventoLogistica {
     direccion: string | null;
     fechaEvento: string | null;
     equipos: Equipo[];
+    externos: ElementoExterno[];
 }
 
 const listaEl = document.getElementById('listaEventos') as HTMLElement;
 const detalleEl = document.getElementById('detalleEvento') as HTMLElement;
 
+/**
+ * Nombre con la cantidad por delante cuando es más de una unidad: "4 x Parlante".
+ */
 function nombreItem(eq: Equipo): string {
     return eq.cantidad > 1 ? `${eq.cantidad} x ${eq.nombre}` : eq.nombre;
 }
 
+/**
+ * Dibuja la lista de eventos (o el aviso de que aún no hay ninguno).
+ */
 function renderLista(eventos: EventoLogistica[]) {
     listaEl.innerHTML = '';
 
@@ -43,8 +64,8 @@ function renderLista(eventos: EventoLogistica[]) {
         card.className = 'item-card';
         card.innerHTML = `
             <div class="item-card-main">
-                <h3>${e.clienteNombre}</h3>
-                <p>${e.tipoEvento || 'N/A'} · ${e.lugar || 'N/A'} (${e.ciudad || 'N/A'})</p>
+                <h3>${esc(e.clienteNombre)}</h3>
+                <p>${esc(e.tipoEvento || 'N/A')} · ${esc(e.lugar || 'N/A')} (${esc(e.ciudad || 'N/A')})</p>
             </div>
             <div class="item-card-side">
                 <div class="item-card-total">${e.fechaEvento ? new Date(e.fechaEvento + 'T00:00:00').toLocaleDateString('es-CO') : 'Sin fecha'}</div>
@@ -56,11 +77,14 @@ function renderLista(eventos: EventoLogistica[]) {
     });
 }
 
+/**
+ * Muestra el detalle de un evento: datos generales, equipos y enlace a la lista de carga en PDF.
+ */
 async function abrirDetalle(e: EventoLogistica) {
     document.getElementById('resumenEvento')!.innerHTML = `
-        <div class="detail-row-main" style="font-size:1.15rem; color:#fff; margin-bottom:0.4rem;"><strong>${e.clienteNombre}</strong></div>
-        <div class="detail-row-sub">Ref: ${e.numeroReferencia} · ${e.tipoEvento || 'N/A'}</div>
-        <div class="detail-row-sub">${e.lugar || 'Por definir'}${e.direccion ? ' — ' + e.direccion : ''} (${e.ciudad || 'N/A'})</div>
+        <div class="detail-row-main" style="font-size:1.15rem; color:#fff; margin-bottom:0.4rem;"><strong>${esc(e.clienteNombre)}</strong></div>
+        <div class="detail-row-sub">Ref: ${esc(e.numeroReferencia)} · ${esc(e.tipoEvento || 'N/A')}</div>
+        <div class="detail-row-sub">${esc((e.lugar || 'Por definir') + (e.direccion ? ' — ' + e.direccion : ''))} (${esc(e.ciudad || 'N/A')})</div>
         <div class="detail-row-sub">Fecha: ${e.fechaEvento ? new Date(e.fechaEvento + 'T00:00:00').toLocaleDateString('es-CO') : 'Sin fecha'}</div>
     `;
 
@@ -72,16 +96,32 @@ async function abrirDetalle(e: EventoLogistica) {
         : e.equipos.map((eq) => `
             <div class="detail-row">
                 <div>
-                    <div class="detail-row-main"><strong>${nombreItem(eq)}</strong></div>
-                    <div class="detail-row-sub">${eq.tag}${eq.descripcion ? ' · Incluye: ' + eq.descripcion : ''}</div>
+                    <div class="detail-row-main"><strong>${esc(nombreItem(eq))}</strong></div>
+                    <div class="detail-row-sub">${esc(eq.tag + (eq.descripcion ? ' · Incluye: ' + eq.descripcion : ''))}</div>
                 </div>
             </div>
         `).join('');
+
+    // Lo que se consigue aparte va en su propia sección (solo aparece si el evento tiene alguno).
+    const externos = e.externos ?? [];
+    document.getElementById('seccionExternos')!.classList.toggle('hidden', externos.length === 0);
+    document.getElementById('listaExternosDetalle')!.innerHTML = externos.map((x) => `
+        <div class="detail-row">
+            <div>
+                <div class="detail-row-main"><strong>${esc(x.cantidad > 1 ? `${x.cantidad} x ${x.nombre}` : x.nombre)}</strong></div>
+                ${x.descripcion ? `<div class="detail-row-sub">${esc('Incluye: ' + x.descripcion)}</div>` : ''}
+                ${x.nota ? `<div class="detail-row-sub" style="color:var(--orange-main); margin-top:0.3rem;"><i class="fa-solid fa-note-sticky"></i> ${esc(x.nota)}</div>` : ''}
+            </div>
+        </div>
+    `).join('');
 
     listaEl.classList.add('hidden');
     detalleEl.classList.remove('hidden');
 }
 
+/**
+ * Vuelve de un evento a la lista.
+ */
 function volverALista() {
     detalleEl.classList.add('hidden');
     listaEl.classList.remove('hidden');

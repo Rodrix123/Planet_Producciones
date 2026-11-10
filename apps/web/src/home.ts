@@ -1,67 +1,76 @@
-import './style.css';
-import './landing.css';
-import { apiUrl } from './shared/api';
+// Página de inicio: monta el menú y el pie de página compartidos (ver shared/sitio.ts) y hace pasar
+// las fotos de eventos que van de fondo en la portada.
 
-declare const Swal: any;
+import { montarSitio } from './shared/sitio';
 
-document.addEventListener('DOMContentLoaded', () => {
-    // Scroll suave para los anclajes internos del menú (Inicio, Servicios, etc.)
-    document.querySelectorAll<HTMLAnchorElement>('.promo-nav a[href^="#"]').forEach(link => {
-        link.addEventListener('click', event => {
-            const targetId = link.getAttribute('href');
-            if (!targetId || targetId === '#') return;
-            const targetEl = document.querySelector(targetId);
-            if (!targetEl) return;
-            event.preventDefault();
-            targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+montarSitio();
+
+const SEGUNDOS_POR_FOTO = 6.5;
+
+const slides = Array.from(document.querySelectorAll<HTMLElement>('.hero-slide'));
+const puntos = Array.from(document.querySelectorAll<HTMLButtonElement>('#heroPuntos button'));
+
+if (slides.length > 1) {
+    const sinMovimiento = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let actual = 0;
+    let temporizador: number | undefined;
+    // Las fotos pasan solas; solo se quedan quietas si la persona pidió "reducir movimiento" en su sistema.
+    const pausado = sinMovimiento;
+
+    // Solo la primera foto viene en el HTML; las demás se crean y descargan cuando la página ya terminó de cargar.
+    const cargarFotos = () => {
+        slides.forEach((slide) => {
+            if (!slide.dataset.src) return;
+            const picture = document.createElement('picture');
+            const source = document.createElement('source');
+            source.media = '(max-width: 700px)';
+            source.srcset = slide.dataset.movil!;
+            const img = document.createElement('img');
+            img.alt = '';
+            img.sizes = '100vw';
+            img.decoding = 'async';
+            img.srcset = slide.dataset.srcset!;
+            img.src = slide.dataset.src;
+            picture.append(source, img);
+            slide.appendChild(picture);
+            slide.removeAttribute('data-src');
         });
-    });
+    };
+    if (document.readyState === 'complete') window.setTimeout(cargarFotos, 600);
+    else window.addEventListener('load', () => window.setTimeout(cargarFotos, 600), { once: true });
 
-    // Acordeón de Preguntas Frecuentes
-    document.querySelectorAll<HTMLElement>('.faq-item').forEach(item => {
-        item.querySelector('.faq-question')?.addEventListener('click', () => {
-            item.classList.toggle('open');
-        });
-    });
+    const mostrar = (indice: number) => {
+        slides[actual].classList.remove('activa');
+        puntos[actual]?.removeAttribute('aria-current');
+        actual = (indice + slides.length) % slides.length;
+        slides[actual].classList.add('activa');
+        puntos[actual]?.setAttribute('aria-current', 'true');
+    };
 
-    // Formulario de PQRS
-    const pqrsForm = document.getElementById('pqrsForm') as HTMLFormElement | null;
-    pqrsForm?.addEventListener('submit', async (event) => {
-        event.preventDefault();
-
-        const nombre = (document.getElementById('pqrsNombre') as HTMLInputElement).value.trim();
-        const correo = (document.getElementById('pqrsCorreo') as HTMLInputElement).value.trim();
-        const telefono = (document.getElementById('pqrsTelefono') as HTMLInputElement).value.trim();
-        const mensaje = (document.getElementById('pqrsMensaje') as HTMLTextAreaElement).value.trim();
-
-        if (!nombre || !correo || !mensaje) return;
-
-        const btn = document.getElementById('btnEnviarPqrs') as HTMLButtonElement;
-        btn.disabled = true;
-
-        try {
-            const res = await fetch(apiUrl('/api/pqrs'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nombre, correo, telefono: telefono || undefined, mensaje })
-            });
-
-            if (!res.ok) {
-                Swal.fire({ icon: 'error', title: 'No se pudo enviar', text: 'Intenta de nuevo en unos minutos.', confirmButtonColor: '#f97316' });
+    const programar = () => {
+        window.clearTimeout(temporizador);
+        if (pausado || document.hidden) return;
+        temporizador = window.setTimeout(() => {
+            // Si la siguiente foto todavía no terminó de bajar (conexión lenta), se espera un poco más.
+            const siguiente = slides[(actual + 1) % slides.length].querySelector<HTMLImageElement>('img');
+            if (!siguiente || !siguiente.complete) {
+                programar();
                 return;
             }
+            mostrar(actual + 1);
+            programar();
+        }, SEGUNDOS_POR_FOTO * 1000);
+    };
 
-            pqrsForm.reset();
-            Swal.fire({
-                icon: 'success',
-                title: '¡Mensaje enviado!',
-                text: 'Gracias por escribirnos. Te responderemos al correo que dejaste.',
-                confirmButtonColor: '#f97316'
-            });
-        } catch {
-            Swal.fire({ icon: 'error', title: 'Sin conexión', text: 'No se pudo conectar con el servidor. Intenta de nuevo.', confirmButtonColor: '#f97316' });
-        } finally {
-            btn.disabled = false;
-        }
+    puntos.forEach((punto, i) => {
+        punto.addEventListener('click', () => {
+            mostrar(i);
+            programar();
+        });
     });
-});
+
+    // Si la pestaña no se está viendo, las fotos no avanzan.
+    document.addEventListener('visibilitychange', programar);
+
+    programar();
+}

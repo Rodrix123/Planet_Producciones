@@ -20,6 +20,15 @@
         ],
         "createdAt": "2026-10-10T19:27:18.758Z",
         "reason": "user confirmed: el usuario pidio explicitamente (10-oct-2026) que el calendario se extienda al pasar el cursor y que la lista de eventos se retraiga horizontalmente; la animacion del ancho de .deck-panel es ese efecto."
+      },
+      {
+        "rule": "flat-type-hierarchy",
+        "value": "*",
+        "files": [
+          "apps/web/panel-admin.html"
+        ],
+        "createdAt": "2026-11-04T21:53:07.855Z",
+        "reason": "Decidido por Claude, no confirmado por el usuario: el detector no resuelve el CSS importado desde src/panel-admin.ts; los tamanos reales son h1 1.9rem, h3 1.15rem y p 0.88rem (saltos de 1.65x y 1.31x)."
       }
     ]
   }

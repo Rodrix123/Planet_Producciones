@@ -21,8 +21,10 @@ export interface DatosCotizacion {
     itemsSeleccionados: ItemSeleccionado[];
 }
 
+// Marcado del catálogo (catalogo.html) como texto, para montarlo en cualquier página.
 export const HTML_CATALOGO: string = catalogoHtml;
 
+// Pesos colombianos sin decimales.
 export const formatterCOP = new Intl.NumberFormat('es-CO', {
     style: 'currency',
     currency: 'COP',
