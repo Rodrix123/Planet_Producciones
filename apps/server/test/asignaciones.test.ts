@@ -427,6 +427,9 @@ describe('API de asignación de personal', () => {
             'Fabio Trabajador', 'Jaime Jefe', 'Samuel Sin Celular', 'Sara Secretaria']);
         assert.equal(persona(r, 'Sara Secretaria').clave, `p:${perfil.sara}`); // reutiliza su cuenta
         assert.equal(persona(r, 'Ana Torres').clave, `e:${empleado.ana}`); // aún sin cuenta
+        // El tipo de contrato viaja con su código real (para el filtro) y su etiqueta
+        assert.deepEqual([persona(r, 'Bruno Díaz').tipoContrato, persona(r, 'Bruno Díaz').detalle], ['freelance_fijo', 'Freelance fijo']);
+        assert.deepEqual([persona(r, 'Diego Trabajador').tipoContrato, persona(r, 'Diego Trabajador').detalle], [null, 'Personal de eventos']);
         assert.equal(persona(r, 'Ana Torres').estado, 'SIN_COMPROBAR');
         assert.equal(persona(r, 'Samuel Sin Celular').estado, 'SIN_CELULAR');
         assert.equal(r.json.personal.some((p: { seleccionable: boolean }) => p.seleccionable), false);

@@ -127,6 +127,12 @@ export interface PersonaDto {
     nombre: string;
     /** Tipo de vinculación: con contrato, freelance... */
     detalle: string;
+    /**
+     * Código del tipo de contrato de la nómina (empleados.tipo_contrato): con_contrato, freelance_fijo
+     * o freelance_no_fijo. null para las cuentas "trabajador" que no están en la nómina. Lo usa el
+     * filtro "Tipo de contrato" de la pantalla.
+     */
+    tipoContrato: string | null;
     estado: EstadoPersona;
     /**
      * Se puede elegir para asignar. Quien ya está en el evento (ASIGNADO) también se puede elegir para
@@ -475,6 +481,7 @@ export async function consultarPersonal(
             empleadoId: c.empleadoId,
             nombre: c.nombre,
             detalle: (c.tipoContrato && DETALLE_CONTRATO[c.tipoContrato]) || 'Personal de eventos',
+            tipoContrato: c.tipoContrato,
             etapas: null
         };
         const propia = c.perfilId ? enEvento.get(c.perfilId) : undefined;

@@ -50,10 +50,20 @@ export interface AsignadoDto {
     motivos: Motivo[];
 }
 
+/** Tipos de contrato reales de la nómina (empleados.tipo_contrato), en el orden del filtro. */
+export const TIPOS_CONTRATO = [
+    { valor: 'con_contrato', nombre: 'Con contrato' },
+    { valor: 'freelance_fijo', nombre: 'Freelance fijo' },
+    { valor: 'freelance_no_fijo', nombre: 'Freelance no fijo' }
+] as const;
+export type TipoContrato = (typeof TIPOS_CONTRATO)[number]['valor'];
+
 export interface PersonaDto {
     clave: string;
     nombre: string;
     detalle: string;
+    /** Código de empleados.tipo_contrato; null para cuentas "trabajador" fuera de la nómina. */
+    tipoContrato: TipoContrato | null;
     estado: EstadoPersona;
     seleccionable: boolean;
     /** Etapas en las que ya está en este evento (si está ASIGNADO). */
