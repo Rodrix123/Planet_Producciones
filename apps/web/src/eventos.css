@@ -1738,9 +1738,10 @@
 }
 
 .asig-fila {
+    --asig-fila-gap: 1rem;
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: var(--asig-fila-gap);
     min-height: 3.6rem;
     margin: 0;
     padding: 0.5rem 1rem;
@@ -1776,6 +1777,16 @@
 .asig-opcion.bloqueada:hover {
     background: var(--asig-fila);
     border-color: var(--asig-borde);
+}
+
+/* Quien no se puede elegir se ve más discreto, pero su nombre, contrato y estado siguen legibles. */
+.asig-opcion.bloqueada .asig-avatar {
+    color: var(--asig-tenue);
+    background: #222a3a;
+}
+
+.asig-opcion.bloqueada .asig-contrato-tag {
+    opacity: 0.8;
 }
 
 /* Casilla propia, grande: cuadrada, naranja al marcarla, guion si la selección es parcial. */
@@ -1870,35 +1881,111 @@
     color: #f87171;
 }
 
+/* Debajo del nombre: la etapa (o etapas) en la que ya está la persona en este evento. */
 .asig-chips {
     display: flex;
     flex-wrap: wrap;
     gap: 0.3rem;
-    margin-top: 0.15rem;
+    margin-top: 0.2rem;
+}
+
+.asig-etapa-chip,
+.asig-evento-chip {
+    padding: 0.05rem 0.5rem;
+    font-size: 0.76rem;
+    font-weight: 600;
+    line-height: 1.45;
+    border-radius: 6px;
 }
 
 .asig-etapa-chip {
-    padding: 0.05rem 0.55rem;
-    font-size: 0.7rem;
-    font-weight: 700;
     color: var(--orange-main);
     background: rgba(249, 115, 22, 0.1);
-    border: 1px solid rgba(249, 115, 22, 0.3);
+    border: 1px solid rgba(249, 115, 22, 0.55);
+}
+
+.asig-evento-chip {
+    color: var(--asig-tenue);
+    background: rgba(152, 162, 182, 0.08);
+    border: 1px solid var(--asig-borde-fuerte);
+}
+
+/* A la derecha: tipo de contrato y disponibilidad, con ancho mínimo para que formen columnas. */
+.asig-fila-etiquetas {
+    display: flex;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem 0.75rem;
+}
+
+.asig-contrato-tag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-width: 9.75rem;
+    padding: 0.32rem 0.9rem;
+    font-size: 0.84rem;
+    font-weight: 700;
+    white-space: nowrap;
+    color: var(--text-light);
+    background: var(--contrato-relleno, var(--contrato-fondo));
+    border: 1px solid var(--contrato-borde);
     border-radius: 999px;
+}
+
+.asig-contrato-tag i {
+    color: var(--contrato);
+}
+
+/* Relleno algo más intenso que en el detalle del evento, como en el diseño del panel. */
+.asig-contrato-tag.contrato-con {
+    --contrato-relleno: rgba(52, 211, 153, 0.15);
+}
+
+.asig-contrato-tag.contrato-fijo {
+    --contrato-relleno: rgba(96, 165, 250, 0.16);
+}
+
+.asig-contrato-tag.contrato-no-fijo {
+    --contrato-relleno: rgba(192, 132, 252, 0.16);
 }
 
 .asig-estado {
     display: inline-flex;
     flex-shrink: 0;
     align-items: center;
+    justify-content: center;
     gap: 0.45rem;
-    padding: 0.28rem 0.8rem;
-    font-size: 0.8rem;
+    min-width: 8.5rem;
+    padding: 0.32rem 0.85rem;
+    font-size: 0.84rem;
     font-weight: 600;
     white-space: nowrap;
     color: var(--asig-tenue);
     border: 1px solid var(--asig-borde-fuerte);
     border-radius: 999px;
+}
+
+/* Columna Personal angosta: el contrato y el estado bajan debajo del nombre, alineados con él. */
+@container personal (max-width: 600px) {
+    .asig-fila {
+        flex-wrap: wrap;
+        row-gap: 0.5rem;
+    }
+
+    .asig-fila-etiquetas {
+        flex: 1 0 100%;
+        justify-content: flex-start;
+        padding-left: calc(1.5rem + 2.5rem + 2 * var(--asig-fila-gap));
+    }
+
+    .asig-contrato-tag,
+    .asig-estado {
+        min-width: 0;
+    }
 }
 
 .asig-punto {
@@ -1912,15 +1999,6 @@
     color: var(--asig-verde);
     background: rgba(52, 211, 153, 0.08);
     border-color: rgba(52, 211, 153, 0.4);
-}
-
-.asig-estado-en-evento {
-    color: var(--text-light);
-    border-color: rgba(249, 115, 22, 0.5);
-}
-
-.asig-estado-en-evento .asig-punto {
-    background: var(--orange-main);
 }
 
 .asig-estado-no_disponible,
@@ -2449,12 +2527,12 @@
     }
 
     .asig-fila {
-        flex-wrap: wrap;
-        gap: 0.7rem;
+        --asig-fila-gap: 0.7rem;
     }
 
-    .asig-estado {
-        margin-left: calc(1.5rem + 2.5rem + 1.4rem);
+    /* En el celular el contrato y el estado usan todo el ancho de la fila para caber en una línea. */
+    .asig-fila-etiquetas {
+        padding-left: 0;
     }
 
     .asig-pie-barra {

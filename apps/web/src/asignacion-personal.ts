@@ -14,6 +14,8 @@ import { api } from './api';
 import { esc } from './shared/panelShell';
 import {
     agruparPorEtapa,
+    claveContrato,
+    CONTRATO_INFO,
     ETAPA_INFO,
     ETAPAS,
     formatearFecha,
@@ -202,20 +204,39 @@ function htmlMotivos(motivos: Motivo[], clase = 'asig-motivo'): string {
     return motivos.map((m) => `<small class="${clase}">${esc(m.mensaje)}</small>`).join('');
 }
 
+/**
+ * Disponibilidad para la etapa de destino. Quien ya está en el evento en otra etapa sale
+ * "Disponible" (se le puede sumar esta); sus etapas actuales se ven debajo del nombre.
+ */
 function estadoDe(p: PersonaDto): { texto: string; clase: string } {
     if (p.estado === 'ASIGNADO') {
         return (p.etapas ?? []).includes(destino)
             ? { texto: `Ya en ${nombreEtapa(destino)}`, clase: 'en-etapa' }
-            : { texto: 'En el evento', clase: 'en-evento' };
+            : { texto: ETIQUETA_ESTADO.DISPONIBLE, clase: 'disponible' };
     }
     return { texto: ETIQUETA_ESTADO[p.estado], clase: p.estado.toLowerCase() };
+}
+
+/** Debajo del nombre: las etapas en las que ya está, o que está en el evento sin etapa. */
+function htmlEtapasDe(p: PersonaDto): string {
+    if (p.estado !== 'ASIGNADO') return '';
+    const etapas = p.etapas ?? [];
+    const chips = etapas.length
+        ? etapas.map((et) => `<span class="asig-etapa-chip">${nombreEtapa(et)}</span>`).join('')
+        : '<span class="asig-evento-chip">En el evento · sin etapa</span>';
+    return `<span class="asig-chips">${chips}</span>`;
+}
+
+/** Etiqueta del tipo de contrato (verde, azul o morado), a la derecha de la fila. */
+function htmlContrato(p: PersonaDto): string {
+    const info = CONTRATO_INFO[claveContrato(p.tipoContrato)];
+    return `<span class="asig-contrato-tag ${info.clase}"><i class="fa-solid ${info.icono}" aria-hidden="true"></i> ${info.nombre}</span>`;
 }
 
 function htmlFila(p: PersonaDto): string {
     const puede = elegible(p);
     const marcada = seleccion.has(p.clave);
     const estado = estadoDe(p);
-    const etapas = (p.etapas ?? []).map((et) => `<span class="asig-etapa-chip">${nombreEtapa(et)}</span>`).join('');
     return `
         <li>
             <label class="asig-fila asig-opcion${puede ? '' : ' bloqueada'}${marcada ? ' marcada' : ''}">
@@ -223,11 +244,13 @@ function htmlFila(p: PersonaDto): string {
                 <span class="asig-avatar" aria-hidden="true">${esc(iniciales(p.nombre))}</span>
                 <span class="asig-persona">
                     <strong>${esc(p.nombre)}</strong>
-                    <small>${esc(p.detalle)}</small>
-                    ${etapas ? `<span class="asig-chips">${etapas}</span>` : ''}
+                    ${htmlEtapasDe(p)}
                     ${htmlMotivos(p.motivos)}
                 </span>
-                <span class="asig-estado asig-estado-${estado.clase}"><span class="asig-punto" aria-hidden="true"></span>${esc(estado.texto)}</span>
+                <span class="asig-fila-etiquetas">
+                    ${htmlContrato(p)}
+                    <span class="asig-estado asig-estado-${estado.clase}"><span class="asig-punto" aria-hidden="true"></span>${esc(estado.texto)}</span>
+                </span>
             </label>
         </li>`;
 }
