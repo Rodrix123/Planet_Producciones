@@ -16,12 +16,9 @@ import { asyncHandler } from '../asyncHandler';
 import { enviarCorreo } from '../mailer';
 import { generarCotizacionPdfBuffer, type ItemCotizacionPdf } from '../pdf/cotizacionPdf';
 import { esCorreoValido, limpiarTexto, LIMITES, normalizarCotizacion, normalizarExtras, normalizarItems } from '../cotizacionEntrada';
+import { ESTADOS_VALIDOS, derivarEstado, type EstadoCotizacion } from '../estadoCotizacion';
 import { numeroReferencia } from '../referencia';
 import { limiteCotizar } from '../limitador';
-
-// Estados posibles de una cotización, en orden del recorrido.
-const ESTADOS_VALIDOS = ['recibida', 'en_revision', 'finalizada', 'contrato_enviado', 'programada', 'cancelada'] as const;
-type EstadoCotizacion = (typeof ESTADOS_VALIDOS)[number];
 
 // La secretaria solo puede ver cotizaciones que ya pasaron por "finalizada" en adelante;
 // nunca las que Maritza todavía está revisando.
@@ -118,17 +115,6 @@ interface ExtraGuardado {
     proveedor: string | null;
     costoProveedor: number | null;
     nota: string | null;
-}
-
-/**
- * Deduce el estado visible: sin evento es el de la cotización; con evento depende de si ya se envió el
- * contrato o ya está confirmado.
- */
-function derivarEstado(fila: FilaCotizacion): EstadoCotizacion {
-    if (!fila.event_id) return fila.quote_estado;
-    if (fila.confirmed) return 'programada';
-    if (fila.contrato_enviado_en) return 'contrato_enviado';
-    return 'finalizada';
 }
 
 /**
@@ -606,6 +592,8 @@ cotizacionesRouter.get('/:id/historial', requireRole('administrador'), asyncHand
         comentario: r.comentario,
         estadoAntes: r.estado_antes,
         estadoDespues: r.estado_despues,
+        itemsAntes: r.items_antes,
+        itemsDespues: r.items_despues,
         usuarioNombre: r.profile_nombre,
         creadoEn: r.creado_en
     })));

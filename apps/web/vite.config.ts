@@ -79,6 +79,7 @@ export default defineConfig(({ mode }) => {
                     pagos: 'pagos.html',
                     eventosProceso: 'eventos-proceso.html',
                     eventosProgramados: 'eventos-programados.html',
+                    consulta: 'consulta.html',
                     cotizacionesDefinitivas: 'cotizaciones-definitivas.html',
                     pqrsAdmin: 'pqrs-admin.html',
                     inventario: 'inventario.html',

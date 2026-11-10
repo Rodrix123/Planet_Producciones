@@ -109,7 +109,7 @@ describe('contrato firmado de un evento confirmado sin contrato', () => {
         const id = await eventoConfirmadoSinContrato();
         const r = await api('GET', `/api/contratos/${id}`);
         assert.equal(r.status, 200);
-        assert.deepEqual(r.json, { enviadoEn: null, firmadoSubidoEn: null, tieneFirmado: false });
+        assert.deepEqual(r.json, { enviadoEn: null, firmadoSubidoEn: null, tieneFirmado: false, archivoFirmadoDisponible: false });
     });
 
     it('Maritza puede subir el contrato firmado y después reemplazarlo sin dejar archivos sueltos', async () => {

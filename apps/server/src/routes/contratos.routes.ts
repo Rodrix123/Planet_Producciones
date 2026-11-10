@@ -127,7 +127,11 @@ contratosRouter.get('/:cotizacionId', requireRole('administrador', 'secretaria')
     res.json({
         enviadoEn: fila.contrato_enviado_en,
         firmadoSubidoEn: fila.contrato_firmado_subido_en,
-        tieneFirmado: !!fila.contrato_firmado_nombre
+        tieneFirmado: !!fila.contrato_firmado_nombre,
+        // La base recuerda el nombre del archivo, pero el archivo vive en el disco de este
+        // servidor: puede no estar (otra máquina, disco nuevo) aunque el contrato conste firmado.
+        archivoFirmadoDisponible: !!fila.contrato_firmado_nombre
+            && fs.existsSync(path.join(UPLOAD_DIR, fila.contrato_firmado_nombre))
     });
 }));
 

@@ -14,6 +14,7 @@ import {
     type ItemSeleccionado,
     type ResultadoCatalogo
 } from './shared/catalogoCotizacion';
+import { formatearItemsParaMostrar, generarExcelEjecutivo, type ItemParaMostrar } from './shared/cotizacionExcel';
 
 // Librerías cargadas vía CDN en index.html (sin tipos propios en este proyecto)
 declare const Swal: any;
@@ -34,25 +35,6 @@ interface DatosCliente {
 
 // Valor de la opción "Otro" del selector de lugar: el cliente escribe el nombre y la dirección a mano.
 const OTRO_VALUE = 'otro';
-
-/** Ítem listo para mostrarse en el PDF/Excel (precio ya multiplicado por la cantidad,
- *  nombre con el prefijo "N x" cuando aplica). */
-interface ItemParaMostrar {
-    tag: string;
-    nombre: string;
-    descripcion: string;
-    precio: number;
-}
-
-// Convierte los servicios elegidos en filas listas para el PDF/Excel.
-function formatearItemsParaMostrar(formatterCOP: Intl.NumberFormat, items: ItemSeleccionado[]): ItemParaMostrar[] {
-    return items.map((item) => ({
-        tag: item.tag,
-        nombre: item.cantidad > 1 ? `${item.cantidad} x ${item.nombre} (${formatterCOP.format(item.precioUnit)} c/u)` : item.nombre,
-        descripcion: item.descripcion,
-        precio: item.precioUnit * item.cantidad
-    }));
-}
 
 /** Intenta guardar la cotización en la base de datos para que Maritza la vea en su panel.
  *  Si falla (red/servidor caído), no interrumpe la descarga del PDF/Excel del cliente: solo
@@ -334,7 +316,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div style="position: relative; z-index: 1;">
 
                 <!-- Header VIP con Logo Real -->
-                <div style="background-color: #0a0a0c; border-radius: 12px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #f97316;">
+                <div style="background-color: #0a0a0c; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #f97316;">
                     <div style="display: flex; align-items: center; gap: 14px;">
                         <img src="${logoBase64}" style="height: 50px; width: auto; max-width: 70px; object-fit: contain;">
                         <div>
@@ -423,61 +405,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         `;
 
         return container;
-    }
-
-    // Exportación a Excel Profesional Estructurado
-    function generarExcelEjecutivo(
-        datosCliente: DatosCliente,
-        itemsParaMostrar: ItemParaMostrar[],
-        total: number,
-        refNum: string,
-        fechaHoy: string
-    ): void {
-        const aoaData: any[][] = [
-            ["PLANET PRODUCCIONES - PRODUCCIÓN TÉCNICA & EVENTOS VIP"],
-            [`COTIZACIÓN OFICIAL: ${refNum}`, "", "", `FECHA: ${fechaHoy}`],
-            [""],
-            ["1. DATOS DEL CLIENTE"],
-            ["Cliente:", datosCliente.nombre, "Tipo Evento:", datosCliente.tipoEvento || 'N/A'],
-            ["Correo:", datosCliente.correo, "Sede:", datosCliente.lugar || 'Por definir'],
-            ["WhatsApp:", datosCliente.telefono, "", ""],
-            [""],
-            ["2. DESGLOSE PREVENTIVO DE SERVICIOS"],
-            ["Item", "Categoría", "Servicio / Descripción", "Valor COP"]
-        ];
-
-        itemsParaMostrar.forEach((item, index) => {
-            aoaData.push([
-                index + 1,
-                item.tag,
-                item.descripcion ? `${item.nombre} — Incluye: ${item.descripcion}` : item.nombre,
-                item.precio
-            ]);
-        });
-
-        aoaData.push([""]);
-        aoaData.push(["", "", "TOTAL PRESUPUESTO ESTIMADO:", total]);
-
-        const worksheet = XLSX.utils.aoa_to_sheet(aoaData);
-
-        worksheet['!cols'] = [
-            { wch: 8 },  // Ítem
-            { wch: 26 }, // Categoría
-            { wch: 75 }, // Descripción
-            { wch: 18 }  // Precio COP
-        ];
-
-        const numRows = aoaData.length;
-        for (let i = 11; i < numRows; i++) {
-            const cellAddress = `D${i}`;
-            if (worksheet[cellAddress] && typeof worksheet[cellAddress].v === 'number') {
-                worksheet[cellAddress].z = '"$"#,##0';
-            }
-        }
-
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'Cotización VIP');
-        XLSX.writeFile(workbook, `Cotizacion_Planet_${datosCliente.nombre.replace(/\s+/g, '_')}.xlsx`);
     }
 
     // Evento Principal al Clic
