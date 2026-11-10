@@ -40,6 +40,7 @@ const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) 
 const estadoEl = $('estado');
 const listaEl = $('listaClientes');
 const filtrosEl = $('filtros');
+const filtrosFijosEl = $('filtros').parentElement as HTMLElement;
 const conteoEl = $('conteo');
 const fNombre = $<HTMLInputElement>('fNombre');
 const fEstado = $<HTMLSelectElement>('fEstado');
@@ -89,6 +90,18 @@ function textoConteo(visibles: ClienteConsulta[], filtros: FiltrosConsulta): str
         ? `${nClientes} de ${plural(clientes.length, 'cliente', 'clientes')}`
         : plural(nClientes, 'cliente', 'clientes');
     return `${quienes} · ${plural(eventos, 'evento', 'eventos')} · ${plural(cotizaciones, 'cotización', 'cotizaciones')} sin evento`;
+}
+
+/**
+ * Con la barra de filtros fija arriba, el navegador debe saber cuánto mide para que el
+ * elemento que recibe el foco con el teclado no quede tapado debajo de ella
+ * (scroll-padding-top). Si la barra no está fija (detalle, teléfono), no se reserva nada.
+ */
+function ajustarEspacioDeFoco(): void {
+    const fija = getComputedStyle(filtrosFijosEl).position === 'sticky';
+    document.documentElement.style.scrollPaddingTop = fija
+        ? `${Math.ceil(filtrosFijosEl.getBoundingClientRect().height) + 12}px`
+        : '';
 }
 
 // ---------- Lista de clientes ----------
@@ -337,6 +350,10 @@ async function abrirDetalle(id: number, apilar = true): Promise<void> {
 document.addEventListener('DOMContentLoaded', async () => {
     const sesion = await exigirSesion('administrador');
     initPanelLayout(sesion);
+
+    // El alto de la barra fija cambia con el ancho, con "Limpiar filtros" y al pasar al detalle.
+    new ResizeObserver(ajustarEspacioDeFoco).observe(filtrosFijosEl, { box: 'border-box' });
+    window.addEventListener('resize', ajustarEspacioDeFoco);
 
     $('btnVolverLista').addEventListener('click', volverALista);
     for (const boton of pestanas) {

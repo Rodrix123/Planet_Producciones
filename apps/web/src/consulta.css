@@ -42,6 +42,23 @@
     color: var(--text-muted);
 }
 
+/* Barra de filtros fija al desplazarse la lista; el título de la página sí sube con ella.
+   Solo mientras los filtros se ven (no en el detalle, que tiene su propio encabezado fijo, ni
+   al cargar) y en pantallas donde cabe: en un teléfono los filtros apilados ocupan casi media
+   pantalla. Sin soporte de :has() la regla se ignora y la barra simplemente no queda fija. */
+@media (min-width: 701px) and (min-height: 600px) {
+    .consulta-filtros-fijos:has(> .filtros:not([hidden])) {
+        position: sticky;
+        top: 0;
+        z-index: 15;
+        /* Absorbe el espacio sobre la barra: al cargar se ve igual que antes y, fija arriba,
+           conserva aire sobre ella. El fondo tapa la lista que pasa por debajo. */
+        margin-top: -1.75rem;
+        padding-top: 1.75rem;
+        background-color: var(--bg-dark);
+    }
+}
+
 /* ---------- Lista de clientes ---------- */
 .consulta-lista {
     display: flex;

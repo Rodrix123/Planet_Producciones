@@ -35,16 +35,16 @@
     </aside>
 
     <main class="panel-main panel-main-wide">
-        <!-- Encabezado de la lista (título, filtros y búsqueda): queda fijo al desplazarse -->
-        <div class="consulta-cabecera">
-            <div class="page-header">
-                <div>
-                    <h2>Clientes y eventos</h2>
-                    <p>Consulta los clientes, sus eventos agendados y el detalle de cada cotización. Desde aquí no se modifica ningún dato.</p>
-                </div>
-                <a href="panel-admin.html" class="back-home-btn"><i class="fa-solid fa-arrow-left"></i> Volver al panel</a>
+        <div class="page-header">
+            <div>
+                <h2>Clientes y eventos</h2>
+                <p>Consulta los clientes, sus eventos agendados y el detalle de cada cotización. Desde aquí no se modifica ningún dato.</p>
             </div>
+            <a href="panel-admin.html" class="back-home-btn"><i class="fa-solid fa-arrow-left"></i> Volver al panel</a>
+        </div>
 
+        <!-- Barra de filtros: queda fija al desplazarse la lista (el título sube con la página) -->
+        <div class="consulta-filtros-fijos">
             <div class="filtros consulta-filtros" id="filtros" hidden>
                 <label class="filtro filtro-nombre">
                     <span><i class="fa-solid fa-magnifying-glass"></i> Cliente</span>
@@ -119,6 +119,5 @@
     <div id="toast" class="toast" role="status"></div>
 
     <script type="module" src="/src/consulta.ts"></script>
-    <script type="module" src="/src/consultaCabeceraFija.ts"></script>
 </body>
 </html>
