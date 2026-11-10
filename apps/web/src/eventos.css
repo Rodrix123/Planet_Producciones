@@ -810,8 +810,8 @@
     font: inherit;
     font-size: 0.85rem;
     font-weight: 700;
-    color: #fff;
-    background: linear-gradient(to right, var(--orange-main), var(--orange-hover));
+    color: var(--ink);
+    background: var(--orange-main);
     border: none;
     border-radius: 12px;
     cursor: pointer;
@@ -819,7 +819,7 @@
 }
 
 .btn-asignar-personal:hover {
-    filter: brightness(1.08);
+    filter: brightness(1.06);
 }
 
 .btn-asignar-personal:focus-visible {
@@ -832,29 +832,29 @@
     container: detalle / inline-size;
 }
 
-/* Colores por modalidad de contratación */
+/* Colores por modalidad de contratación (tonos oscuros para que se lean sobre fondo claro) */
 .contrato-con {
-    --contrato: #34d399;
-    --contrato-fondo: rgba(52, 211, 153, 0.1);
-    --contrato-borde: rgba(52, 211, 153, 0.45);
+    --contrato: #1d6b49;
+    --contrato-fondo: rgba(29, 107, 73, 0.08);
+    --contrato-borde: rgba(29, 107, 73, 0.35);
 }
 
 .contrato-fijo {
-    --contrato: #60a5fa;
-    --contrato-fondo: rgba(96, 165, 250, 0.1);
-    --contrato-borde: rgba(96, 165, 250, 0.5);
+    --contrato: #1f4fc4;
+    --contrato-fondo: rgba(31, 79, 196, 0.07);
+    --contrato-borde: rgba(31, 79, 196, 0.32);
 }
 
 .contrato-no-fijo {
-    --contrato: #c084fc;
-    --contrato-fondo: rgba(192, 132, 252, 0.1);
-    --contrato-borde: rgba(192, 132, 252, 0.5);
+    --contrato: #7a2bb8;
+    --contrato-fondo: rgba(122, 43, 184, 0.07);
+    --contrato-borde: rgba(122, 43, 184, 0.32);
 }
 
 .contrato-sin {
     --contrato: var(--text-muted);
-    --contrato-fondo: rgba(156, 163, 175, 0.08);
-    --contrato-borde: rgba(156, 163, 175, 0.35);
+    --contrato-fondo: rgba(90, 82, 72, 0.06);
+    --contrato-borde: rgba(90, 82, 72, 0.3);
 }
 
 /* ----- Composición del personal: a la derecha de "Logística y contrato" ----- */
@@ -867,8 +867,8 @@
     gap: 0.9rem 1.25rem;
     align-self: start;
     padding: 0.9rem 1.2rem;
-    background: linear-gradient(90deg, rgba(249, 115, 22, 0.07), rgba(249, 115, 22, 0.02));
-    border: 1px solid rgba(249, 115, 22, 0.65);
+    background: linear-gradient(90deg, rgba(229, 96, 26, 0.07), rgba(229, 96, 26, 0.02));
+    border: 1px solid rgba(229, 96, 26, 0.65);
     border-radius: 16px;
 }
 
@@ -1207,19 +1207,19 @@
 }
 
 /* ---------- Panel "Asignar personal" (src/asignacion-personal.ts) ---------- */
-/* Tonos propios del panel: superficies azul oscuro sobre el fondo de la página, naranja para la
-   acción y verde para lo disponible. Todo se apoya en la paleta del panel (style.css). */
+/* Tonos propios del panel, tomados de la paleta clara de style.css: tarjetas porcelana, controles
+   y filas hundidos, naranja para la acción y verde para lo disponible. */
 .asig-panel {
-    --asig-superficie: #111724;
-    --asig-superficie-alta: #151c2b;
-    --asig-control: #0f1520;
-    --asig-fila: #141b29;
-    --asig-fila-hover: #182133;
-    --asig-borde: #232c3e;
-    --asig-borde-fuerte: #303b52;
-    --asig-tenue: #98a2b6;
-    --asig-azul: #8ea6e3;
-    --asig-naranja-suave: rgba(249, 115, 22, 0.14);
+    --asig-superficie: var(--bg-card);
+    --asig-superficie-alta: var(--bg-dark);
+    --asig-control: var(--bg-input);
+    --asig-fila: var(--bg-input);
+    --asig-fila-hover: #e3e6dc;
+    --asig-borde: var(--border-color);
+    --asig-borde-fuerte: #c4c9ba;
+    --asig-tenue: var(--text-muted);
+    --asig-azul: #2b54b8;
+    --asig-naranja-suave: rgba(229, 96, 26, 0.12);
     --asig-verde: var(--emerald-green);
     display: flex;
     flex-direction: column;
@@ -1278,11 +1278,11 @@
     gap: 0.75rem 1.15rem;
     padding: 0.75rem 1.25rem;
     background:
-        radial-gradient(120% 160% at 100% 50%, rgba(249, 115, 22, 0.12), transparent 55%),
+        radial-gradient(120% 160% at 100% 50%, rgba(229, 96, 26, 0.12), transparent 55%),
         var(--asig-superficie);
     border: 1px solid var(--asig-borde);
     border-radius: 16px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 8px 24px rgba(28, 20, 16, 0.06);
 }
 
 .asig-volver {
@@ -1324,7 +1324,7 @@
     font-size: 1.25rem;
     color: var(--orange-main);
     background: var(--asig-naranja-suave);
-    border: 1px solid rgba(249, 115, 22, 0.35);
+    border: 1px solid rgba(229, 96, 26, 0.35);
     border-radius: 12px;
 }
 
@@ -1493,7 +1493,7 @@
 }
 
 .asig-caja.activa {
-    border-color: rgba(249, 115, 22, 0.6);
+    border-color: rgba(229, 96, 26, 0.6);
 }
 
 .asig-hora {
@@ -1548,7 +1548,7 @@
 .asig-caja-campo select option {
     font-weight: 500;
     color: var(--text-light);
-    background: #111724;
+    background: var(--bg-card);
 }
 
 /* La flecha abre el selector; el ícono del navegador sobra. */
@@ -1605,8 +1605,8 @@
     padding: 0.15rem 0.6rem;
     font-weight: 600;
     color: var(--asig-azul);
-    background: rgba(142, 166, 227, 0.1);
-    border: 1px solid rgba(142, 166, 227, 0.3);
+    background: rgba(43, 84, 184, 0.08);
+    border: 1px solid rgba(43, 84, 184, 0.3);
     border-radius: 999px;
 }
 
@@ -1663,14 +1663,15 @@
     outline-offset: 2px;
 }
 
+/* Naranja sólido con texto tinta, como los demás botones activos de la paleta clara (contraste AA). */
 .asig-segmento[aria-pressed="true"] {
-    color: #fff;
-    background: linear-gradient(to right, var(--orange-main), var(--orange-hover));
-    box-shadow: 0 6px 18px rgba(249, 115, 22, 0.3);
+    color: var(--ink);
+    background: var(--orange-main);
+    box-shadow: 0 6px 16px rgba(229, 96, 26, 0.25);
 }
 
 .asig-segmento[aria-pressed="true"] i {
-    color: #fff;
+    color: var(--ink);
 }
 
 .asig-filtros {
@@ -1748,7 +1749,7 @@
 
 /* Con un filtro distinto de "Todos" el borde queda naranja suave; abierto o con foco, naranja pleno. */
 .desplegable.cambiado .desplegable-boton {
-    border-color: rgba(249, 115, 22, 0.6);
+    border-color: rgba(229, 96, 26, 0.6);
 }
 
 .desplegable.abierto .desplegable-boton,
@@ -1785,10 +1786,10 @@
     margin: 0;
     padding: 0.35rem;
     list-style: none;
-    background: var(--asig-superficie-alta);
+    background: var(--asig-superficie);
     border: 1px solid var(--asig-borde-fuerte);
     border-radius: 12px;
-    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 16px 36px rgba(28, 20, 16, 0.16);
 }
 
 .desplegable-opciones[hidden] {
@@ -1822,7 +1823,7 @@
 
 .desplegable-opcion[aria-selected="true"] {
     font-weight: 700;
-    background: rgba(249, 115, 22, 0.2);
+    background: rgba(229, 96, 26, 0.14);
 }
 
 .desplegable-icono {
@@ -1992,7 +1993,7 @@
 
 .asig-opcion.marcada,
 .asig-opcion:has(input:checked) {
-    background: linear-gradient(90deg, rgba(249, 115, 22, 0.24), rgba(249, 115, 22, 0.07));
+    background: linear-gradient(90deg, rgba(229, 96, 26, 0.16), rgba(229, 96, 26, 0.05));
     border-color: var(--orange-main);
 }
 
@@ -2008,7 +2009,7 @@
 /* Quien no se puede elegir se ve más discreto, pero su nombre, contrato y estado siguen legibles. */
 .asig-opcion.bloqueada .asig-avatar {
     color: var(--asig-tenue);
-    background: #222a3a;
+    background: #e2e5db;
 }
 
 .asig-opcion.bloqueada .asig-contrato-tag {
@@ -2022,7 +2023,7 @@
     height: 1.5rem;
     margin: 0;
     background: transparent;
-    border: 1.5px solid #4a5570;
+    border: 1.5px solid #80867a;
     border-radius: 6px;
     appearance: none;
     cursor: pointer;
@@ -2059,12 +2060,12 @@
     font-weight: 700;
     letter-spacing: 0.02em;
     color: var(--text-light);
-    background: #2a3346;
+    background: #d9ddd0;
     border-radius: 50%;
 }
 
 .asig-opcion.marcada .asig-avatar {
-    background: #3a3434;
+    background: #f3d3bf;
 }
 
 .asig-avatar-mini {
@@ -2100,11 +2101,11 @@
 }
 
 .asig-persona small.asig-motivo {
-    color: #fdba74;
+    color: var(--orange-text);
 }
 
 .asig-persona small.asig-motivo-alerta {
-    color: #f87171;
+    color: var(--danger);
 }
 
 /* Debajo del nombre: la etapa (o etapas) en la que ya está la persona en este evento. */
@@ -2126,13 +2127,13 @@
 
 .asig-etapa-chip {
     color: var(--orange-main);
-    background: rgba(249, 115, 22, 0.1);
-    border: 1px solid rgba(249, 115, 22, 0.55);
+    background: rgba(229, 96, 26, 0.1);
+    border: 1px solid rgba(229, 96, 26, 0.55);
 }
 
 .asig-evento-chip {
     color: var(--asig-tenue);
-    background: rgba(152, 162, 182, 0.08);
+    background: rgba(90, 82, 72, 0.06);
     border: 1px solid var(--asig-borde-fuerte);
 }
 
@@ -2168,15 +2169,15 @@
 
 /* Relleno algo más intenso que en el detalle del evento, como en el diseño del panel. */
 .asig-contrato-tag.contrato-con {
-    --contrato-relleno: rgba(52, 211, 153, 0.15);
+    --contrato-relleno: rgba(29, 107, 73, 0.12);
 }
 
 .asig-contrato-tag.contrato-fijo {
-    --contrato-relleno: rgba(96, 165, 250, 0.16);
+    --contrato-relleno: rgba(31, 79, 196, 0.1);
 }
 
 .asig-contrato-tag.contrato-no-fijo {
-    --contrato-relleno: rgba(192, 132, 252, 0.16);
+    --contrato-relleno: rgba(122, 43, 184, 0.1);
 }
 
 .asig-estado {
@@ -2232,8 +2233,8 @@
 
 .asig-estado-no_disponible,
 .asig-estado-rechazo_whatsapp {
-    color: #fdba74;
-    border-color: rgba(253, 186, 116, 0.35);
+    color: var(--orange-text);
+    border-color: rgba(166, 62, 8, 0.35);
 }
 
 .asig-vacio,
@@ -2371,7 +2372,7 @@
 
 .asig-elegido button:hover,
 .asig-elegido button:focus-visible {
-    color: #fff;
+    color: var(--ink);
     background: var(--asig-borde-fuerte);
     outline: none;
 }
@@ -2392,7 +2393,7 @@
     padding: 0.85rem 1.6rem;
     font-size: 1.02rem;
     white-space: nowrap;
-    box-shadow: 0 8px 22px rgba(249, 115, 22, 0.28);
+    box-shadow: 0 8px 22px rgba(229, 96, 26, 0.28);
 }
 
 .asig-btn-asignar:disabled {
@@ -2420,9 +2421,9 @@
 }
 
 .asig-etapa.destino {
-    background: linear-gradient(90deg, rgba(249, 115, 22, 0.2), rgba(249, 115, 22, 0.05) 70%), var(--asig-superficie-alta);
+    background: linear-gradient(90deg, rgba(229, 96, 26, 0.2), rgba(229, 96, 26, 0.05) 70%), var(--asig-superficie-alta);
     border-color: var(--orange-main);
-    box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.35), 0 10px 28px rgba(249, 115, 22, 0.12);
+    box-shadow: 0 0 0 1px rgba(229, 96, 26, 0.35), 0 10px 28px rgba(229, 96, 26, 0.12);
 }
 
 .asig-etapa-head {
@@ -2436,7 +2437,7 @@
     width: 1.5rem;
     font-size: 1.25rem;
     text-align: center;
-    color: #b8c0d0;
+    color: var(--asig-tenue);
 }
 
 .asig-etapa.destino .asig-etapa-icono {
@@ -2476,7 +2477,7 @@
 
 .asig-etapa-elegir[aria-pressed="true"] {
     color: var(--orange-main);
-    background: rgba(249, 115, 22, 0.1);
+    background: rgba(229, 96, 26, 0.1);
     border-color: var(--orange-main);
 }
 
@@ -2544,7 +2545,7 @@
     font-size: 0.8rem;
     color: var(--text-light);
     background: transparent;
-    border: 1.5px solid #c8cfdc;
+    border: 1.5px solid #9aa08f;
     border-radius: 50%;
     cursor: pointer;
     transition: color 0.15s, border-color 0.15s;
@@ -2552,8 +2553,8 @@
 
 .asig-quitar:hover,
 .asig-quitar:focus-visible {
-    color: #f87171;
-    border-color: #f87171;
+    color: var(--danger);
+    border-color: var(--danger);
     outline: none;
 }
 
@@ -2590,8 +2591,8 @@
     font-size: 0.88rem;
     line-height: 1.45;
     color: var(--text-light);
-    background: rgba(249, 115, 22, 0.08);
-    border: 1px solid rgba(249, 115, 22, 0.35);
+    background: rgba(229, 96, 26, 0.08);
+    border: 1px solid rgba(229, 96, 26, 0.35);
     border-radius: 12px;
 }
 
@@ -2601,12 +2602,12 @@
 }
 
 .asig-aviso-error {
-    background: rgba(248, 113, 113, 0.08);
-    border-color: rgba(248, 113, 113, 0.4);
+    background: rgba(180, 35, 24, 0.06);
+    border-color: rgba(180, 35, 24, 0.35);
 }
 
 .asig-aviso-error i {
-    color: #f87171;
+    color: var(--danger);
 }
 
 .asig-btn-primario,
@@ -2615,8 +2616,8 @@
     font: inherit;
     font-size: 0.9rem;
     font-weight: 700;
-    color: #fff;
-    background: linear-gradient(to right, var(--orange-main), var(--orange-hover));
+    color: var(--ink);
+    background: var(--orange-main);
     border: none;
     border-radius: 12px;
     cursor: pointer;
@@ -2624,18 +2625,19 @@
 }
 
 .asig-btn-primario:not(:disabled):hover {
-    filter: brightness(1.08);
+    filter: brightness(1.06);
 }
 
 .asig-btn-peligro {
     padding: 0.35rem 0.75rem;
     font-size: 0.78rem;
-    background: #dc2626;
+    color: #fff;
+    background: var(--danger);
     border-radius: 10px;
 }
 
 .asig-btn-peligro:hover {
-    background: #b91c1c;
+    background: #8f1c13;
 }
 
 .asig-btn-primario:disabled {
