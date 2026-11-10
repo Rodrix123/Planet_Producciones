@@ -1,5 +1,5 @@
-// Qué personas muestra la lista del panel "Asignar personal". Es solo presentación: la
-// disponibilidad la decide el servidor (estado y `seleccionable` de cada persona) y aquí no se cambia.
+// Qué personas muestra la lista del panel "Asignar personal" y en qué orden. Es solo presentación:
+// la disponibilidad la decide el servidor (estado y `seleccionable` de cada persona) y aquí no se cambia.
 
 import { normalizar, type Etapa, type PersonaDto, type TipoContrato } from './etapasPersonal';
 
@@ -32,4 +32,21 @@ export function filtrarPersonal(personal: PersonaDto[], c: CriteriosLista): Pers
         && (!c.contrato || p.tipoContrato === c.contrato)
         && (c.vista === 'todos'
             || (c.vista === 'disponibles' ? disponibleEn(p, c.destino) : estaEnEtapa(p, c.destino))));
+}
+
+/**
+ * Primero quienes están disponibles para la etapa de destino y al final los demás (no disponibles,
+ * ya en esa etapa, sin celular...). Cada grupo conserva el orden en que llegó, que es el alfabético
+ * del servidor. No quita ni repite a nadie.
+ */
+export function ordenarPorDisponibilidad(personas: PersonaDto[], destino: Etapa): PersonaDto[] {
+    const disponibles: PersonaDto[] = [];
+    const resto: PersonaDto[] = [];
+    for (const p of personas) (disponibleEn(p, destino) ? disponibles : resto).push(p);
+    return [...disponibles, ...resto];
+}
+
+/** Lo que se ve en la lista: primero se filtra y luego se ordena por disponibilidad. */
+export function personasVisibles(personal: PersonaDto[], c: CriteriosLista): PersonaDto[] {
+    return ordenarPorDisponibilidad(filtrarPersonal(personal, c), c.destino);
 }

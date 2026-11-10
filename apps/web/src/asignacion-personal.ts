@@ -8,12 +8,13 @@
 //
 // Las reglas (evento confirmado, choques de horario, días no disponibles, duplicados) viven solo en
 // el servidor: el panel muestra lo que responde GET /api/eventos/:id/personal y, al escribir la hora
-// de finalización, vuelve a preguntar con esa hora. Los filtros solo cambian lo que se muestra.
+// de finalización, vuelve a preguntar con esa hora. Los filtros y el orden de la lista (primero
+// quienes están disponibles para la etapa de destino) solo cambian lo que se muestra.
 
 import { api } from './api';
 import { actualizarDesplegable, conectarDesplegables, htmlDesplegable, type OpcionDesplegable } from './shared/desplegable';
 import { esc } from './shared/panelShell';
-import { disponibleEn, filtrarPersonal, type VistaPersonal } from './shared/listaPersonal';
+import { disponibleEn, personasVisibles, type VistaPersonal } from './shared/listaPersonal';
 import {
     agruparPorEtapa,
     claveContrato,
@@ -100,9 +101,13 @@ function nombreCorto(nombre: string): string {
 
 const hayFiltros = (): boolean => busqueda.trim() !== '' || vista !== 'todos' || contrato !== '';
 
-/** Personas que se ven con la búsqueda (nombre o contrato), lo que se elige mostrar y el tipo de contrato. */
+/**
+ * Personas que se ven con la búsqueda (nombre o contrato), lo que se elige mostrar y el tipo de
+ * contrato; las disponibles para la etapa de destino primero. Se recalcula en cada pintada, así que
+ * quien deja de estar disponible (o vuelve a estarlo) cambia de grupo solo.
+ */
 function filtrados(): PersonaDto[] {
-    return datos ? filtrarPersonal(datos.personal, { busqueda, contrato, vista, destino }) : [];
+    return datos ? personasVisibles(datos.personal, { busqueda, contrato, vista, destino }) : [];
 }
 
 // ---------- Estructura ----------
@@ -237,8 +242,9 @@ function htmlFila(p: PersonaDto): string {
     const puede = elegible(p);
     const marcada = seleccion.has(p.clave);
     const estado = estadoDe(p);
+    // La fila se identifica por la clave única de la persona (no por su posición en la lista).
     return `
-        <li>
+        <li data-clave="${esc(p.clave)}">
             <label class="asig-fila asig-opcion${puede ? '' : ' bloqueada'}${marcada ? ' marcada' : ''}">
                 <input type="checkbox" class="asig-check" value="${esc(p.clave)}" data-asig-persona ${puede ? '' : 'disabled'} ${marcada ? 'checked' : ''}>
                 <span class="asig-avatar" aria-hidden="true">${esc(iniciales(p.nombre))}</span>
