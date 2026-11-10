@@ -51,6 +51,28 @@ export class ErrorAsignacion extends Error {
 const falla = (estadoHttp: number, codigo: string, mensaje: string, detalles?: unknown) =>
     new ErrorAsignacion(estadoHttp, codigo, mensaje, detalles);
 
+/**
+ * Etapas fijas del evento, en su orden (migración 0012). Una persona puede estar en varias; la lista
+ * se guarda en event_staff.etapas siempre en este orden y sin repetir. NULL = asignada sin etapa.
+ * Las etapas no tienen horario propio: los choques se calculan con el horario completo del evento.
+ */
+export const ETAPAS = ['carga', 'organizacion', 'desmonte'] as const;
+export type Etapa = (typeof ETAPAS)[number];
+
+export const ETIQUETA_ETAPA: Record<Etapa, string> = {
+    carga: 'Carga',
+    organizacion: 'Organización',
+    desmonte: 'Desmonte'
+};
+
+export const esEtapa = (valor: unknown): valor is Etapa => typeof valor === 'string' && (ETAPAS as readonly string[]).includes(valor);
+
+/** Etapas válidas en el orden de ETAPAS, sin repetir; null si no queda ninguna. */
+function ordenarEtapas(etapas: readonly unknown[] | null | undefined): Etapa[] | null {
+    const lista = ETAPAS.filter((e) => (etapas ?? []).includes(e));
+    return lista.length > 0 ? lista : null;
+}
+
 /** Crea los usuarios de Supabase Auth del personal. Se inyecta para probar sin tocar Supabase. */
 export interface CuentasDePersonal {
     /** Usuario solo con celular (sin correo ni contraseña). `yaExiste` si ese celular ya tiene usuario. */
@@ -82,6 +104,8 @@ export interface AsignadoDto {
     horaInicio: string | null;
     horaFin: string | null;
     puedeQuitarse: boolean;
+    /** Etapas en las que trabaja (en orden); null = asignado sin etapa. */
+    etapas: Etapa[] | null;
     /** Choques con otros eventos según la hora de finalización evaluada (vacío = sin problema). */
     motivos: MotivoPersona[];
 }
@@ -104,7 +128,13 @@ export interface PersonaDto {
     /** Tipo de vinculación: con contrato, freelance... */
     detalle: string;
     estado: EstadoPersona;
+    /**
+     * Se puede elegir para asignar. Quien ya está en el evento (ASIGNADO) también se puede elegir para
+     * sumarle otra etapa; la pantalla no lo ofrece para una etapa en la que ya está (ver `etapas`).
+     */
     seleccionable: boolean;
+    /** Etapas en las que ya está en este evento (solo si está ASIGNADO); null si no tiene. */
+    etapas: Etapa[] | null;
     motivos: { codigo: string; mensaje: string }[];
 }
 
@@ -164,6 +194,7 @@ interface FilaDelEvento {
     nombre: string;
     de_whatsapp: boolean;
     estado_respuesta: string | null;
+    etapas: string[] | null;
     conv_inicio: string | null;
     conv_fin: string | null;
 }
@@ -175,6 +206,7 @@ async function filasDelEvento(c: Conexion, eventoId: number): Promise<FilaDelEve
                 coalesce(nullif(btrim(p.nombre), ''), p.correo, 'Sin nombre') as nombre,
                 (s.convocatoria_id is not null) as de_whatsapp,
                 s.estado_respuesta,
+                s.etapas,
                 to_char(cv.hora_inicio, 'HH24:MI') as conv_inicio,
                 to_char(cv.hora_fin, 'HH24:MI') as conv_fin
            from public.event_staff s
@@ -383,21 +415,24 @@ function intervaloDelEvento(fila: FilaEvento, horaFin: string): Intervalo {
 // ---------------------------------------------------------------------------------------------
 
 /**
- * Evento, personal asignado y, si el evento admite asignaciones, todo el personal con su
- * disponibilidad. La disponibilidad se calcula con `horaFinPropuesta` (lo que la administradora está
- * escribiendo) o, si no viene, con la hora de finalización guardada; sin ninguna no se puede comprobar.
+ * Evento, personal asignado (con sus etapas) y, si el evento admite asignaciones, todo el personal
+ * con su disponibilidad. La disponibilidad se calcula con `horaFinPropuesta` (lo que la administradora
+ * está escribiendo) o, si no viene, con la hora de finalización guardada; sin ninguna no se puede
+ * comprobar. Con `soloAsignados` devuelve solo el evento y su personal, sin calcular disponibilidad:
+ * es lo que usa el detalle del evento para mostrar el personal por etapa.
  */
 export async function consultarPersonal(
     db: Conexion,
     eventoId: number,
-    horaFinPropuesta?: unknown
+    horaFinPropuesta?: unknown,
+    opciones: { soloAsignados?: boolean } = {}
 ): Promise<ConsultaPersonalDto> {
     const fila = await eventoExistente(db, eventoId);
     const evento = aEventoDto(fila);
     const propuesta =
         horaFinPropuesta === undefined || horaFinPropuesta === '' ? null : leerHoraFin(horaFinPropuesta);
     const horaFin = propuesta ?? fila.hora_fin;
-    const intervalo = evento.asignable && horaFin ? intervaloDelEvento(fila, horaFin) : null;
+    const intervalo = evento.asignable && horaFin && !opciones.soloAsignados ? intervaloDelEvento(fila, horaFin) : null;
 
     const filas = await filasDelEvento(db, eventoId);
     const asignadas = filas.filter((f) => cuentaComoAsignado(f.estado_respuesta));
@@ -413,6 +448,7 @@ export async function consultarPersonal(
             horaInicio: f.de_whatsapp ? f.conv_inicio : fila.hora_inicio,
             horaFin: f.de_whatsapp ? f.conv_fin : horaFin,
             puedeQuitarse: evento.asignable && !f.de_whatsapp,
+            etapas: ordenarEtapas(f.etapas),
             motivos: motivosAsignados.get(f.perfil_id) ?? []
         }))
         .sort((a, b) => ALFABETICO.compare(a.nombre, b.nombre));
@@ -424,7 +460,7 @@ export async function consultarPersonal(
         asignados,
         personal: []
     };
-    if (!evento.asignable) return respuesta;
+    if (!evento.asignable || opciones.soloAsignados) return respuesta;
 
     const candidatos = await listarCandidatos(db);
     const enEvento = new Map(filas.map((f) => [f.perfil_id, f]));
@@ -438,12 +474,14 @@ export async function consultarPersonal(
             perfilId: c.perfilId,
             empleadoId: c.empleadoId,
             nombre: c.nombre,
-            detalle: (c.tipoContrato && DETALLE_CONTRATO[c.tipoContrato]) || 'Personal de eventos'
+            detalle: (c.tipoContrato && DETALLE_CONTRATO[c.tipoContrato]) || 'Personal de eventos',
+            etapas: null
         };
         const propia = c.perfilId ? enEvento.get(c.perfilId) : undefined;
         if (propia) {
             if (cuentaComoAsignado(propia.estado_respuesta)) {
-                return { ...base, estado: 'ASIGNADO', seleccionable: false, motivos: [] };
+                // Ya está en el evento: se puede elegir para sumarle otra etapa.
+                return { ...base, estado: 'ASIGNADO', seleccionable: true, etapas: ordenarEtapas(propia.etapas), motivos: [] };
             }
             return propia.estado_respuesta === 'PENDIENTE'
                 ? { ...base, estado: 'CONVOCADO', seleccionable: false, motivos: [{ codigo: 'YA_CONVOCADO', mensaje: 'Fue convocado por WhatsApp a este evento y aún no responde.' }] }
@@ -479,7 +517,15 @@ export async function consultarPersonal(
 
 export interface SolicitudAsignar {
     horaFin: string;
+    /** Etapa a la que se asigna la selección; obligatoria si hay personas. */
+    etapa: Etapa | null;
     claves: string[];
+}
+
+function leerEtapa(valor: unknown): Etapa | null {
+    if (valor === undefined || valor === null || valor === '') return null;
+    if (!esEtapa(valor)) throw falla(400, 'ETAPA_INVALIDA', 'La etapa debe ser Carga, Organización o Desmonte.');
+    return valor;
 }
 
 export function validarSolicitudAsignar(cuerpo: unknown): SolicitudAsignar {
@@ -499,7 +545,11 @@ export function validarSolicitudAsignar(cuerpo: unknown): SolicitudAsignar {
     if (claves.length > MAX_PERSONAS) {
         throw falla(400, 'DEMASIADAS_PERSONAS', `No se pueden asignar más de ${MAX_PERSONAS} personas a la vez.`);
     }
-    return { horaFin, claves: claves as string[] };
+    const etapa = leerEtapa(datos.etapa);
+    if (claves.length > 0 && etapa === null) {
+        throw falla(400, 'ETAPA_INVALIDA', 'Elige la etapa a la que vas a asignar: Carga, Organización o Desmonte.');
+    }
+    return { horaFin, etapa, claves: claves as string[] };
 }
 
 interface Problema {
@@ -511,8 +561,10 @@ interface Problema {
 
 interface Evaluacion {
     evento: FilaEvento;
-    /** Candidatos ya resueltos; los que no tienen cuenta todavía llevan perfilId null. */
-    seleccion: Candidato[];
+    /** Personas que aún no están en el evento; las que no tienen cuenta todavía llevan perfilId null. */
+    nuevos: Candidato[];
+    /** Personas ya asignadas a las que se les suma la etapa, con su lista de etapas resultante. */
+    existentes: { perfilId: string; etapas: Etapa[] }[];
     horaFinCambia: boolean;
     problemas: Problema[];
 }
@@ -564,18 +616,28 @@ async function evaluarSolicitud(c: Conexion, eventoId: number, solicitud: Solici
 
     const enEvento = new Map(filas.map((f) => [f.perfil_id, f]));
     const libres: string[] = [];
+    const nuevos: Candidato[] = [];
+    const existentes: { perfilId: string; etapas: Etapa[] }[] = [];
     for (const s of seleccion) {
         const propia = s.perfilId ? enEvento.get(s.perfilId) : undefined;
         if (propia && cuentaComoAsignado(propia.estado_respuesta)) {
-            problemas.push({ clave: claveDe(s), nombre: s.nombre, codigo: 'YA_ASIGNADO', mensaje: 'Ya está asignado a este evento.' });
+            // Ya está en el evento: solo se le suma la etapa (su horario no cambia, es el del evento).
+            const etapa = solicitud.etapa as Etapa; // validarSolicitudAsignar la exige si hay personas
+            const actuales = ordenarEtapas(propia.etapas) ?? [];
+            if (actuales.includes(etapa)) {
+                problemas.push({ clave: claveDe(s), nombre: s.nombre, codigo: 'YA_EN_ETAPA', mensaje: `Ya está en ${ETIQUETA_ETAPA[etapa]}.` });
+            } else {
+                existentes.push({ perfilId: propia.perfil_id, etapas: ordenarEtapas([...actuales, etapa]) as Etapa[] });
+            }
         } else if (propia?.estado_respuesta === 'PENDIENTE') {
             problemas.push({ clave: claveDe(s), nombre: s.nombre, codigo: 'YA_CONVOCADO', mensaje: 'Fue convocado por WhatsApp a este evento y aún no responde.' });
         } else if (propia) {
             problemas.push({ clave: claveDe(s), nombre: s.nombre, codigo: 'RECHAZO_WHATSAPP', mensaje: 'Rechazó la convocatoria de este evento por WhatsApp.' });
         } else if (!s.perfilId && !normalizarCelular(s.telefono)) {
             problemas.push({ clave: claveDe(s), nombre: s.nombre, codigo: 'SIN_CELULAR', mensaje: 'No tiene un celular válido en su ficha de la nómina.' });
-        } else if (s.perfilId) {
-            libres.push(s.perfilId);
+        } else {
+            nuevos.push(s);
+            if (s.perfilId) libres.push(s.perfilId);
         }
     }
 
@@ -599,7 +661,7 @@ async function evaluarSolicitud(c: Conexion, eventoId: number, solicitud: Solici
             }
         }
     }
-    return { evento: fila, seleccion, horaFinCambia, problemas };
+    return { evento: fila, nuevos, existentes, horaFinCambia, problemas };
 }
 
 function errorDeProblemas(problemas: Problema[]): ErrorAsignacion {
@@ -701,8 +763,8 @@ export async function asignarPersonal(
     if (previa.problemas.length > 0) throw errorDeProblemas(previa.problemas);
 
     let cuentasCreadas = 0;
-    const claves: string[] = [];
-    for (const persona of previa.seleccion) {
+    const claves: string[] = previa.existentes.map((x) => `p:${x.perfilId}`);
+    for (const persona of previa.nuevos) {
         if (persona.perfilId) {
             claves.push(`p:${persona.perfilId}`);
         } else {
@@ -712,27 +774,35 @@ export async function asignarPersonal(
     }
 
     const asignadosAhora = await db.transaccion(async (c) => {
-        const final = await evaluarSolicitud(c, eventoId, { horaFin: solicitud.horaFin, claves }, true);
+        const final = await evaluarSolicitud(c, eventoId, { ...solicitud, claves }, true);
         if (final.problemas.length > 0) throw errorDeProblemas(final.problemas);
         if (final.horaFinCambia) {
             await c.query('update public.events set hora_fin = $2, updated_at = now() where id = $1', [eventoId, solicitud.horaFin]);
         }
-        const perfiles = final.seleccion.map((s) => s.perfilId as string);
+        const perfiles = final.nuevos.map((s) => s.perfilId as string);
         if (perfiles.length > 0) {
             await c.query(
-                `insert into public.event_staff (event_id, profile_id)
-                 select $1::bigint, unnest($2::uuid[])`,
-                [eventoId, perfiles]
+                `insert into public.event_staff (event_id, profile_id, etapas)
+                 select $1::bigint, perfil, $3::text[] from unnest($2::uuid[]) as perfil`,
+                [eventoId, perfiles, [solicitud.etapa]]
             );
         }
-        return perfiles.length;
+        for (const x of final.existentes) {
+            await c.query('update public.event_staff set etapas = $3::text[] where event_id = $1 and profile_id = $2', [
+                eventoId,
+                x.perfilId,
+                x.etapas
+            ]);
+        }
+        return perfiles.length + final.existentes.length;
     });
 
     const resultado = await consultarPersonal(db, eventoId);
+    const destino = solicitud.etapa ? ETIQUETA_ETAPA[solicitud.etapa] : '';
     const mensaje =
         asignadosAhora === 0
             ? 'Se guardó la hora de finalización del evento.'
-            : `Se ${asignadosAhora === 1 ? 'asignó 1 persona' : `asignaron ${asignadosAhora} personas`} al evento.`;
+            : `Se ${asignadosAhora === 1 ? 'asignó 1 persona' : `asignaron ${asignadosAhora} personas`} a ${destino}.`;
     return { ...resultado, mensaje, asignadosAhora, cuentasCreadas };
 }
 
@@ -740,20 +810,26 @@ export async function asignarPersonal(
 // Quitar (DELETE)
 // ---------------------------------------------------------------------------------------------
 
-/** Quita a una persona asignada a mano. Las confirmaciones por WhatsApp no se borran desde aquí. */
+/**
+ * Quita a una persona del evento o, si se indica `etapa`, solo de esa etapa. Si era su única etapa,
+ * sale del evento. Las confirmaciones por WhatsApp no se borran desde aquí: a esas personas solo se
+ * les puede quitar la etapa (quedan "sin etapa", pero siguen asignadas).
+ */
 export async function quitarAsignacion(
     db: BaseDeDatos,
     eventoId: number,
-    perfilId: string
+    perfilId: string,
+    etapaIndicada?: unknown
 ): Promise<ConsultaPersonalDto & { mensaje: string }> {
     if (!UUID.test(perfilId)) throw falla(400, 'PERSONA_INVALIDA', 'La persona indicada no es válida.');
+    const etapa = leerEtapa(etapaIndicada);
 
-    const nombre = await db.transaccion(async (c) => {
+    const mensaje = await db.transaccion(async (c) => {
         const evento = aEventoDto(await eventoExistente(c, eventoId, true));
         if (evento.motivo) throw falla(409, evento.motivo.codigo, evento.motivo.mensaje);
-        const { rows } = await c.query<{ nombre: string; de_whatsapp: boolean; estado_respuesta: string | null }>(
+        const { rows } = await c.query<{ nombre: string; de_whatsapp: boolean; estado_respuesta: string | null; etapas: string[] | null }>(
             `select coalesce(nullif(btrim(p.nombre), ''), p.correo, 'Sin nombre') as nombre,
-                    (s.convocatoria_id is not null) as de_whatsapp, s.estado_respuesta
+                    (s.convocatoria_id is not null) as de_whatsapp, s.estado_respuesta, s.etapas
                from public.event_staff s join public.profiles p on p.id = s.profile_id
               where s.event_id = $1 and s.profile_id = $2
               for update of s`,
@@ -763,12 +839,24 @@ export async function quitarAsignacion(
         if (!fila || !cuentaComoAsignado(fila.estado_respuesta)) {
             throw falla(404, 'NO_ASIGNADO', 'Esa persona no está asignada a este evento.');
         }
-        if (fila.de_whatsapp) {
+
+        const actuales = ordenarEtapas(fila.etapas) ?? [];
+        if (etapa) {
+            if (!actuales.includes(etapa)) {
+                throw falla(404, 'NO_EN_ETAPA', `${fila.nombre} no está en ${ETIQUETA_ETAPA[etapa]}.`);
+            }
+            const quedan = ordenarEtapas(actuales.filter((e) => e !== etapa));
+            // Le quedan otras etapas, o confirmó por WhatsApp (sigue asignada, sin etapa)
+            if (quedan || fila.de_whatsapp) {
+                await c.query('update public.event_staff set etapas = $3::text[] where event_id = $1 and profile_id = $2', [eventoId, perfilId, quedan]);
+                return `Se quitó a ${fila.nombre} de ${ETIQUETA_ETAPA[etapa]}.`;
+            }
+        } else if (fila.de_whatsapp) {
             throw falla(409, 'ORIGEN_WHATSAPP', 'Esta persona confirmó por WhatsApp; su respuesta no se quita desde aquí.');
         }
         await c.query('delete from public.event_staff where event_id = $1 and profile_id = $2', [eventoId, perfilId]);
-        return fila.nombre;
+        return `Se quitó a ${fila.nombre} del evento.`;
     });
 
-    return { ...(await consultarPersonal(db, eventoId)), mensaje: `Se quitó a ${nombre} del evento.` };
+    return { ...(await consultarPersonal(db, eventoId)), mensaje };
 }

@@ -34,6 +34,14 @@ import {
 const RAIZ_REPO = path.resolve(__dirname, '..', '..', '..');
 const SQL_ESQUEMA = fs.readFileSync(path.join(__dirname, 'fixtures', 'esquema_asignacion.sql'), 'utf8');
 const SQL_MIGRACION = fs.readFileSync(path.join(RAIZ_REPO, 'supabase', 'migrations', '0011_asignacion_personal.sql'), 'utf8');
+const SQL_ETAPAS = fs.readFileSync(path.join(RAIZ_REPO, 'supabase', 'migrations', '0012_etapas_personal.sql'), 'utf8');
+
+/** Esquema real + migraciones de la historia de usuario 2 (0011 y 0012). */
+async function migrar(pg: PGlite): Promise<void> {
+    await pg.exec(SQL_ESQUEMA);
+    await pg.exec(SQL_MIGRACION);
+    await pg.exec(SQL_ETAPAS);
+}
 
 // ---------------------------------------------------------------------------------------------
 // Utilidades
@@ -296,6 +304,39 @@ describe('Migración 0011', () => {
     });
 });
 
+describe('Migración 0012 (etapas)', () => {
+    it('agrega event_staff.etapas sin tocar las asignaciones existentes y se puede ejecutar dos veces', async () => {
+        const pg = await PGlite.create();
+        await pg.exec(SQL_ESQUEMA);
+        await pg.exec(SQL_MIGRACION);
+        const evento = await crearEvento(pg, { nombre: 'Boda', dias: 5, hora: '18:00', horaFin: '23:00' });
+        const perfilId = await crearCuenta(pg, 'Ana Torres', 'trabajador', '573000000003');
+        await pg.query('insert into event_staff (event_id, profile_id) values ($1, $2)', [evento, perfilId]);
+        await pg.exec(SQL_ETAPAS);
+        await pg.exec(SQL_ETAPAS);
+        const columna = await uno(pg, `select data_type, is_nullable from information_schema.columns
+            where table_schema = 'public' and table_name = 'event_staff' and column_name = 'etapas'`);
+        assert.deepEqual(columna, { data_type: 'ARRAY', is_nullable: 'YES' });
+        assert.deepEqual(await uno(pg, 'select etapas from event_staff'), { etapas: null }); // queda "sin etapa"
+        await pg.close();
+    });
+
+    it('solo admite carga, organizacion y desmonte, sin repetir y sin listas vacías', async () => {
+        const pg = await PGlite.create();
+        await migrar(pg);
+        const evento = await crearEvento(pg, { nombre: 'Boda', dias: 5, hora: '18:00', horaFin: '23:00' });
+        const perfilId = await crearCuenta(pg, 'Ana Torres', 'trabajador', '573000000003');
+        await pg.query(`insert into event_staff (event_id, profile_id, etapas) values ($1, $2, '{carga,desmonte}')`, [evento, perfilId]);
+        const poner = (valor: string | null) => pg.query('update event_staff set etapas = $1::text[]', [valor]);
+        await poner('{carga,organizacion,desmonte}');
+        await poner(null);
+        for (const invalido of ['{montaje}', '{}', '{carga,carga}', '{carga,organizacion,desmonte,carga}']) {
+            await assert.rejects(poner(invalido), (err: { code?: string }) => err.code === '23514', invalido);
+        }
+        await pg.close();
+    });
+});
+
 // ---------------------------------------------------------------------------------------------
 // API
 // ---------------------------------------------------------------------------------------------
@@ -308,8 +349,7 @@ describe('API de asignación de personal', () => {
 
     before(async () => {
         const pg = await PGlite.create();
-        await pg.exec(SQL_ESQUEMA);
-        await pg.exec(SQL_MIGRACION);
+        await migrar(pg);
 
         // Cuentas existentes: dos de ellas son personas de la nómina (mismo celular)
         perfil.admin = await crearCuenta(pg, 'Ada Administradora', 'administrador', null);
@@ -404,9 +444,9 @@ describe('API de asignación de personal', () => {
     });
 
     it('asigna una persona: crea su cuenta, guarda la hora de fin y la fila de event_staff', async () => {
-        const r = await e.pedir('POST', `/api/eventos/${ev.boda}/personal`, { horaFin: '23:00', personal: [`e:${empleado.ana}`] });
+        const r = await e.pedir('POST', `/api/eventos/${ev.boda}/personal`, { horaFin: '23:00', etapa: 'organizacion', personal: [`e:${empleado.ana}`] });
         assert.equal(r.status, 200, JSON.stringify(r.json));
-        assert.equal(r.json.mensaje, 'Se asignó 1 persona al evento.');
+        assert.equal(r.json.mensaje, 'Se asignó 1 persona a Organización.');
         assert.equal(r.json.cuentasCreadas, 1);
         assert.deepEqual(r.json.asignados.map((a: { nombre: string }) => a.nombre), ['Ana Torres']);
         assert.equal(r.json.asignados[0].origen, 'manual');
@@ -424,10 +464,11 @@ describe('API de asignación de personal', () => {
     it('asigna varias personas a la vez (con y sin cuenta previa)', async () => {
         const r = await e.pedir('POST', `/api/eventos/${ev.boda}/personal`, {
             horaFin: '23:00',
+            etapa: 'organizacion',
             personal: [`e:${empleado.bruno}`, `p:${perfil.sara}`, `p:${perfil.diego}`]
         });
         assert.equal(r.status, 200, JSON.stringify(r.json));
-        assert.equal(r.json.mensaje, 'Se asignaron 3 personas al evento.');
+        assert.equal(r.json.mensaje, 'Se asignaron 3 personas a Organización.');
         assert.equal(r.json.cuentasCreadas, 1);
         assert.deepEqual(r.json.asignados.map((a: { nombre: string }) => a.nombre),
             ['Ana Torres', 'Bruno Díaz', 'Diego Trabajador', 'Sara Secretaria']);
@@ -446,7 +487,7 @@ describe('API de asignación de personal', () => {
             [999999, 'EVENTO_NO_ENCONTRADO', 404]
         ];
         for (const [id, codigo, status] of casos) {
-            const r = await e.pedir('POST', `/api/eventos/${id}/personal`, { horaFin: '23:00', personal: [`e:${empleado.carla}`] });
+            const r = await e.pedir('POST', `/api/eventos/${id}/personal`, { horaFin: '23:00', etapa: 'organizacion', personal: [`e:${empleado.carla}`] });
             assert.equal(r.status, status, `${codigo}: ${JSON.stringify(r.json)}`);
             assert.equal(r.json.codigo, codigo);
         }
@@ -464,41 +505,41 @@ describe('API de asignación de personal', () => {
         const usuarios = await contar(e.pg, 'select 1 from auth.users');
         // e:<Ana> es la clave vieja de antes de crearle la cuenta: igual se reconoce
         for (const clave of [`p:${perfil.ana}`, `e:${empleado.ana}`]) {
-            const r = await e.pedir('POST', `/api/eventos/${ev.boda}/personal`, { horaFin: '23:00', personal: [clave, `e:${empleado.carla}`] });
+            const r = await e.pedir('POST', `/api/eventos/${ev.boda}/personal`, { horaFin: '23:00', etapa: 'organizacion', personal: [clave, `e:${empleado.carla}`] });
             assert.equal(r.status, 409);
             assert.equal(r.json.codigo, 'PERSONAL_NO_DISPONIBLE');
             assert.match(r.json.message, /^No se guardó ninguna asignación\./);
-            assert.deepEqual(r.json.detalles.map((p: { codigo: string }) => p.codigo), ['YA_ASIGNADO']);
+            assert.deepEqual(r.json.detalles.map((p: { codigo: string }) => p.codigo), ['YA_EN_ETAPA']);
         }
         assert.equal(await contar(e.pg, 'select 1 from event_staff where event_id = $1', [ev.boda]), 4);
         assert.equal(await contar(e.pg, 'select 1 from auth.users'), usuarios); // Carla sigue sin cuenta
         // La misma persona dos veces en una solicitud se cuenta una vez
-        const r = await e.pedir('POST', `/api/eventos/${ev.desayuno}/personal`, { horaFin: '12:00', personal: [`p:${perfil.ana}`, `p:${perfil.ana}`] });
+        const r = await e.pedir('POST', `/api/eventos/${ev.desayuno}/personal`, { horaFin: '12:00', etapa: 'organizacion', personal: [`p:${perfil.ana}`, `p:${perfil.ana}`] });
         assert.equal(r.status, 200, JSON.stringify(r.json));
-        assert.equal(r.json.mensaje, 'Se asignó 1 persona al evento.');
+        assert.equal(r.json.mensaje, 'Se asignó 1 persona a Organización.');
     });
 
     it('detecta choques de horario, incluso con eventos que terminan al día siguiente', async () => {
         // Ana está en la Boda (18:00-23:00): el Concierto (20:00-23:30) se cruza
-        const choque = await e.pedir('POST', `/api/eventos/${ev.concierto}/personal`, { horaFin: '23:30', personal: [`p:${perfil.ana}`] });
+        const choque = await e.pedir('POST', `/api/eventos/${ev.concierto}/personal`, { horaFin: '23:30', etapa: 'organizacion', personal: [`p:${perfil.ana}`] });
         assert.equal(choque.status, 409);
         assert.equal(choque.json.detalles[0].codigo, 'SOLAPE');
         assert.match(choque.json.message, /Ana Torres: Ya está asignado a «Boda»/);
         // La pantalla lo ve antes de intentar
         assert.equal(persona(await e.pedir('GET', `/api/eventos/${ev.concierto}/personal`), 'Ana Torres').estado, 'NO_DISPONIBLE');
         // Trasnocho empieza a las 23:00, justo cuando termina la Boda: no es choque
-        const contiguo = await e.pedir('POST', `/api/eventos/${ev.trasnocho}/personal`, { horaFin: '02:00', personal: [`p:${perfil.ana}`] });
+        const contiguo = await e.pedir('POST', `/api/eventos/${ev.trasnocho}/personal`, { horaFin: '02:00', etapa: 'organizacion', personal: [`p:${perfil.ana}`] });
         assert.equal(contiguo.status, 200, JSON.stringify(contiguo.json));
         assert.equal(contiguo.json.terminaAlDiaSiguiente, true);
         // Trasnocho termina a las 02:00 del día siguiente: la Madrugada (01:00-05:00) se cruza
-        const madrugada = await e.pedir('POST', `/api/eventos/${ev.madrugada}/personal`, { horaFin: '05:00', personal: [`p:${perfil.ana}`] });
+        const madrugada = await e.pedir('POST', `/api/eventos/${ev.madrugada}/personal`, { horaFin: '05:00', etapa: 'organizacion', personal: [`p:${perfil.ana}`] });
         assert.equal(madrugada.status, 409);
         assert.match(madrugada.json.message, /«Trasnocho»/);
     });
 
     it('usa el horario de la convocatoria de WhatsApp para quien confirmó por ese medio', async () => {
         // Diego confirmó la Feria WhatsApp de 10:00 a 14:00; el Congreso es de 13:00 a 15:00
-        const r = await e.pedir('POST', `/api/eventos/${ev.congreso}/personal`, { horaFin: '15:00', personal: [`p:${perfil.diego}`] });
+        const r = await e.pedir('POST', `/api/eventos/${ev.congreso}/personal`, { horaFin: '15:00', etapa: 'organizacion', personal: [`p:${perfil.diego}`] });
         assert.equal(r.status, 409);
         assert.match(r.json.message, /«Feria WhatsApp»/);
     });
@@ -511,7 +552,7 @@ describe('API de asignación de personal', () => {
         assert.equal(r.json.asignados[0].horaFin, '22:00'); // de su convocatoria
         assert.equal(persona(r, 'Elena Trabajadora').estado, 'CONVOCADO');
         assert.equal(persona(r, 'Fabio Trabajador').estado, 'RECHAZO_WHATSAPP');
-        const pendiente = await e.pedir('POST', `/api/eventos/${ev.gala}/personal`, { horaFin: '23:00', personal: [`p:${perfil.elena}`] });
+        const pendiente = await e.pedir('POST', `/api/eventos/${ev.gala}/personal`, { horaFin: '23:00', etapa: 'organizacion', personal: [`p:${perfil.elena}`] });
         assert.equal(pendiente.status, 409);
         assert.equal(pendiente.json.detalles[0].codigo, 'YA_CONVOCADO');
         const quitar = await e.pedir('DELETE', `/api/eventos/${ev.gala}/personal/${perfil.diego}`);
@@ -520,7 +561,7 @@ describe('API de asignación de personal', () => {
     });
 
     it('no ofrece ni acepta a quien salió de la nómina, aunque conserve su cuenta de trabajador', async () => {
-        const r = await e.pedir('POST', `/api/eventos/${ev.desayuno}/personal`, { horaFin: '12:00', personal: [`p:${perfil.ignacio}`] });
+        const r = await e.pedir('POST', `/api/eventos/${ev.desayuno}/personal`, { horaFin: '12:00', etapa: 'organizacion', personal: [`p:${perfil.ignacio}`] });
         assert.equal(r.status, 409);
         assert.equal(r.json.detalles[0].codigo, 'NO_ENCONTRADO');
         assert.equal(r.json.detalles[0].nombre, 'Persona');
@@ -543,7 +584,7 @@ describe('API de asignación de personal', () => {
     it('si Supabase no crea la cuenta, no asigna a nadie', async () => {
         e.cuentas.fallar = true;
         try {
-            const r = await e.pedir('POST', `/api/eventos/${ev.desayuno}/personal`, { horaFin: '12:00', personal: [`e:${empleado.carla}`, `p:${perfil.sara}`] });
+            const r = await e.pedir('POST', `/api/eventos/${ev.desayuno}/personal`, { horaFin: '12:00', etapa: 'organizacion', personal: [`e:${empleado.carla}`, `p:${perfil.sara}`] });
             assert.equal(r.status, 502);
             assert.equal(r.json.codigo, 'CUENTA_NO_CREADA');
             assert.equal(await contar(e.pg, 'select 1 from event_staff where event_id = $1 and profile_id = $2', [ev.desayuno, perfil.sara]), 0);
@@ -563,8 +604,8 @@ describe('API de asignación de personal', () => {
         let b: Respuesta;
         try {
             [a, b] = await Promise.all([
-                e.pedir('POST', `/api/eventos/${ev.boda}/personal`, { horaFin: '22:00', personal: [`e:${empleado.carla}`] }),
-                e.pedir('POST', `/api/eventos/${ev.concierto}/personal`, { horaFin: '23:30', personal: [`e:${empleado.carla}`] })
+                e.pedir('POST', `/api/eventos/${ev.boda}/personal`, { horaFin: '22:00', etapa: 'organizacion', personal: [`e:${empleado.carla}`] }),
+                e.pedir('POST', `/api/eventos/${ev.concierto}/personal`, { horaFin: '23:30', etapa: 'organizacion', personal: [`e:${empleado.carla}`] })
             ]);
         } finally {
             e.cuentas.reunir = 0;
@@ -586,13 +627,72 @@ describe('API de asignación de personal', () => {
         assert.equal((await e.pedir('DELETE', `/api/eventos/${ev.pasado}/personal/${perfil.ana}`)).json.codigo, 'EVENTO_PASADO');
     });
 
+    it('organiza por etapas: una persona puede estar en varias, pero no dos veces en la misma', async () => {
+        // Ana ya está en Organización; Bruno salió del evento en la prueba anterior
+        const r = await e.pedir('POST', `/api/eventos/${ev.boda}/personal`, { horaFin: '22:00', etapa: 'carga', personal: [`p:${perfil.ana}`, `p:${perfil.bruno}`] });
+        assert.equal(r.status, 200, JSON.stringify(r.json));
+        assert.equal(r.json.mensaje, 'Se asignaron 2 personas a Carga.');
+        const etapasDe = (resp: Respuesta, nombre: string) => resp.json.asignados.find((a: { nombre: string }) => a.nombre === nombre)?.etapas;
+        assert.deepEqual(etapasDe(r, 'Ana Torres'), ['carga', 'organizacion']); // siempre en el orden de las etapas
+        assert.deepEqual(etapasDe(r, 'Bruno Díaz'), ['carga']);
+        assert.deepEqual(await uno(e.pg, 'select etapas from event_staff where event_id = $1 and profile_id = $2', [ev.boda, perfil.ana]), { etapas: ['carga', 'organizacion'] });
+
+        const repetida = await e.pedir('POST', `/api/eventos/${ev.boda}/personal`, { horaFin: '22:00', etapa: 'carga', personal: [`p:${perfil.ana}`] });
+        assert.equal(repetida.status, 409);
+        assert.equal(repetida.json.detalles[0].codigo, 'YA_EN_ETAPA');
+        assert.match(repetida.json.message, /Ana Torres: Ya está en Carga\./);
+
+        const ana = persona(await e.pedir('GET', `/api/eventos/${ev.boda}/personal`), 'Ana Torres');
+        assert.deepEqual([ana.estado, ana.seleccionable, ana.etapas], ['ASIGNADO', true, ['carga', 'organizacion']]);
+    });
+
+    it('quitar de una etapa conserva las demás; quitar la última saca a la persona del evento', async () => {
+        const base = `/api/eventos/${ev.boda}/personal`;
+        const r = await e.pedir('DELETE', `${base}/${perfil.ana}?etapa=organizacion`);
+        assert.equal(r.status, 200, JSON.stringify(r.json));
+        assert.equal(r.json.mensaje, 'Se quitó a Ana Torres de Organización.');
+        assert.deepEqual(r.json.asignados.find((a: { nombre: string }) => a.nombre === 'Ana Torres').etapas, ['carga']);
+        assert.equal((await e.pedir('DELETE', `${base}/${perfil.ana}?etapa=organizacion`)).json.codigo, 'NO_EN_ETAPA');
+        assert.equal((await e.pedir('DELETE', `${base}/${perfil.ana}?etapa=montaje`)).json.codigo, 'ETAPA_INVALIDA');
+
+        const ultima = await e.pedir('DELETE', `${base}/${perfil.bruno}?etapa=carga`);
+        assert.equal(ultima.json.mensaje, 'Se quitó a Bruno Díaz del evento.');
+        assert.equal(await contar(e.pg, 'select 1 from event_staff where event_id = $1 and profile_id = $2', [ev.boda, perfil.bruno]), 0);
+    });
+
+    it('las asignaciones sin etapa (anteriores o de WhatsApp) se muestran sin etapa y se les puede dar una', async () => {
+        // Como las 10 de la Gala real: asignada antes de que existieran las etapas
+        await e.pg.query('insert into event_staff (event_id, profile_id) values ($1, $2)', [ev.congreso, perfil.sara]);
+        const resumen = await e.pedir('GET', `/api/eventos/${ev.congreso}/personal?vista=asignados`);
+        assert.equal(resumen.status, 200);
+        assert.deepEqual(resumen.json.asignados.map((a: { nombre: string; etapas: unknown }) => [a.nombre, a.etapas]), [['Sara Secretaria', null]]);
+        assert.deepEqual(resumen.json.personal, []); // la vista resumida no calcula disponibilidad
+        const conEtapa = await e.pedir('POST', `/api/eventos/${ev.congreso}/personal`, { horaFin: '15:00', etapa: 'desmonte', personal: [`p:${perfil.sara}`] });
+        assert.equal(conEtapa.status, 200, JSON.stringify(conEtapa.json));
+        assert.equal(conEtapa.json.mensaje, 'Se asignó 1 persona a Desmonte.');
+        assert.deepEqual(conEtapa.json.asignados[0].etapas, ['desmonte']);
+
+        // Diego confirmó la Gala por WhatsApp: se le da etapa y, al quitársela, sigue asignado sin etapa
+        const gala = `/api/eventos/${ev.gala}/personal`;
+        const carga = await e.pedir('POST', gala, { horaFin: '23:00', etapa: 'carga', personal: [`p:${perfil.diego}`] });
+        assert.equal(carga.status, 200, JSON.stringify(carga.json));
+        const diego = () => carga.json.asignados.find((a: { nombre: string }) => a.nombre === 'Diego Trabajador');
+        assert.deepEqual([diego().origen, diego().etapas], ['whatsapp', ['carga']]);
+        const sinEtapa = await e.pedir('DELETE', `${gala}/${perfil.diego}?etapa=carga`);
+        assert.equal(sinEtapa.json.mensaje, 'Se quitó a Diego Trabajador de Carga.');
+        assert.deepEqual(sinEtapa.json.asignados.find((a: { nombre: string }) => a.nombre === 'Diego Trabajador').etapas, null);
+        assert.equal(await contar(e.pg, 'select 1 from event_staff where event_id = $1 and profile_id = $2', [ev.gala, perfil.diego]), 1);
+    });
+
     it('rechaza solicitudes mal formadas', async () => {
         const ruta = `/api/eventos/${ev.desayuno}/personal`;
+        assert.equal((await e.pedir('POST', ruta, { horaFin: '12:00', personal: [`p:${perfil.sara}`] })).json.codigo, 'ETAPA_INVALIDA');
+        assert.equal((await e.pedir('POST', ruta, { horaFin: '12:00', etapa: 'montaje', personal: [`p:${perfil.sara}`] })).json.codigo, 'ETAPA_INVALIDA');
         assert.equal((await e.pedir('POST', ruta, { personal: [`p:${perfil.sara}`] })).json.codigo, 'HORA_FIN_INVALIDA');
         assert.equal((await e.pedir('POST', ruta, { horaFin: '8pm', personal: [] })).json.codigo, 'HORA_FIN_INVALIDA');
-        assert.equal((await e.pedir('POST', ruta, { horaFin: '12:00', personal: ['x:123'] })).json.codigo, 'PERSONA_INVALIDA');
+        assert.equal((await e.pedir('POST', ruta, { horaFin: '12:00', etapa: 'organizacion', personal: ['x:123'] })).json.codigo, 'PERSONA_INVALIDA');
         assert.equal((await e.pedir('POST', ruta, { horaFin: '12:00', personal: 'todos' })).json.codigo, 'SOLICITUD_INVALIDA');
-        assert.equal((await e.pedir('POST', ruta, { horaFin: '08:00', personal: [`p:${perfil.sara}`] })).json.codigo, 'HORA_FIN_INVALIDA');
+        assert.equal((await e.pedir('POST', ruta, { horaFin: '08:00', etapa: 'organizacion', personal: [`p:${perfil.sara}`] })).json.codigo, 'HORA_FIN_INVALIDA');
     });
 });
 
@@ -601,12 +701,11 @@ describe('Persistencia y base sin migrar', () => {
         const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'asignacion-'));
         try {
             let pg = await PGlite.create(dir);
-            await pg.exec(SQL_ESQUEMA);
-            await pg.exec(SQL_MIGRACION);
+            await migrar(pg);
             const id = await crearEvento(pg, { nombre: 'Aniversario', dias: 5, hora: '19:00' });
             const empleadoId = await crearEmpleado(pg, 'Lina Prueba', 'con_contrato', '3000000010');
             let entorno = await levantar(pg);
-            const r = await entorno.pedir('POST', `/api/eventos/${id}/personal`, { horaFin: '23:00', personal: [`e:${empleadoId}`] });
+            const r = await entorno.pedir('POST', `/api/eventos/${id}/personal`, { horaFin: '23:00', etapa: 'organizacion', personal: [`e:${empleadoId}`] });
             assert.equal(r.status, 200, JSON.stringify(r.json));
             await entorno.cerrar();
             await pg.close();

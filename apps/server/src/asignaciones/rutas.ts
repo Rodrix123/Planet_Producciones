@@ -1,10 +1,12 @@
 // Rutas HTTP de la asignación de personal (historia de usuario 2). Solo la administradora:
 //
-//   GET    /api/eventos/:eventoId/personal[?horaFin=HH:MM]  evento, asignados y personal con su
-//                                                           disponibilidad (con la hora propuesta)
-//   POST   /api/eventos/:eventoId/personal                  { horaFin, personal: ["p:<id>" | "e:<id>"] }
-//                                                           asigna (todo o nada) y guarda la hora fin
-//   DELETE /api/eventos/:eventoId/personal/:perfilId        quita a alguien asignado a mano
+//   GET    /api/eventos/:eventoId/personal[?horaFin=HH:MM]  evento, asignados (con sus etapas) y personal
+//                                                           con su disponibilidad (con la hora propuesta)
+//   GET    /api/eventos/:eventoId/personal?vista=asignados  solo el evento y su personal por etapa
+//   POST   /api/eventos/:eventoId/personal                  { horaFin, etapa, personal: ["p:<id>" | "e:<id>"] }
+//                                                           asigna a una etapa (todo o nada) y guarda la hora fin
+//   DELETE /api/eventos/:eventoId/personal/:perfilId[?etapa=carga]
+//                                                           quita a alguien del evento o solo de una etapa
 //
 // Errores: { status: 'error', codigo, message, detalles? } con 400 (solicitud mal formada),
 // 401/403 (sin sesión / sin rol), 404 (no existe), 409 (las reglas no lo permiten), 502 (Supabase no
@@ -52,7 +54,7 @@ function manejarErrores(err: unknown, _req: Request, res: Response, next: NextFu
         res.status(503).json({
             status: 'error',
             codigo: 'FALTA_MIGRACION',
-            message: 'La base de datos aún no tiene lo necesario para asignar personal: aplica supabase/migrations/0011_asignacion_personal.sql.'
+            message: 'La base de datos aún no tiene lo necesario para asignar personal: aplica las migraciones 0011_asignacion_personal.sql y 0012_etapas_personal.sql (carpeta supabase/migrations).'
         });
         return;
     }
@@ -65,7 +67,8 @@ export function crearAsignacionesRouter(db: BaseDeDatos, cuentas: CuentasDePerso
     router.use(requireAuth, requireRole('administrador'));
 
     router.get('/', asyncHandler(async (req, res) => {
-        res.json({ status: 'ok', ...(await consultarPersonal(db, leerEventoId(req), req.query.horaFin)) });
+        const soloAsignados = req.query.vista === 'asignados';
+        res.json({ status: 'ok', ...(await consultarPersonal(db, leerEventoId(req), req.query.horaFin, { soloAsignados })) });
     }));
 
     router.post('/', asyncHandler(async (req, res) => {
@@ -73,7 +76,7 @@ export function crearAsignacionesRouter(db: BaseDeDatos, cuentas: CuentasDePerso
     }));
 
     router.delete('/:perfilId', asyncHandler(async (req, res) => {
-        res.json({ status: 'ok', ...(await quitarAsignacion(db, leerEventoId(req), String(req.params.perfilId))) });
+        res.json({ status: 'ok', ...(await quitarAsignacion(db, leerEventoId(req), String(req.params.perfilId), req.query.etapa)) });
     }));
 
     router.use(manejarErrores);
