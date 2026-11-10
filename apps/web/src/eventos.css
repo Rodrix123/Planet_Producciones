@@ -1618,8 +1618,8 @@
    se abre encima de las filas, sin desplazarlas. */
 .desplegable {
     position: relative;
-    flex: 0 1 14rem;
-    min-width: 12rem;
+    flex: 0 1 13.5rem;
+    min-width: 11rem;
 }
 
 .desplegable-boton {
@@ -1795,6 +1795,24 @@
     color: var(--text-light);
 }
 
+/* Columna Personal mediana: el buscador a todo el ancho y debajo, repartidos, el desplegable y
+   "Seleccionar visibles" (en una sola fila el buscador quedaría muy corto). */
+@container personal (max-width: 600px) {
+    .asig-buscar {
+        flex-basis: 100%;
+    }
+
+    .desplegable,
+    .asig-sel-visibles {
+        flex: 1 1 10rem;
+        min-width: 0;
+    }
+
+    .asig-sel-visibles {
+        justify-content: center;
+    }
+}
+
 /* Columna Personal angosta: la instrucción se queda en una línea y los controles se reparten. */
 @container personal (max-width: 640px) {
     .asig-instruccion-extra {
@@ -1814,17 +1832,6 @@
 @container personal (max-width: 520px) {
     .asig-controles {
         grid-template-columns: minmax(0, 1fr) auto;
-    }
-
-    /* El desplegable y "Seleccionar visibles" se reparten el ancho bajo el buscador. */
-    .desplegable,
-    .asig-sel-visibles {
-        flex: 1 1 10rem;
-        min-width: 0;
-    }
-
-    .asig-sel-visibles {
-        justify-content: center;
     }
 
     .asig-contrato {
@@ -2087,8 +2094,16 @@
     border-radius: 999px;
 }
 
+/* Columna Personal mediana: las etiquetas toman su ancho justo para dejar más espacio al nombre. */
+@container personal (max-width: 640px) {
+    .asig-contrato-tag,
+    .asig-estado {
+        min-width: 0;
+    }
+}
+
 /* Columna Personal angosta: el contrato y el estado bajan debajo del nombre, alineados con él. */
-@container personal (max-width: 600px) {
+@container personal (max-width: 520px) {
     .asig-fila {
         flex-wrap: wrap;
         row-gap: 0.5rem;
@@ -2098,11 +2113,6 @@
         flex: 1 0 100%;
         justify-content: flex-start;
         padding-left: calc(1.5rem + 2.5rem + 2 * var(--asig-fila-gap));
-    }
-
-    .asig-contrato-tag,
-    .asig-estado {
-        min-width: 0;
     }
 }
 
