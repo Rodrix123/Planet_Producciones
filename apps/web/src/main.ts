@@ -316,7 +316,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div style="position: relative; z-index: 1;">
 
                 <!-- Header VIP con Logo Real -->
-                <div style="background-color: #0a0a0c; border-radius: 12px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #f97316;">
+                <div style="background-color: #0a0a0c; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #f97316;">
                     <div style="display: flex; align-items: center; gap: 14px;">
                         <img src="${logoBase64}" style="height: 50px; width: auto; max-width: 70px; object-fit: contain;">
                         <div>
