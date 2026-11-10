@@ -1,7 +1,7 @@
 // Panel "Asignar personal" del menú Eventos (historia de usuario 2).
 //
 // Ocupa el lugar de la vista de eventos (como el detalle ampliado de Consulta) y se cierra con
-// "Volver al evento". A la izquierda está todo el personal, con buscador, filtros (disponibilidad y
+// "Volver al evento". A la izquierda está todo el personal, con buscador, filtros (qué mostrar y
 // tipo de contrato) y su disponibilidad; se eligen una o varias personas y se asignan a la etapa
 // elegida (Carga, Organización o Desmonte). A la derecha, el personal del evento por etapa, donde se
 // puede quitar a alguien de una etapa.
@@ -11,7 +11,9 @@
 // de finalización, vuelve a preguntar con esa hora. Los filtros solo cambian lo que se muestra.
 
 import { api } from './api';
+import { actualizarDesplegable, conectarDesplegables, htmlDesplegable, type OpcionDesplegable } from './shared/desplegable';
 import { esc } from './shared/panelShell';
+import { disponibleEn, filtrarPersonal, type VistaPersonal } from './shared/listaPersonal';
 import {
     agruparPorEtapa,
     claveContrato,
@@ -21,7 +23,6 @@ import {
     formatearFecha,
     formatearHora,
     horario,
-    normalizar,
     TIPOS_CONTRATO,
     type AsignadoDto,
     type ConsultaPersonal,
@@ -62,7 +63,7 @@ let error: string | null = null;
 const seleccion = new Set<string>();
 let destino: Etapa = 'carga';
 let busqueda = '';
-let soloDisponibles = false;
+let vista: VistaPersonal = 'todos';
 /** '' = todos los contratos. */
 let contrato: TipoContrato | '' = '';
 /** Cada carga lleva un número: si llega una respuesta vieja (otra hora, otro evento), se descarta. */
@@ -77,7 +78,14 @@ const horaEscrita = (): string => $<HTMLInputElement>('asigHoraFin')?.value ?? '
 const nombreEtapa = (etapa: Etapa): string => ETAPA_INFO[etapa].nombre;
 
 /** ¿Se puede elegir a esta persona para la etapa de destino? Quien ya está en ella, no. */
-const elegible = (p: PersonaDto): boolean => p.seleccionable && !(p.etapas ?? []).includes(destino);
+const elegible = (p: PersonaDto): boolean => disponibleEn(p, destino);
+
+/** Opciones del desplegable "Mostrar"; la última cambia con la etapa de destino. */
+const opcionesVista = (): OpcionDesplegable<VistaPersonal>[] => [
+    { valor: 'todos', texto: 'Todos', icono: 'fa-solid fa-list' },
+    { valor: 'disponibles', texto: 'Disponibles', icono: 'fa-solid fa-circle asig-icono-disponible' },
+    { valor: 'en-etapa', texto: `Ya en ${nombreEtapa(destino)}`, icono: 'fa-regular fa-calendar' }
+];
 
 /** "MATEO GOMEZ HERNANDEZ" -> "MG" */
 function iniciales(nombre: string): string {
@@ -90,16 +98,11 @@ function nombreCorto(nombre: string): string {
     return nombre.trim().split(/\s+/).slice(0, 2).join(' ');
 }
 
-const hayFiltros = (): boolean => busqueda.trim() !== '' || soloDisponibles || contrato !== '';
+const hayFiltros = (): boolean => busqueda.trim() !== '' || vista !== 'todos' || contrato !== '';
 
-/** Personas que se ven con la búsqueda (nombre o contrato), la disponibilidad y el tipo de contrato. */
+/** Personas que se ven con la búsqueda (nombre o contrato), lo que se elige mostrar y el tipo de contrato. */
 function filtrados(): PersonaDto[] {
-    if (!datos) return [];
-    const texto = normalizar(busqueda);
-    return datos.personal.filter((p) =>
-        (!texto || normalizar(`${p.nombre} ${p.detalle}`).includes(texto))
-        && (!soloDisponibles || elegible(p))
-        && (!contrato || p.tipoContrato === contrato));
+    return datos ? filtrarPersonal(datos.personal, { busqueda, contrato, vista, destino }) : [];
 }
 
 // ---------- Estructura ----------
@@ -171,10 +174,7 @@ function htmlColumnas(d: ConsultaPersonal): string {
                         <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
                         <input type="search" id="asigBuscar" placeholder="Buscar por nombre, apellido o contrato..." aria-label="Buscar personal por nombre, apellido o contrato" autocomplete="off">
                     </label>
-                    <div class="asig-filtro-grupo" role="group" aria-label="Mostrar">
-                        <button type="button" class="asig-filtro" data-asig-filtro="todos" aria-pressed="true">Todos</button>
-                        <button type="button" class="asig-filtro" data-asig-filtro="disponibles" aria-pressed="false">Disponibles</button>
-                    </div>
+                    ${htmlDesplegable('asigVista', 'Mostrar', opcionesVista(), vista)}
                     <label class="asig-sel-visibles">
                         <input type="checkbox" class="asig-check" id="asigSelVisibles">
                         <span>Seleccionar visibles</span>
@@ -264,9 +264,11 @@ function renderLista(): void {
         : `<li class="asig-vacio asig-lista-vacia"><i class="fa-regular fa-face-meh" aria-hidden="true"></i>
             ${busqueda.trim()
                 ? `Nadie coincide con «${esc(busqueda.trim())}».`
-                : hayFiltros()
-                    ? 'Nadie coincide con los filtros elegidos.'
-                    : 'No hay personal registrado. El personal sale de la nómina activa (menú Empleados).'}
+                : vista === 'en-etapa' && contrato === ''
+                    ? `Nadie está asignado a ${esc(nombreEtapa(destino))} todavía.`
+                    : hayFiltros()
+                        ? 'Nadie coincide con los filtros elegidos.'
+                        : 'No hay personal registrado. El personal sale de la nómina activa (menú Empleados).'}
             ${hayFiltros() ? '<button type="button" class="asig-btn-texto" data-asig-quitar-filtros>Quitar filtros</button>' : ''}</li>`;
 
     const disponibles = datos.personal.filter(elegible).length;
@@ -435,9 +437,7 @@ function renderControles(): void {
     panel.querySelectorAll<HTMLElement>('.asig-destino [data-asig-destino]').forEach((b) => {
         b.setAttribute('aria-pressed', String(b.dataset.asigDestino === destino));
     });
-    panel.querySelectorAll<HTMLElement>('[data-asig-filtro]').forEach((b) => {
-        b.setAttribute('aria-pressed', String((b.dataset.asigFiltro === 'disponibles') === soloDisponibles));
-    });
+    actualizarDesplegable('asigVista', opcionesVista(), vista);
     const selectContrato = $<HTMLSelectElement>('asigContrato');
     if (selectContrato && selectContrato.value !== contrato) selectContrato.value = contrato;
     selectContrato?.closest('.asig-caja')?.classList.toggle('activa', contrato !== '');
@@ -592,7 +592,7 @@ function elegirDestino(etapa: Etapa): void {
 
 function quitarFiltros(): void {
     busqueda = '';
-    soloDisponibles = false;
+    vista = 'todos';
     contrato = '';
     const buscar = $<HTMLInputElement>('asigBuscar');
     if (buscar) buscar.value = '';
@@ -630,13 +630,6 @@ panel.addEventListener('click', (ev) => {
     if (botonDestino?.dataset.asigDestino) {
         elegirDestino(botonDestino.dataset.asigDestino as Etapa);
         if (botonDestino.classList.contains('asig-etapa-elegir')) $('asigBuscar')?.focus();
-        return;
-    }
-    const filtro = t.closest<HTMLElement>('[data-asig-filtro]');
-    if (filtro) {
-        soloDisponibles = filtro.dataset.asigFiltro === 'disponibles';
-        renderControles();
-        renderLista();
         return;
     }
     if (t.closest('[data-asig-quitar-filtros]')) {
@@ -678,6 +671,14 @@ panel.addEventListener('click', (ev) => {
         quitarPendiente = null;
         renderEtapas();
     }
+});
+
+// Desplegable "Mostrar": Todos, Disponibles o Ya en [etapa de destino].
+conectarDesplegables(panel, (id, valor) => {
+    if (id !== 'asigVista') return;
+    vista = valor as VistaPersonal;
+    renderControles();
+    renderLista();
 });
 
 panel.addEventListener('change', (ev) => {
@@ -743,7 +744,7 @@ export function abrirAsignacionPersonal(id: number, opts: OpcionesAsignacion): v
     quitarPendiente = null;
     destino = 'carga';
     busqueda = '';
-    soloDisponibles = false;
+    vista = 'todos';
     contrato = '';
     seleccion.clear();
     panel.innerHTML = esqueleto();

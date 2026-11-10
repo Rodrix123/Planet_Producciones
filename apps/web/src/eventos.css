@@ -1614,47 +1614,154 @@
     color: var(--asig-tenue);
 }
 
-.asig-filtro-grupo {
-    display: inline-flex;
-    gap: 0.5rem;
+/* Desplegable "Mostrar" (src/shared/desplegable.ts): Todos, Disponibles o Ya en [etapa]. La lista
+   se abre encima de las filas, sin desplazarlas. */
+.desplegable {
+    position: relative;
+    flex: 0 1 14rem;
+    min-width: 12rem;
 }
 
-.asig-filtro,
-.asig-sel-visibles {
-    height: 2.5rem;
-    padding: 0 1.05rem;
+.desplegable-boton {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+    height: 2.65rem;
+    padding: 0 1rem;
     font: inherit;
-    font-size: 0.88rem;
-    font-weight: 600;
+    font-size: 0.93rem;
+    font-weight: 700;
     color: var(--text-light);
     background: var(--asig-control);
     border: 1px solid var(--asig-borde-fuerte);
-    border-radius: 999px;
+    border-radius: 12px;
     cursor: pointer;
-    transition: border-color 0.15s, color 0.15s, background 0.15s;
+    transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-.asig-filtro:hover,
-.asig-sel-visibles:hover {
+.desplegable-boton:hover {
     border-color: var(--asig-tenue);
 }
 
-.asig-filtro:focus-visible {
-    outline: 2px solid var(--orange-main);
-    outline-offset: 2px;
+/* Con un filtro distinto de "Todos" el borde queda naranja suave; abierto o con foco, naranja pleno. */
+.desplegable.cambiado .desplegable-boton {
+    border-color: rgba(249, 115, 22, 0.6);
 }
 
-.asig-filtro[aria-pressed="true"] {
-    background: rgba(249, 115, 22, 0.12);
+.desplegable.abierto .desplegable-boton,
+.desplegable-boton:focus-visible {
     border-color: var(--orange-main);
+    box-shadow: 0 0 0 1px var(--orange-main);
+    outline: none;
+}
+
+.desplegable-valor {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.desplegable-flecha {
+    flex-shrink: 0;
+    font-size: 0.85rem;
+    color: var(--asig-tenue);
+    transition: transform 0.15s;
+}
+
+.desplegable.abierto .desplegable-flecha {
+    color: var(--text-light);
+    transform: rotate(180deg);
+}
+
+.desplegable-opciones {
+    position: absolute;
+    top: calc(100% + 0.35rem);
+    left: 0;
+    z-index: 30;
+    min-width: 100%;
+    margin: 0;
+    padding: 0.35rem;
+    list-style: none;
+    background: var(--asig-superficie-alta);
+    border: 1px solid var(--asig-borde-fuerte);
+    border-radius: 12px;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
+}
+
+.desplegable-opciones[hidden] {
+    display: none;
+}
+
+.desplegable-opciones:focus {
+    outline: none;
+}
+
+.desplegable-opcion {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    color: var(--text-light);
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.desplegable-opcion:hover,
+.desplegable-opcion.resaltada {
+    background: var(--asig-fila-hover);
+}
+
+.desplegable-opciones:focus-visible .desplegable-opcion.resaltada {
+    outline: 1px solid var(--asig-borde-fuerte);
+}
+
+.desplegable-opcion[aria-selected="true"] {
+    font-weight: 700;
+    background: rgba(249, 115, 22, 0.2);
+}
+
+.desplegable-icono {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 1.1rem;
+    color: var(--asig-tenue);
+}
+
+.desplegable-opcion[aria-selected="true"] .desplegable-icono {
+    color: var(--text-light);
+}
+
+.desplegable-icono .asig-icono-disponible {
+    font-size: 0.55rem;
+    color: var(--asig-verde);
 }
 
 .asig-sel-visibles {
     display: inline-flex;
     align-items: center;
     gap: 0.6rem;
+    height: 2.65rem;
     margin: 0;
+    padding: 0 1.05rem;
+    font: inherit;
+    font-size: 0.88rem;
+    font-weight: 600;
     white-space: nowrap;
+    color: var(--text-light);
+    background: var(--asig-control);
+    border: 1px solid var(--asig-borde-fuerte);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+}
+
+.asig-sel-visibles:hover {
+    border-color: var(--asig-tenue);
 }
 
 .asig-sel-visibles .asig-check {
@@ -1707,6 +1814,17 @@
 @container personal (max-width: 520px) {
     .asig-controles {
         grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    /* El desplegable y "Seleccionar visibles" se reparten el ancho bajo el buscador. */
+    .desplegable,
+    .asig-sel-visibles {
+        flex: 1 1 10rem;
+        min-width: 0;
+    }
+
+    .asig-sel-visibles {
+        justify-content: center;
     }
 
     .asig-contrato {
