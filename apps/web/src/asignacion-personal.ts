@@ -7,7 +7,7 @@
 //
 // Las reglas (evento confirmado, choques de horario, días no disponibles, duplicados) viven solo en
 // el servidor: el panel muestra lo que responde GET /api/eventos/:id/personal y, al escribir la hora
-// de finalización, vuelve a preguntar con esa hora.
+// de finalización, vuelve a preguntar con esa hora. Este archivo solo arma la vista y llama a la API.
 
 import { api } from './api';
 import { esc } from './shared/panelShell';
@@ -45,6 +45,8 @@ const ETIQUETA_ESTADO: Record<Exclude<EstadoPersona, 'ASIGNADO'>, string> = {
 };
 
 const ESPERA_HORA_MS = 400;
+/** Nombres seleccionados que se muestran en el pie; el resto se resume como "+N" (con sus nombres al pasar el cursor). */
+const ELEGIDOS_VISIBLES = 1;
 
 const panel = document.getElementById('panelAsignacion') as HTMLElement;
 
@@ -70,13 +72,21 @@ const nombreEtapa = (etapa: Etapa): string => ETAPA_INFO[etapa].nombre;
 /** ¿Se puede elegir a esta persona para la etapa de destino? Quien ya está en ella, no. */
 const elegible = (p: PersonaDto): boolean => p.seleccionable && !(p.etapas ?? []).includes(destino);
 
+/** "MATEO GOMEZ HERNANDEZ" -> "MG" */
+function iniciales(nombre: string): string {
+    const palabras = nombre.trim().split(/\s+/).filter(Boolean);
+    return palabras.slice(0, 2).map((p) => p.charAt(0).toUpperCase()).join('') || '?';
+}
+
 // ---------- Estructura ----------
 function esqueleto(): string {
     return `
         <div class="asig-barra">
-            <button type="button" class="btn-secundario asig-volver" data-asig-volver>
+            <button type="button" class="asig-volver" data-asig-volver>
                 <i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Volver al evento
             </button>
+            <span class="asig-divisor-v" aria-hidden="true"></span>
+            <span class="asig-barra-icono" aria-hidden="true"><i class="fa-regular fa-calendar"></i></span>
             <div class="asig-titulos">
                 <h2 id="asigTitulo" tabindex="-1">Asignar personal</h2>
                 <p class="asig-sub" id="asigSub">Cargando evento...</p>
@@ -94,22 +104,29 @@ function htmlColumnas(d: ConsultaPersonal): string {
     return `
         <section class="asig-col asig-col-personal" id="asigColPersonal" aria-labelledby="asigTituloPersonal">
             <div class="asig-col-head">
-                <h3 id="asigTituloPersonal">Personal</h3>
-                <span class="asig-conteo" id="asigConteo"></span>
+                <h3 id="asigTituloPersonal"><i class="fa-solid fa-users" aria-hidden="true"></i> Personal</h3>
+                <span class="asig-pastilla" id="asigConteo"></span>
             </div>
             <div class="asig-herramientas">
                 <div class="asig-horario">
-                    <label for="asigHoraFin">Hora de finalización</label>
-                    <div class="asig-horario-fila">
-                        <input type="time" id="asigHoraFin" value="${esc(d.evento.horaFin ?? '')}" required aria-describedby="asigHoraAyuda">
-                        <span class="asig-inicio">Inicio: ${esc(inicio)}</span>
+                    <div class="asig-hora" data-asig-hora>
+                        <i class="fa-regular fa-clock asig-hora-icono" aria-hidden="true"></i>
+                        <span class="asig-hora-campo">
+                            <label for="asigHoraFin">Hora de finalización</label>
+                            <input type="time" id="asigHoraFin" value="${esc(d.evento.horaFin ?? '')}" required aria-describedby="asigHoraAyuda">
+                        </span>
+                        <button type="button" class="asig-hora-abrir" data-asig-hora-selector aria-label="Elegir la hora de finalización">
+                            <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                        </button>
                     </div>
-                    <p class="field-hint" id="asigHoraAyuda"></p>
+                    <span class="asig-divisor-v" aria-hidden="true"></span>
+                    <span class="asig-inicio">Inicio: ${esc(inicio)}</span>
+                    <span class="asig-hora-nota" id="asigHoraAyuda"></span>
                 </div>
                 <div class="asig-destino">
-                    <span class="asig-destino-nombre" id="asigDestinoNombre">Asignar a</span>
-                    <div class="segmentos asig-segmentos" role="group" aria-labelledby="asigDestinoNombre">
-                        ${ETAPAS.map((et) => `<button type="button" class="segmento" data-asig-destino="${et}" aria-pressed="false">
+                    <span class="asig-destino-nombre" id="asigDestinoNombre">Asignar a:</span>
+                    <div class="asig-segmentos" role="group" aria-labelledby="asigDestinoNombre">
+                        ${ETAPAS.map((et) => `<button type="button" class="asig-segmento" data-asig-destino="${et}" aria-pressed="false">
                             <i class="fa-solid ${ETAPA_INFO[et].icono}" aria-hidden="true"></i> ${nombreEtapa(et)}</button>`).join('')}
                     </div>
                 </div>
@@ -118,22 +135,22 @@ function htmlColumnas(d: ConsultaPersonal): string {
                         <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
                         <input type="search" id="asigBuscar" placeholder="Buscar por nombre" aria-label="Buscar personal por nombre" autocomplete="off">
                     </label>
-                    <div class="segmentos" role="group" aria-label="Mostrar">
-                        <button type="button" class="segmento" data-asig-filtro="todos" data-valor="todos" aria-pressed="true">Todos</button>
-                        <button type="button" class="segmento" data-asig-filtro="disponibles" aria-pressed="false">Disponibles</button>
+                    <div class="asig-filtro-grupo" role="group" aria-label="Mostrar">
+                        <button type="button" class="asig-filtro" data-asig-filtro="todos" aria-pressed="true">Todos</button>
+                        <button type="button" class="asig-filtro" data-asig-filtro="disponibles" aria-pressed="false">Disponibles</button>
                     </div>
                 </div>
             </div>
             <ul class="asig-lista" id="asigLista" aria-label="Personal para asignar"></ul>
             <div class="asig-pie">
                 <p class="form-error asig-error" id="asigError" role="alert" hidden></p>
-                <div class="asig-pie-acciones" id="asigAcciones"></div>
+                <div class="asig-pie-barra" id="asigAcciones"></div>
             </div>
         </section>
         <section class="asig-col asig-col-etapas" aria-labelledby="asigTituloEtapas">
             <div class="asig-col-head">
-                <h3 id="asigTituloEtapas">Personal del evento</h3>
-                <span class="asig-conteo" id="asigTotal"></span>
+                <h3 id="asigTituloEtapas"><i class="fa-solid fa-users" aria-hidden="true"></i> Personal del evento</h3>
+                <span class="asig-pastilla asig-pastilla-fuerte" id="asigTotal"></span>
             </div>
             <div class="asig-etapas" id="asigEtapas"></div>
         </section>`;
@@ -155,19 +172,21 @@ function estadoDe(p: PersonaDto): { texto: string; clase: string } {
 
 function htmlFila(p: PersonaDto): string {
     const puede = elegible(p);
+    const marcada = seleccion.has(p.clave);
     const estado = estadoDe(p);
     const etapas = (p.etapas ?? []).map((et) => `<span class="asig-etapa-chip">${nombreEtapa(et)}</span>`).join('');
     return `
         <li>
-            <label class="asig-fila asig-opcion${puede ? '' : ' bloqueada'}">
-                <input type="checkbox" value="${esc(p.clave)}" data-asig-persona ${puede ? '' : 'disabled'} ${seleccion.has(p.clave) ? 'checked' : ''}>
+            <label class="asig-fila asig-opcion${puede ? '' : ' bloqueada'}${marcada ? ' marcada' : ''}">
+                <input type="checkbox" class="asig-check" value="${esc(p.clave)}" data-asig-persona ${puede ? '' : 'disabled'} ${marcada ? 'checked' : ''}>
+                <span class="asig-avatar" aria-hidden="true">${esc(iniciales(p.nombre))}</span>
                 <span class="asig-persona">
                     <strong>${esc(p.nombre)}</strong>
                     <small>${esc(p.detalle)}</small>
                     ${etapas ? `<span class="asig-chips">${etapas}</span>` : ''}
                     ${htmlMotivos(p.motivos)}
                 </span>
-                <span class="asig-estado asig-estado-${estado.clase}">${esc(estado.texto)}</span>
+                <span class="asig-estado asig-estado-${estado.clase}"><span class="asig-punto" aria-hidden="true"></span>${esc(estado.texto)}</span>
             </label>
         </li>`;
 }
@@ -179,15 +198,16 @@ function renderLista(): void {
     const visibles = datos.personal.filter((p) => (!filtro || normalizar(p.nombre).includes(filtro)) && (!soloDisponibles || elegible(p)));
     lista.innerHTML = visibles.length
         ? visibles.map(htmlFila).join('')
-        : `<li class="asig-vacio">${filtro
+        : `<li class="asig-vacio asig-lista-vacia"><i class="fa-regular fa-face-meh" aria-hidden="true"></i> ${filtro
             ? `Nadie coincide con «${esc(busqueda.trim())}».`
             : soloDisponibles
                 ? `No hay personal disponible para ${esc(nombreEtapa(destino))}.`
                 : 'No hay personal registrado. El personal sale de la nómina activa (menú Empleados).'}</li>`;
     const disponibles = datos.personal.filter(elegible).length;
-    $('asigConteo')!.textContent = datos.horaFinEvaluada
+    const resumen = datos.horaFinEvaluada
         ? `${disponibles} disponibles para ${nombreEtapa(destino)} · ${datos.personal.length} en total`
         : `${datos.personal.length} personas`;
+    $('asigConteo')!.innerHTML = `<i class="fa-solid fa-users" aria-hidden="true"></i> ${esc(resumen)}`;
 }
 
 function htmlQuitar(a: AsignadoDto, etapa: Etapa | null): string {
@@ -200,7 +220,7 @@ function htmlQuitar(a: AsignadoDto, etapa: Etapa | null): string {
         return `
             <span class="asig-confirmar">
                 <button type="button" class="asig-btn-peligro" data-asig-quitar-si>Quitar ${esc(donde)}</button>
-                <button type="button" class="btn-secundario" data-asig-quitar-no>No</button>
+                <button type="button" class="asig-btn-no" data-asig-quitar-no>No</button>
             </span>`;
     }
     return `<button type="button" class="asig-quitar" data-asig-quitar="${esc(a.perfilId)}" data-asig-etapa="${etapa ?? ''}"
@@ -210,6 +230,7 @@ function htmlQuitar(a: AsignadoDto, etapa: Etapa | null): string {
 function htmlPersonaEtapa(a: AsignadoDto, etapa: Etapa | null): string {
     return `
         <li class="asig-etapa-persona">
+            <span class="asig-avatar-icono" aria-hidden="true"><i class="fa-regular fa-user"></i></span>
             <span class="asig-persona">
                 <strong>${esc(a.nombre)}</strong>
                 ${a.origen === 'whatsapp' ? '<small><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Confirmó por WhatsApp</small>' : ''}
@@ -227,36 +248,55 @@ function renderEtapas(): void {
     const tarjetas = ETAPAS.map((et) => {
         const lista = porEtapa[et];
         const esDestino = asignable && et === destino;
-        const accion = !asignable
-            ? ''
-            : esDestino
-                ? '<span class="asig-etapa-marca">Asignando aquí</span>'
-                : `<button type="button" class="asig-etapa-elegir" data-asig-destino="${et}">Asignar aquí</button>`;
         return `
             <section class="asig-etapa${esDestino ? ' destino' : ''}" aria-labelledby="asigEtapa-${et}">
                 <div class="asig-etapa-head">
-                    <h4 id="asigEtapa-${et}"><i class="fa-solid ${ETAPA_INFO[et].icono}" aria-hidden="true"></i> ${nombreEtapa(et)}</h4>
-                    <span class="asig-conteo">${lista.length}</span>
-                    ${accion}
+                    <i class="fa-solid ${ETAPA_INFO[et].icono} asig-etapa-icono" aria-hidden="true"></i>
+                    <h4 id="asigEtapa-${et}">${nombreEtapa(et)}</h4>
+                    <span class="asig-etapa-conteo" aria-label="${lista.length} asignados">${lista.length}</span>
+                    ${asignable
+                        ? `<button type="button" class="asig-etapa-elegir" data-asig-destino="${et}" aria-pressed="${esDestino}">Asignar aquí</button>`
+                        : ''}
                 </div>
                 ${lista.length
                     ? `<ul class="asig-etapa-lista">${lista.map((a) => htmlPersonaEtapa(a, et)).join('')}</ul>`
-                    : '<p class="asig-vacio">Nadie asignado.</p>'}
+                    : '<p class="asig-etapa-vacia"><i class="fa-regular fa-calendar" aria-hidden="true"></i> Nadie asignado.</p>'}
             </section>`;
     });
     if (sinEtapa.length > 0) {
         tarjetas.push(`
             <section class="asig-etapa asig-sin-etapa" aria-labelledby="asigEtapa-sin">
                 <div class="asig-etapa-head">
-                    <h4 id="asigEtapa-sin"><i class="fa-regular fa-circle-question" aria-hidden="true"></i> Sin etapa</h4>
-                    <span class="asig-conteo">${sinEtapa.length}</span>
+                    <i class="fa-regular fa-circle-question asig-etapa-icono" aria-hidden="true"></i>
+                    <h4 id="asigEtapa-sin">Sin etapa</h4>
+                    <span class="asig-etapa-conteo" aria-label="${sinEtapa.length} sin etapa">${sinEtapa.length}</span>
                 </div>
-                ${asignable ? '<p class="asig-ayuda">Elígelos en la lista, escoge la etapa y pulsa «Asignar».</p>' : ''}
+                <p class="asig-ayuda">Personas asignadas sin una etapa. ${asignable ? 'Puedes asignarles una etapa en cualquier momento.' : ''}</p>
                 <ul class="asig-etapa-lista">${sinEtapa.map((a) => htmlPersonaEtapa(a, null)).join('')}</ul>
             </section>`);
     }
     contenedor.innerHTML = tarjetas.join('');
     $('asigTotal')!.textContent = `${datos.asignados.length} ${datos.asignados.length === 1 ? 'persona' : 'personas'}`;
+}
+
+function htmlElegidos(): string {
+    if (!datos || seleccion.size === 0) return '';
+    const porClave = new Map(datos.personal.map((p) => [p.clave, p]));
+    const elegidos = [...seleccion].map((c) => porClave.get(c)).filter((p): p is PersonaDto => !!p);
+    const visibles = elegidos.slice(0, ELEGIDOS_VISIBLES).map((p) => `
+        <li class="asig-elegido">
+            <span class="asig-avatar asig-avatar-mini" aria-hidden="true">${esc(iniciales(p.nombre))}</span>
+            <span class="asig-elegido-nombre">${esc(p.nombre)}</span>
+            <button type="button" data-asig-deseleccionar="${esc(p.clave)}" aria-label="Quitar a ${esc(p.nombre)} de la selección" title="Quitar de la selección">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+            </button>
+        </li>`);
+    const resto = elegidos.length - ELEGIDOS_VISIBLES;
+    if (resto > 0) {
+        const nombres = elegidos.slice(ELEGIDOS_VISIBLES).map((p) => p.nombre).join(', ');
+        visibles.push(`<li class="asig-elegido asig-elegido-mas" title="${esc(nombres)}">+${resto}</li>`);
+    }
+    return `<span class="asig-divisor-v" aria-hidden="true"></span><ul class="asig-elegidos" aria-label="Personas seleccionadas">${visibles.join('')}</ul>`;
 }
 
 function renderAcciones(): void {
@@ -266,15 +306,20 @@ function renderAcciones(): void {
     const cambiaHora = hora !== '' && hora !== (datos.evento.horaFin ?? '');
     const n = seleccion.size;
     const texto = guardando
-        ? '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...'
-        : n > 0
-            ? `Asignar ${n} a ${esc(nombreEtapa(destino))}`
-            : cambiaHora ? 'Guardar hora' : `Asignar a ${esc(nombreEtapa(destino))}`;
+        ? '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> Guardando...'
+        : n === 0 && cambiaHora
+            ? '<i class="fa-regular fa-clock" aria-hidden="true"></i> Guardar hora'
+            : `<i class="fa-solid fa-users" aria-hidden="true"></i> Asignar a ${esc(nombreEtapa(destino))}`;
     const deshabilitado = guardando || hora === '' || (n === 0 && !cambiaHora);
+    const casilla = n > 0
+        ? `<button type="button" class="asig-check-todos marcada" data-asig-limpiar aria-label="Quitar toda la selección" title="Quitar toda la selección">
+               <i class="fa-solid fa-check" aria-hidden="true"></i></button>`
+        : '<span class="asig-check-todos" aria-hidden="true"></span>';
     acciones.innerHTML = `
+        ${casilla}
         <span class="asig-seleccion">${n === 0 ? 'Nadie seleccionado' : n === 1 ? '1 seleccionado' : `${n} seleccionados`}</span>
-        ${n > 0 ? '<button type="button" class="btn-secundario" data-asig-limpiar>Limpiar</button>' : ''}
-        <button type="button" class="asig-btn-primario" data-asig-guardar ${deshabilitado ? 'disabled' : ''}>${texto}</button>`;
+        ${htmlElegidos()}
+        <button type="button" class="asig-btn-primario asig-btn-asignar" data-asig-guardar ${deshabilitado ? 'disabled' : ''}>${texto}</button>`;
 }
 
 function renderError(): void {
@@ -291,11 +336,14 @@ function renderControles(): void {
     panel.querySelectorAll<HTMLElement>('[data-asig-filtro]').forEach((b) => {
         b.setAttribute('aria-pressed', String((b.dataset.asigFiltro === 'disponibles') === soloDisponibles));
     });
-    const ayuda = $('asigHoraAyuda');
-    if (ayuda && datos) {
-        ayuda.innerHTML = !datos.horaFinEvaluada
-            ? 'Hora en que se libera al personal. Escríbela para comprobar quién está disponible.'
-            : `Hora en que se libera al personal.${datos.terminaAlDiaSiguiente ? ' <strong>El evento termina al día siguiente.</strong>' : ''}`;
+    const nota = $('asigHoraAyuda');
+    if (nota && datos) {
+        nota.innerHTML = !datos.horaFinEvaluada
+            ? 'Escríbela para comprobar quién está disponible.'
+            : datos.terminaAlDiaSiguiente
+                ? '<i class="fa-regular fa-moon" aria-hidden="true"></i> Termina al día siguiente'
+                : '';
+        nota.classList.toggle('dia-siguiente', !!datos.horaFinEvaluada && datos.terminaAlDiaSiguiente);
     }
 }
 
@@ -307,8 +355,8 @@ function render(): void {
     if (e.lugar) partes.push(e.lugar);
     $('asigSub')!.textContent = partes.join(' · ');
     $('asigEstadoEvento')!.innerHTML = e.confirmado
-        ? '<span class="badge on"><i class="fa-solid fa-circle-check"></i> Confirmado</span>'
-        : '<span class="badge"><i class="fa-solid fa-circle-check"></i> Sin confirmar</span>';
+        ? '<span class="asig-estado-evento confirmado"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> Confirmado</span>'
+        : '<span class="asig-estado-evento"><i class="fa-regular fa-circle" aria-hidden="true"></i> Sin confirmar</span>';
     $('asigAviso')!.innerHTML = e.motivo
         ? `<p class="asig-aviso"><i class="fa-solid fa-circle-info"></i> ${esc(e.motivo.mensaje)}</p>`
         : '';
@@ -345,7 +393,7 @@ async function cargar(horaFin?: string): Promise<void> {
             $('asigCuerpo')!.innerHTML = `
                 <div class="asig-col">
                     <p class="asig-aviso asig-aviso-error"><i class="fa-solid fa-triangle-exclamation"></i> No se pudo cargar el personal: ${esc((err as Error).message)}</p>
-                    <div class="asig-pie-acciones"><button type="button" class="asig-btn-primario" data-asig-reintentar>Reintentar</button></div>
+                    <div class="asig-pie-barra"><button type="button" class="asig-btn-primario" data-asig-reintentar>Reintentar</button></div>
                 </div>`;
         }
     }
@@ -421,6 +469,16 @@ function cerrar(): void {
     void opciones.alCerrar(huboCambios);
 }
 
+/** Cambia de etapa de destino y deja ambas columnas en sintonía. */
+function elegirDestino(etapa: Etapa): void {
+    destino = etapa;
+    podarSeleccion();
+    renderControles();
+    renderLista();
+    renderEtapas();
+    renderAcciones();
+}
+
 // ---------- Eventos del panel ----------
 panel.addEventListener('click', (ev) => {
     const t = ev.target as HTMLElement;
@@ -433,14 +491,23 @@ panel.addEventListener('click', (ev) => {
         void cargar();
         return;
     }
+    if (t.closest('[data-asig-hora-selector]')) {
+        const campo = $<HTMLInputElement>('asigHoraFin');
+        campo?.focus();
+        try {
+            campo?.showPicker();
+        } catch {
+            // Navegador sin selector: queda el campo enfocado para escribir la hora.
+        }
+        return;
+    }
+    if (t.closest('[data-asig-hora]') && !t.closest('input')) {
+        $<HTMLInputElement>('asigHoraFin')?.focus();
+        return;
+    }
     const botonDestino = t.closest<HTMLElement>('[data-asig-destino]');
     if (botonDestino?.dataset.asigDestino) {
-        destino = botonDestino.dataset.asigDestino as Etapa;
-        podarSeleccion();
-        renderControles();
-        renderLista();
-        renderEtapas();
-        renderAcciones();
+        elegirDestino(botonDestino.dataset.asigDestino as Etapa);
         if (botonDestino.classList.contains('asig-etapa-elegir')) $('asigBuscar')?.focus();
         return;
     }
@@ -451,10 +518,19 @@ panel.addEventListener('click', (ev) => {
         renderLista();
         return;
     }
+    const deseleccionar = t.closest<HTMLElement>('[data-asig-deseleccionar]');
+    if (deseleccionar?.dataset.asigDeseleccionar) {
+        seleccion.delete(deseleccionar.dataset.asigDeseleccionar);
+        renderLista();
+        renderAcciones();
+        $('asigBuscar')?.focus();
+        return;
+    }
     if (t.closest('[data-asig-limpiar]')) {
         seleccion.clear();
         renderLista();
         renderAcciones();
+        $('asigBuscar')?.focus();
         return;
     }
     if (t.closest('[data-asig-guardar]')) {
@@ -483,6 +559,7 @@ panel.addEventListener('change', (ev) => {
     if (!t.matches('[data-asig-persona]')) return;
     if (t.checked) seleccion.add(t.value);
     else seleccion.delete(t.value);
+    t.closest('.asig-opcion')?.classList.toggle('marcada', t.checked);
     error = null;
     renderError();
     renderAcciones();
