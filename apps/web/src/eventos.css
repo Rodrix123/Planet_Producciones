@@ -800,7 +800,20 @@
 }
 
 /* ---------- Panel "Asignar personal" (src/asignacion-personal.ts) ---------- */
+/* Tonos propios del panel: superficies azul oscuro sobre el fondo de la página, naranja para la
+   acción y verde para lo disponible. Todo se apoya en la paleta del panel (style.css). */
 .asig-panel {
+    --asig-superficie: #111724;
+    --asig-superficie-alta: #151c2b;
+    --asig-control: #0f1520;
+    --asig-fila: #141b29;
+    --asig-fila-hover: #182133;
+    --asig-borde: #232c3e;
+    --asig-borde-fuerte: #303b52;
+    --asig-tenue: #98a2b6;
+    --asig-azul: #8ea6e3;
+    --asig-naranja-suave: rgba(249, 115, 22, 0.14);
+    --asig-verde: var(--emerald-green);
     display: flex;
     flex-direction: column;
     gap: 1rem;
@@ -810,6 +823,22 @@
     display: none;
 }
 
+/* Mientras el panel está abierto, el título de la página lleva la marca naranja. */
+.panel-main:has(> .asig-panel:not([hidden])) .panel-topbar h1 {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.panel-main:has(> .asig-panel:not([hidden])) .panel-topbar h1::before {
+    content: '';
+    width: 5px;
+    height: 1.55rem;
+    background: var(--orange-main);
+    border-radius: 3px;
+}
+
+/* ----- Encabezado ----- */
 .asig-barra {
     position: sticky;
     top: 0;
@@ -817,17 +846,57 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.75rem 1.25rem;
-    padding: 1rem 1.25rem;
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
+    gap: 0.9rem 1.25rem;
+    padding: 0.9rem 1.5rem;
+    background:
+        radial-gradient(120% 160% at 100% 50%, rgba(249, 115, 22, 0.12), transparent 55%),
+        var(--asig-superficie);
+    border: 1px solid var(--asig-borde);
     border-radius: 18px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
 }
 
 .asig-volver {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.6rem;
+    padding: 0.7rem 1.1rem;
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-light);
+    background: var(--asig-superficie-alta);
+    border: 1px solid var(--asig-borde-fuerte);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.asig-volver:hover,
+.asig-volver:focus-visible {
+    border-color: var(--orange-main);
+    background: var(--asig-fila-hover);
+}
+
+.asig-divisor-v {
+    flex-shrink: 0;
+    align-self: center;
+    width: 1px;
+    height: 2.5rem;
+    background: var(--asig-borde-fuerte);
+}
+
+.asig-barra-icono {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 3rem;
+    height: 3rem;
+    font-size: 1.35rem;
+    color: var(--orange-main);
+    background: var(--asig-naranja-suave);
+    border: 1px solid rgba(249, 115, 22, 0.35);
+    border-radius: 12px;
 }
 
 .asig-titulos {
@@ -836,7 +905,9 @@
 }
 
 .asig-titulos h2 {
-    font-size: 1.25rem;
+    font-size: 1.45rem;
+    font-weight: 700;
+    line-height: 1.2;
 }
 
 .asig-titulos h2:focus {
@@ -844,15 +915,38 @@
 }
 
 .asig-sub {
-    margin-top: 0.15rem;
-    font-size: 0.85rem;
-    color: var(--text-muted);
+    margin-top: 0.25rem;
+    font-size: 0.9rem;
+    color: var(--asig-tenue);
 }
 
+.asig-estado-evento {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 1.1rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--asig-tenue);
+    border: 1px solid var(--asig-borde-fuerte);
+    border-radius: 999px;
+}
+
+.asig-estado-evento.confirmado {
+    color: var(--asig-verde);
+    background: rgba(52, 211, 153, 0.1);
+    border-color: rgba(52, 211, 153, 0.45);
+}
+
+.asig-estado-evento.confirmado i {
+    font-size: 1.1rem;
+}
+
+/* ----- Cuerpo en dos columnas ----- */
 .asig-cuerpo {
     display: grid;
-    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
-    gap: 1rem;
+    grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr);
+    gap: 1.25rem;
     align-items: start;
 }
 
@@ -865,7 +959,7 @@
     padding: 3rem 0;
     text-align: center;
     font-size: 0.9rem;
-    color: var(--text-muted);
+    color: var(--asig-tenue);
 }
 
 .asig-col {
@@ -873,9 +967,9 @@
     flex-direction: column;
     gap: 0.85rem;
     min-width: 0;
-    padding: 1.1rem;
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
+    padding: 1.2rem 1.35rem;
+    background: var(--asig-superficie);
+    border: 1px solid var(--asig-borde);
     border-radius: 18px;
 }
 
@@ -885,99 +979,244 @@
 
 .asig-col-head {
     display: flex;
-    align-items: baseline;
+    flex-wrap: wrap;
+    align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
 }
 
 .asig-col-head h3 {
-    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    font-size: 1.4rem;
     font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--text-muted);
 }
 
-.asig-conteo {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--text-muted);
+.asig-col-head h3 i {
+    font-size: 1.25rem;
+    color: var(--orange-main);
 }
 
+.asig-pastilla {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.85rem;
+    font-size: 0.82rem;
+    color: var(--text-light);
+    background: var(--asig-control);
+    border: 1px solid var(--asig-borde-fuerte);
+    border-radius: 10px;
+}
+
+.asig-pastilla i {
+    color: var(--asig-tenue);
+}
+
+.asig-pastilla-fuerte {
+    padding: 0.45rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 700;
+    border-radius: 999px;
+}
+
+/* ----- Herramientas de la lista ----- */
 .asig-herramientas {
     display: flex;
     flex-direction: column;
-    gap: 0.85rem;
-    padding-bottom: 0.9rem;
-    border-bottom: 1px solid var(--border-color);
+    gap: 0.8rem;
+    padding: 0.85rem 0;
+    border-top: 1px solid var(--asig-borde);
+    border-bottom: 1px solid var(--asig-borde);
 }
 
-.asig-horario-fila {
+.asig-horario {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem 1.1rem;
+}
+
+.asig-hora {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    min-width: 15rem;
+    padding: 0.45rem 0.7rem 0.45rem 1rem;
+    background: var(--asig-control);
+    border: 1px solid var(--asig-borde-fuerte);
+    border-radius: 12px;
+    cursor: text;
+    transition: border-color 0.15s;
+}
+
+.asig-hora:focus-within {
+    border-color: var(--orange-main);
+}
+
+.asig-hora-icono {
+    font-size: 1.15rem;
+    color: var(--asig-tenue);
+}
+
+.asig-hora-campo {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+}
+
+.asig-hora-campo label {
+    margin: 0;
+    font-size: 0.72rem;
+    color: var(--asig-tenue);
+}
+
+.asig-hora-campo input[type="time"] {
+    width: 100%;
+    padding: 0;
+    font: inherit;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-light);
+    color-scheme: dark;
+    background: transparent;
+    border: none;
+    outline: none;
+}
+
+/* La flecha abre el selector; el ícono del navegador sobra. */
+.asig-hora-campo input[type="time"]::-webkit-calendar-picker-indicator {
+    display: none;
+}
+
+.asig-hora-abrir {
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    color: var(--asig-tenue);
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.asig-hora-abrir:hover,
+.asig-hora-abrir:focus-visible {
+    color: var(--orange-main);
+    background: var(--asig-fila-hover);
+    outline: none;
+}
+
+.asig-inicio {
+    font-size: 0.92rem;
+    color: var(--asig-tenue);
+}
+
+.asig-hora-nota {
+    font-size: 0.8rem;
+    color: var(--asig-tenue);
+}
+
+.asig-hora-nota:empty {
+    display: none;
+}
+
+.asig-hora-nota.dia-siguiente {
+    padding: 0.25rem 0.65rem;
+    font-weight: 600;
+    color: var(--asig-azul);
+    background: rgba(142, 166, 227, 0.1);
+    border: 1px solid rgba(142, 166, 227, 0.3);
+    border-radius: 999px;
+}
+
+.asig-destino {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 0.6rem 1rem;
 }
 
-.asig-horario input[type="time"] {
-    width: 10rem;
-    padding: 0.6rem 0.8rem;
+.asig-destino-nombre {
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.asig-segmentos {
+    display: inline-flex;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    background: var(--asig-control);
+    border: 1px solid var(--asig-borde-fuerte);
+    border-radius: 999px;
+}
+
+.asig-segmento {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    height: 2.45rem;
+    padding: 0 1.4rem;
     font: inherit;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-light);
+    background: transparent;
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.asig-segmento i {
+    color: var(--asig-tenue);
+    transition: color 0.15s;
+}
+
+.asig-segmento:hover {
+    background: var(--asig-fila-hover);
+}
+
+.asig-segmento:focus-visible {
+    outline: 2px solid var(--orange-main);
+    outline-offset: 2px;
+}
+
+.asig-segmento[aria-pressed="true"] {
     color: #fff;
-    color-scheme: dark;
-    background: var(--bg-input);
-    border: 1px solid var(--border-color);
-    border-radius: 10px;
-    outline: none;
+    background: linear-gradient(to right, var(--orange-main), var(--orange-hover));
+    box-shadow: 0 6px 18px rgba(249, 115, 22, 0.3);
 }
 
-.asig-horario input[type="time"]:focus {
-    border-color: var(--orange-main);
+.asig-segmento[aria-pressed="true"] i {
+    color: #fff;
 }
 
-.asig-inicio {
-    font-size: 0.85rem;
-    color: var(--text-muted);
-}
-
-.asig-destino,
 .asig-filtros {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.6rem;
-}
-
-.asig-destino-nombre {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--text-muted);
-}
-
-/* Segmentos más grandes que los de los filtros: aquí se elige la etapa de destino. */
-.asig-segmentos .segmento {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    height: 32px;
-    padding: 0 0.95rem;
-    font-size: 0.8rem;
+    gap: 0.75rem;
 }
 
 .asig-buscar {
     display: flex;
     flex: 1;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.7rem;
     min-width: 200px;
-    height: 38px;
+    height: 2.7rem;
     margin: 0;
-    padding: 0 0.8rem;
-    color: var(--text-muted);
-    background: var(--bg-input);
-    border: 1px solid var(--border-color);
-    border-radius: 10px;
+    padding: 0 1rem;
+    font-size: 1rem;
+    color: var(--asig-tenue);
+    background: var(--asig-control);
+    border: 1px solid var(--asig-borde-fuerte);
+    border-radius: 12px;
+    transition: border-color 0.15s;
 }
 
 .asig-buscar:focus-within {
@@ -988,49 +1227,95 @@
     flex: 1;
     min-width: 0;
     font: inherit;
-    font-size: 0.88rem;
-    color: #fff;
+    font-size: 0.95rem;
+    color: var(--text-light);
     background: transparent;
     border: none;
     outline: none;
 }
 
+.asig-buscar input::placeholder {
+    color: var(--asig-tenue);
+}
+
+.asig-filtro-grupo {
+    display: inline-flex;
+    gap: 0.5rem;
+}
+
+.asig-filtro {
+    height: 2.3rem;
+    padding: 0 1.05rem;
+    font: inherit;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-light);
+    background: var(--asig-control);
+    border: 1px solid var(--asig-borde-fuerte);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+}
+
+.asig-filtro:hover {
+    border-color: var(--asig-tenue);
+}
+
+.asig-filtro:focus-visible {
+    outline: 2px solid var(--orange-main);
+    outline-offset: 2px;
+}
+
+.asig-filtro[aria-pressed="true"] {
+    background: rgba(249, 115, 22, 0.12);
+    border-color: var(--orange-main);
+}
+
+/* ----- Lista de personal ----- */
 .asig-lista,
-.asig-etapa-lista {
+.asig-etapa-lista,
+.asig-elegidos {
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
+    gap: 0.5rem;
     margin: 0;
     padding: 0;
     list-style: none;
 }
 
+.asig-lista,
+.asig-etapas {
+    scrollbar-width: thin;
+    scrollbar-color: var(--asig-borde-fuerte) transparent;
+}
+
 .asig-fila {
     display: flex;
     align-items: center;
-    gap: 0.8rem;
+    gap: 0.9rem;
     margin: 0;
-    padding: 0.6rem 0.8rem;
-    font-size: 0.88rem;
+    padding: 0.7rem 1rem;
+    font-size: 0.9rem;
     color: var(--text-light);
-    background: var(--bg-input);
-    border: 1px solid var(--border-color);
+    background: var(--asig-fila);
+    border: 1px solid var(--asig-borde);
     border-radius: 12px;
 }
 
 .asig-opcion {
     cursor: pointer;
-    transition: border-color 0.15s;
+    transition: border-color 0.15s, background 0.15s;
 }
 
-.asig-opcion:hover,
-.asig-opcion:has(input:focus-visible) {
-    border-color: var(--orange-main);
+.asig-opcion:hover {
+    background: var(--asig-fila-hover);
+    border-color: var(--asig-borde-fuerte);
 }
 
+.asig-opcion.marcada,
 .asig-opcion:has(input:checked) {
+    background: linear-gradient(90deg, rgba(249, 115, 22, 0.24), rgba(249, 115, 22, 0.07));
     border-color: var(--orange-main);
-    background: rgba(249, 115, 22, 0.08);
 }
 
 .asig-opcion.bloqueada {
@@ -1038,14 +1323,61 @@
 }
 
 .asig-opcion.bloqueada:hover {
-    border-color: var(--border-color);
+    background: var(--asig-fila);
+    border-color: var(--asig-borde);
 }
 
-.asig-opcion input[type="checkbox"] {
+/* Casilla propia: cuadrada, naranja al marcarla, con foco visible. */
+.asig-check {
     flex-shrink: 0;
-    width: 1.05rem;
-    height: 1.05rem;
-    accent-color: var(--orange-main);
+    width: 1.3rem;
+    height: 1.3rem;
+    margin: 0;
+    background: transparent;
+    border: 1.5px solid #4a5570;
+    border-radius: 5px;
+    appearance: none;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.asig-check:checked {
+    background: var(--orange-main) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round' d='M3.5 8.5l3 3 6-7'/%3E%3C/svg%3E") center / 0.9rem no-repeat;
+    border-color: var(--orange-main);
+}
+
+.asig-check:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.asig-check:focus-visible {
+    outline: 2px solid var(--orange-main);
+    outline-offset: 2px;
+}
+
+.asig-avatar {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--text-light);
+    background: #2a3346;
+    border-radius: 50%;
+}
+
+.asig-opcion.marcada .asig-avatar {
+    background: #3a3434;
+}
+
+.asig-avatar-mini {
+    width: 1.6rem;
+    height: 1.6rem;
+    font-size: 0.65rem;
 }
 
 .asig-persona {
@@ -1057,18 +1389,19 @@
 }
 
 .asig-persona strong {
-    font-weight: 600;
+    font-size: 0.98rem;
+    font-weight: 700;
     overflow-wrap: anywhere;
 }
 
 .asig-persona small {
-    font-size: 0.78rem;
+    font-size: 0.82rem;
     line-height: 1.4;
-    color: var(--text-muted);
+    color: var(--asig-tenue);
 }
 
 .asig-opcion.bloqueada .asig-persona strong {
-    color: var(--text-muted);
+    color: var(--asig-tenue);
 }
 
 .asig-persona small.asig-motivo {
@@ -1083,12 +1416,12 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.3rem;
-    margin-top: 0.1rem;
+    margin-top: 0.15rem;
 }
 
 .asig-etapa-chip {
-    padding: 0.05rem 0.5rem;
-    font-size: 0.68rem;
+    padding: 0.05rem 0.55rem;
+    font-size: 0.7rem;
     font-weight: 700;
     color: var(--orange-main);
     background: rgba(249, 115, 22, 0.1);
@@ -1097,24 +1430,39 @@
 }
 
 .asig-estado {
+    display: inline-flex;
     flex-shrink: 0;
-    padding: 0.2rem 0.6rem;
-    font-size: 0.72rem;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.28rem 0.75rem;
+    font-size: 0.78rem;
     font-weight: 600;
     white-space: nowrap;
-    color: var(--text-muted);
-    border: 1px solid var(--border-color);
+    color: var(--asig-tenue);
+    border: 1px solid var(--asig-borde-fuerte);
     border-radius: 999px;
 }
 
+.asig-punto {
+    width: 0.45rem;
+    height: 0.45rem;
+    background: currentColor;
+    border-radius: 50%;
+}
+
 .asig-estado-disponible {
-    color: var(--emerald-green);
-    border-color: rgba(52, 211, 153, 0.35);
+    color: var(--asig-verde);
+    background: rgba(52, 211, 153, 0.08);
+    border-color: rgba(52, 211, 153, 0.4);
 }
 
 .asig-estado-en-evento {
     color: var(--text-light);
-    border-color: rgba(249, 115, 22, 0.45);
+    border-color: rgba(249, 115, 22, 0.5);
+}
+
+.asig-estado-en-evento .asig-punto {
+    background: var(--orange-main);
 }
 
 .asig-estado-no_disponible,
@@ -1125,43 +1473,143 @@
 
 .asig-vacio,
 .asig-ayuda {
-    font-size: 0.85rem;
-    color: var(--text-muted);
+    font-size: 0.86rem;
+    color: var(--asig-tenue);
 }
 
-li.asig-vacio {
-    padding: 1.25rem 0.5rem;
+.asig-lista-vacia {
+    padding: 2rem 0.5rem;
     text-align: center;
 }
 
-.asig-ayuda {
+.asig-lista-vacia i {
+    display: block;
     margin-bottom: 0.5rem;
+    font-size: 1.4rem;
 }
 
-/* Pie de la lista: queda a la vista mientras se recorre el personal. */
+/* ----- Pie de selección: queda visible aunque la lista se desplace ----- */
 .asig-pie {
     position: sticky;
     bottom: 0;
     display: flex;
     flex-direction: column;
     gap: 0.6rem;
-    padding-top: 0.8rem;
-    background: var(--bg-card);
-    border-top: 1px solid var(--border-color);
+    padding-top: 0.25rem;
+    background: var(--asig-superficie);
 }
 
-.asig-pie-acciones {
+.asig-pie-barra {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: flex-end;
-    gap: 0.6rem;
+    gap: 0.75rem 0.9rem;
+    padding: 0.7rem 0.8rem 0.7rem 1rem;
+    background: var(--asig-control);
+    border: 1px solid var(--asig-borde-fuerte);
+    border-radius: 14px;
+}
+
+.asig-check-todos {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 1.3rem;
+    height: 1.3rem;
+    padding: 0;
+    font-size: 0.75rem;
+    color: #fff;
+    background: transparent;
+    border: 1.5px solid #4a5570;
+    border-radius: 5px;
+}
+
+.asig-check-todos.marcada {
+    background: var(--orange-main);
+    border-color: var(--orange-main);
+    cursor: pointer;
+}
+
+.asig-check-todos.marcada:hover,
+.asig-check-todos.marcada:focus-visible {
+    outline: 2px solid rgba(249, 115, 22, 0.5);
+    outline-offset: 2px;
 }
 
 .asig-seleccion {
-    margin-right: auto;
-    font-size: 0.82rem;
-    color: var(--text-muted);
+    font-size: 1rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.asig-pie-barra .asig-divisor-v {
+    height: 1.8rem;
+}
+
+.asig-elegidos {
+    flex-direction: row;
+    flex: 1;
+    flex-wrap: nowrap;
+    min-width: 0;
+}
+
+.asig-elegido {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    max-width: 15rem;
+    padding: 0.25rem 0.35rem 0.25rem 0.3rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    background: var(--asig-fila);
+    border: 1px solid var(--asig-borde-fuerte);
+    border-radius: 999px;
+}
+
+.asig-elegido-nombre {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.asig-elegido button {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 1.35rem;
+    height: 1.35rem;
+    font-size: 0.7rem;
+    color: var(--asig-tenue);
+    background: transparent;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.asig-elegido button:hover,
+.asig-elegido button:focus-visible {
+    color: #fff;
+    background: var(--asig-borde-fuerte);
+    outline: none;
+}
+
+.asig-elegido-mas {
+    padding: 0.25rem 0.7rem;
+    color: var(--asig-tenue);
+}
+
+.asig-btn-asignar {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-left: auto;
+    padding: 0.85rem 1.5rem;
+    font-size: 1rem;
+    box-shadow: 0 8px 22px rgba(249, 115, 22, 0.28);
+}
+
+.asig-btn-asignar:disabled {
+    box-shadow: none;
 }
 
 .asig-error {
@@ -1169,125 +1617,182 @@ li.asig-vacio {
     line-height: 1.45;
 }
 
+/* ----- Personal del evento por etapa ----- */
 .asig-etapas {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.9rem;
 }
 
 .asig-etapa {
-    padding: 0.8rem 0.9rem;
-    background: var(--bg-input);
-    border: 1px solid var(--border-color);
+    padding: 1rem 1.15rem;
+    background: var(--asig-superficie-alta);
+    border: 1px solid var(--asig-borde);
     border-radius: 14px;
-    transition: border-color 0.15s;
+    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
 }
 
 .asig-etapa.destino {
-    border-color: rgba(249, 115, 22, 0.6);
-}
-
-.asig-sin-etapa {
-    border-style: dashed;
+    background: linear-gradient(90deg, rgba(249, 115, 22, 0.2), rgba(249, 115, 22, 0.05) 70%), var(--asig-superficie-alta);
+    border-color: var(--orange-main);
+    box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.35), 0 10px 28px rgba(249, 115, 22, 0.12);
 }
 
 .asig-etapa-head {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.55rem;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.asig-etapa-icono {
+    width: 1.6rem;
+    font-size: 1.35rem;
+    text-align: center;
+    color: #b8c0d0;
+}
+
+.asig-etapa.destino .asig-etapa-icono {
+    color: var(--orange-main);
 }
 
 .asig-etapa-head h4 {
-    display: flex;
-    align-items: center;
-    gap: 0.45rem;
-    font-size: 0.9rem;
+    font-size: 1.12rem;
     font-weight: 700;
 }
 
-.asig-etapa-head h4 i {
-    color: var(--orange-main);
-}
-
-.asig-sin-etapa .asig-etapa-head h4 i {
-    color: var(--text-muted);
-}
-
-.asig-etapa-marca,
-.asig-etapa-elegir {
-    margin-left: auto;
-    font-size: 0.75rem;
+.asig-etapa-conteo {
+    font-size: 1.05rem;
     font-weight: 700;
-}
-
-.asig-etapa-marca {
-    color: var(--orange-main);
+    color: var(--asig-azul);
 }
 
 .asig-etapa-elegir {
-    padding: 0.3rem 0.7rem;
-    font-family: inherit;
-    color: var(--text-muted);
+    margin-left: auto;
+    padding: 0.45rem 1rem;
+    font: inherit;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: var(--text-light);
     background: transparent;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--asig-borde-fuerte);
     border-radius: 999px;
     cursor: pointer;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
 
 .asig-etapa-elegir:hover,
 .asig-etapa-elegir:focus-visible {
-    color: var(--orange-main);
     border-color: var(--orange-main);
+    outline: none;
+}
+
+.asig-etapa-elegir[aria-pressed="true"] {
+    color: var(--orange-main);
+    background: rgba(249, 115, 22, 0.1);
+    border-color: var(--orange-main);
+}
+
+.asig-etapa-vacia {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    color: var(--asig-tenue);
+    border: 1px dashed var(--asig-borde-fuerte);
+    border-radius: 10px;
+}
+
+.asig-etapa-vacia i {
+    font-size: 1.05rem;
+}
+
+.asig-ayuda {
+    margin: -0.3rem 0 0.75rem;
 }
 
 .asig-etapa-persona {
     display: flex;
     align-items: center;
-    gap: 0.6rem;
-    padding: 0.45rem 0.6rem;
-    font-size: 0.86rem;
-    background: var(--bg-card);
+    gap: 0.75rem;
+    padding: 0.55rem 0.7rem 0.55rem 0.6rem;
+    font-size: 0.9rem;
+    background: var(--asig-control);
+    border: 1px solid var(--asig-borde);
     border-radius: 10px;
 }
 
+.asig-avatar-icono {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    font-size: 0.85rem;
+    color: var(--asig-tenue);
+    border: 1px solid var(--asig-borde-fuerte);
+    border-radius: 50%;
+}
+
 .asig-etapa-persona .fa-whatsapp {
-    color: var(--emerald-green);
+    color: var(--asig-verde);
 }
 
 .asig-quitar {
+    display: grid;
     flex-shrink: 0;
-    width: 28px;
-    height: 28px;
-    color: var(--text-muted);
+    place-items: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    margin-left: auto;
+    font-size: 0.8rem;
+    color: var(--text-light);
     background: transparent;
-    border: 1px solid var(--border-color);
+    border: 1.5px solid #c8cfdc;
     border-radius: 50%;
     cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
 }
 
 .asig-quitar:hover,
 .asig-quitar:focus-visible {
     color: #f87171;
     border-color: #f87171;
+    outline: none;
 }
 
 .asig-confirmar {
     display: inline-flex;
     flex-shrink: 0;
     gap: 0.4rem;
+    margin-left: auto;
 }
 
-.asig-confirmar .btn-secundario {
+.asig-btn-no {
     padding: 0.35rem 0.75rem;
+    font: inherit;
     font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--asig-tenue);
+    background: transparent;
+    border: 1px solid var(--asig-borde-fuerte);
+    border-radius: 10px;
+    cursor: pointer;
 }
 
+.asig-btn-no:hover,
+.asig-btn-no:focus-visible {
+    color: var(--text-light);
+    border-color: var(--asig-tenue);
+}
+
+/* ----- Avisos y botones ----- */
 .asig-aviso {
     display: flex;
     gap: 0.6rem;
     padding: 0.75rem 0.9rem;
-    font-size: 0.85rem;
+    font-size: 0.88rem;
     line-height: 1.45;
     color: var(--text-light);
     background: rgba(249, 115, 22, 0.08);
@@ -1313,19 +1818,25 @@ li.asig-vacio {
 .asig-btn-peligro {
     padding: 0.7rem 1.25rem;
     font: inherit;
-    font-size: 0.88rem;
+    font-size: 0.9rem;
     font-weight: 700;
     color: #fff;
     background: linear-gradient(to right, var(--orange-main), var(--orange-hover));
     border: none;
     border-radius: 12px;
     cursor: pointer;
+    transition: filter 0.15s, opacity 0.15s;
+}
+
+.asig-btn-primario:not(:disabled):hover {
+    filter: brightness(1.08);
 }
 
 .asig-btn-peligro {
     padding: 0.35rem 0.75rem;
     font-size: 0.78rem;
     background: #dc2626;
+    border-radius: 10px;
 }
 
 .asig-btn-peligro:hover {
@@ -1343,11 +1854,24 @@ li.asig-vacio {
     outline-offset: 2px;
 }
 
+/* Con el panel abierto, el aviso flotante sale arriba para no tapar el botón de asignar. */
+.panel-main:has(> .asig-panel:not([hidden])) ~ .toast {
+    top: 1.25rem;
+    bottom: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .asig-panel *,
+    .btn-asignar-personal {
+        transition: none !important;
+    }
+}
+
 /* En pantallas anchas cada columna se desplaza por dentro: la barra y el pie quedan a la vista. */
 @media (min-width: 1001px) {
     /* Descuenta el título de la página y la barra del panel para que el pie quepa en pantalla. */
     .asig-col {
-        max-height: max(440px, calc(100dvh - 18.5rem));
+        max-height: max(460px, calc(100dvh - 18rem));
     }
 
     .asig-lista,
@@ -1355,7 +1879,7 @@ li.asig-vacio {
         flex: 1;
         min-height: 0;
         overflow-y: auto;
-        padding-right: 0.2rem;
+        padding-right: 0.35rem;
     }
 }
 
@@ -1365,40 +1889,75 @@ li.asig-vacio {
     }
 }
 
-@media (max-width: 560px) {
+@media (max-width: 640px) {
     .asig-barra,
     .asig-col {
-        padding: 0.9rem;
+        padding: 1rem;
     }
 
-    .asig-fila {
-        flex-wrap: wrap;
+    .asig-barra .asig-divisor-v,
+    .asig-barra-icono {
+        display: none;
     }
 
-    .asig-estado {
-        margin-left: calc(1.05rem + 0.8rem);
+    .asig-estado-evento {
+        padding: 0.4rem 0.85rem;
+        font-size: 0.85rem;
     }
 
-    .btn-asignar-personal {
-        width: 100%;
-        justify-content: center;
+    .asig-col-head h3 {
+        font-size: 1.2rem;
+    }
+
+    /* La hora ocupa todo el ancho; "Inicio" pasa a la línea siguiente. */
+    .asig-hora {
+        flex: 1 1 100%;
+        min-width: 0;
+    }
+
+    .asig-horario .asig-divisor-v {
+        display: none;
     }
 
     /* La etapa de destino: tres botones iguales a todo el ancho, sin íconos. */
-    .asig-destino .segmentos {
+    .asig-segmentos {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
         width: 100%;
         border-radius: 14px;
     }
 
-    .asig-segmentos .segmento {
-        justify-content: center;
+    .asig-segmento {
+        height: 2.4rem;
         padding: 0 0.3rem;
-        font-size: 0.74rem;
+        font-size: 0.8rem;
+        border-radius: 10px;
     }
 
-    .asig-segmentos .segmento i {
+    .asig-segmento i {
         display: none;
+    }
+
+    .asig-fila {
+        flex-wrap: wrap;
+        gap: 0.7rem;
+    }
+
+    .asig-estado {
+        margin-left: calc(1.3rem + 2.5rem + 1.4rem);
+    }
+
+    .asig-elegidos {
+        display: none;
+    }
+
+    .asig-btn-asignar {
+        justify-content: center;
+        width: 100%;
+    }
+
+    .btn-asignar-personal {
+        width: 100%;
+        justify-content: center;
     }
 }
