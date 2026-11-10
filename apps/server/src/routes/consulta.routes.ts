@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { requireAuth, requireRole } from '../auth';
 import { asyncHandler } from '../asyncHandler';
-import { derivarEstado, numeroReferencia, type EstadoCotizacion } from '../estadoCotizacion';
+import { derivarEstado, type EstadoCotizacion } from '../estadoCotizacion';
+import { numeroReferencia } from '../referencia';
 
 /** Lo único que esta ruta necesita de la base. Permite probarla sin tocar la real. */
 export interface EjecutorConsultas {

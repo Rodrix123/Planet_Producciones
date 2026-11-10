@@ -1,26 +1,45 @@
+// Cotizaciones (/api/cotizaciones): desde que el cliente la guarda en la página pública hasta que
+// el evento queda definitivo.
+//
+// Recorrido de una cotización y quién actúa en cada paso:
+//   recibida / en_revision -> Maritza (administradora) revisa y edita servicios y datos
+//   finalizada             -> Maritza la finaliza: se crea el evento
+//   contrato_enviado       -> Mariana (secretaria) genera y envía el contrato (ver contratos.routes.ts)
+//   programada             -> Maritza sube el contrato firmado y deja el evento definitivo
+//
+// El estado no se guarda en una sola columna: se deduce de quote + events (ver derivarEstado).
+
 import { Router } from 'express';
 import { pool } from '../db';
 import { requireAuth, requireRole } from '../auth';
 import { asyncHandler } from '../asyncHandler';
 import { enviarCorreo } from '../mailer';
 import { generarCotizacionPdfBuffer, type ItemCotizacionPdf } from '../pdf/cotizacionPdf';
-import { ESTADOS_VALIDOS, derivarEstado, numeroReferencia, type EstadoCotizacion } from '../estadoCotizacion';
+import { esCorreoValido, limpiarTexto, LIMITES, normalizarCotizacion, normalizarExtras, normalizarItems } from '../cotizacionEntrada';
+import { ESTADOS_VALIDOS, derivarEstado, type EstadoCotizacion } from '../estadoCotizacion';
+import { numeroReferencia } from '../referencia';
+import { limiteCotizar } from '../limitador';
 
 // La secretaria solo puede ver cotizaciones que ya pasaron por "finalizada" en adelante;
 // nunca las que Maritza todavía está revisando.
 const ESTADOS_VISIBLES_SECRETARIA: EstadoCotizacion[] = ['finalizada', 'contrato_enviado', 'programada'];
 
 // Traduce cada estado "virtual" (no existe como columna única) a la condición SQL que lo
-// identifica a partir de quote + events, usando los alias q/e.
+// identifica a partir de quote + events, usando los alias q/e. Debe decir lo mismo que derivarEstado():
+// con evento, "confirmado" gana sobre todo (programada); si no, un contrato enviado la deja en
+// contrato_enviado; y si no, finalizada. Así un evento aparece en una sola lista y con su etiqueta real.
 const CONDICION_SQL: Record<EstadoCotizacion, string> = {
     recibida: "q.estado = 'recibida' and e.id is null",
     en_revision: "q.estado = 'en_revision' and e.id is null",
-    finalizada: 'e.id is not null and e.contrato_enviado_en is null',
+    finalizada: 'e.id is not null and e.contrato_enviado_en is null and e.confirmed = false',
     contrato_enviado: 'e.id is not null and e.contrato_enviado_en is not null and e.confirmed = false',
     programada: 'e.confirmed = true',
     cancelada: "q.estado = 'cancelada'"
 };
 
+// Consulta base de una cotización con los datos del evento, la sede y el cliente. Donde existe un evento
+// sus datos mandan sobre los de la cotización (coalesce); nombre, teléfono y documento salen de la
+// propia cotización y solo si faltan (cotizaciones antiguas) del cliente.
 const SELECT_BASE = `
     select
         q.id,
@@ -34,10 +53,10 @@ const SELECT_BASE = `
         coalesce(e.venue_nombre_manual, q.venue_nombre_manual) as venue_nombre_manual,
         coalesce(e.venue_direccion_manual, q.venue_direccion_manual) as venue_direccion_manual,
         q.client_id,
-        u.name as cliente_nombre,
+        coalesce(q.cliente_nombre, u.name) as cliente_nombre,
         u.email as cliente_correo,
-        u.phone as cliente_telefono,
-        u.documento as cliente_documento,
+        coalesce(q.cliente_telefono, u.phone) as cliente_telefono,
+        coalesce(q.cliente_documento, u.documento) as cliente_documento,
         v.name as venue_nombre,
         e.id as event_id,
         e.confirmed,
@@ -49,6 +68,7 @@ const SELECT_BASE = `
     left join venue v on v.id = coalesce(e.venue_id, q.venue_id)
 `;
 
+// Fila que devuelve SELECT_BASE (nombres de la base en snake_case).
 interface FilaCotizacion {
     id: number;
     total: string;
@@ -72,6 +92,7 @@ interface FilaCotizacion {
     contrato_firmado_nombre: string | null;
 }
 
+// Un servicio guardado en una cotización, ya con su precio por unidad calculado.
 interface ItemGuardado {
     variantId: number;
     cantidad: number;
@@ -82,7 +103,24 @@ interface ItemGuardado {
     nota: string | null;
 }
 
-function mapCotizacion(fila: FilaCotizacion, items: ItemGuardado[] = []) {
+// Un elemento adicional guardado (quote_extra_items): no sale de la bodega, se alquila o se consigue
+// aparte. `proveedor` y `costoProveedor` son internos: solo los ve la administradora.
+interface ExtraGuardado {
+    id: number;
+    tag: string;
+    nombre: string;
+    descripcion: string;
+    cantidad: number;
+    precioUnit: number;
+    proveedor: string | null;
+    costoProveedor: number | null;
+    nota: string | null;
+}
+
+/**
+ * Convierte la fila de la base al formato JSON que usa el frontend.
+ */
+function mapCotizacion(fila: FilaCotizacion, items: ItemGuardado[] = [], extras: ExtraGuardado[] = [], verCostos = false) {
     return {
         id: fila.id,
         numeroReferencia: numeroReferencia(fila.id, fila.created_at),
@@ -100,10 +138,25 @@ function mapCotizacion(fila: FilaCotizacion, items: ItemGuardado[] = []) {
         total: Number(fila.total),
         estado: derivarEstado(fila),
         creadaEn: fila.created_at,
-        items
+        items,
+        // Los elementos adicionales viajan aparte de los servicios del catálogo. El proveedor y su costo
+        // solo salen para quien puede verlos (la administradora).
+        extras: extras.map((e) => ({
+            id: e.id,
+            tag: e.tag,
+            nombre: e.nombre,
+            descripcion: e.descripcion,
+            cantidad: e.cantidad,
+            precioUnit: e.precioUnit,
+            nota: e.nota,
+            ...(verCostos ? { proveedor: e.proveedor, costoProveedor: e.costoProveedor } : {})
+        }))
     };
 }
 
+/**
+ * Una cotización por id, o null si no existe.
+ */
 async function obtenerFilaCotizacion(id: string): Promise<FilaCotizacion | null> {
     const { rows } = await pool.query<FilaCotizacion>(`${SELECT_BASE} where q.id = $1`, [id]);
     return rows[0] || null;
@@ -143,115 +196,159 @@ async function obtenerItems(quoteId: string | number): Promise<ItemGuardado[]> {
     });
 }
 
+/** Elementos adicionales (externos) de una cotización, en el orden en que se agregaron. */
+async function obtenerExtras(quoteId: string | number): Promise<ExtraGuardado[]> {
+    const { rows } = await pool.query(
+        `select id, tag, name, description, quantity, unit_price, supplier, supplier_cost, nota
+         from quote_extra_items
+         where quote_id = $1
+         order by id`,
+        [quoteId]
+    );
+    return rows.map((r) => ({
+        id: Number(r.id),
+        tag: r.tag,
+        nombre: r.name,
+        descripcion: r.description || '',
+        cantidad: r.quantity,
+        precioUnit: Number(r.unit_price),
+        proveedor: r.supplier,
+        costoProveedor: r.supplier_cost === null ? null : Number(r.supplier_cost),
+        nota: r.nota
+    }));
+}
+
+/**
+ * Cotización + servicios + elementos adicionales en paralelo: consultas independientes no tienen por qué
+ * esperarse una a otra. Solo se usa en rutas de la administradora, por eso incluye proveedor y costo.
+ */
+async function cargarCotizacion(id: string | number) {
+    const [fila, items, extras] = await Promise.all([obtenerFilaCotizacion(String(id)), obtenerItems(id), obtenerExtras(id)]);
+    return fila ? mapCotizacion(fila, items, extras, true) : null;
+}
+
+/** Los elementos adicionales en el historial: sin proveedor ni costo, que son solo para la administradora. */
+function resumenExtras(extras: ExtraGuardado[]) {
+    return extras.map((e) => ({ externo: true, tag: e.tag, nombre: e.nombre, cantidad: e.cantidad, precioUnit: e.precioUnit }));
+}
+
+/**
+ * Precio del transporte elegido (0 si no hay transporte).
+ */
 async function precioTransporte(transportationId: number | null): Promise<number> {
     if (!transportationId) return 0;
     const { rows } = await pool.query('select price from transportation where id = $1', [transportationId]);
     return rows[0] ? Number(rows[0].price) : 0;
 }
 
-interface ItemEntrada {
-    variantId?: number;
-    cantidad?: number;
-    nota?: string;
-}
-
-function validarItems(items: unknown): items is Required<Pick<ItemEntrada, 'variantId' | 'cantidad'>>[] & ItemEntrada[] {
-    if (!Array.isArray(items)) return false;
-    return items.every((item) => {
-        if (!item || typeof item !== 'object') return false;
-        const it = item as Record<string, unknown>;
-        return typeof it.variantId === 'number' && typeof it.cantidad === 'number' && it.cantidad > 0;
-    });
-}
-
-async function reemplazarItems(quoteId: string | number, items: ItemEntrada[]): Promise<void> {
-    await pool.query('delete from quote_items where quote_id = $1', [quoteId]);
-    if (items.length === 0) return;
-
-    const values: unknown[] = [];
-    const placeholders = items.map((item, idx) => {
-        values.push(quoteId, item.variantId, item.cantidad, item.nota || null);
-        const base = idx * 4;
-        return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4})`;
-    }).join(', ');
-
-    await pool.query(`insert into quote_items (quote_id, variant_id, quantity, nota) values ${placeholders}`, values);
-}
-
 export const cotizacionesRouter = Router();
 
 // Público: lo usa el cotizador para guardar la cotización real.
-cotizacionesRouter.post('/', asyncHandler(async (req, res) => {
-    const body = req.body as {
-        cliente?: { nombre?: string; correo?: string; telefono?: string; documento?: string };
-        tipoEvento?: string;
-        venueId?: number;
-        venueNombreManual?: string;
-        venueDireccionManual?: string;
-        transportationId?: number;
-        fechaEvento?: string;
-        items?: unknown;
-    };
+// Cliente + cotización + servicios se guardan con UNA sola consulta: quien cotiza espera esta
+// respuesta antes de bajar su PDF y cada viaje a la base cuesta ~0,25 s (antes eran 7 viajes,
+// ~2 s). Al ser una sola sentencia SQL es atómica: si algo falla (p. ej. un servicio que ya no
+// existe) no queda nada a medias.
+cotizacionesRouter.post('/', limiteCotizar, asyncHandler(async (req, res) => {
+    const entrada = normalizarCotizacion(req.body);
+    if (!entrada.ok) return res.status(400).json({ status: 'error', message: entrada.message });
+    const { cliente, items } = entrada.datos;
 
-    const cliente = body.cliente;
-    if (!cliente?.nombre || !cliente?.correo || !cliente?.telefono) {
-        return res.status(400).json({ status: 'error', message: 'Faltan los datos de contacto del cliente' });
-    }
-    if (body.items !== undefined && !validarItems(body.items)) {
-        return res.status(400).json({ status: 'error', message: 'La lista de servicios no es válida' });
-    }
-
-    const items = (body.items as ItemEntrada[]) || [];
-    const totalTransporte = await precioTransporte(body.transportationId || null);
-
-    if (items.length === 0 && totalTransporte === 0) {
+    // Sin servicios, la cotización solo es válida si el transporte elegido tiene precio.
+    if (items.length === 0 && (await precioTransporte(entrada.datos.transportationId)) === 0) {
         return res.status(400).json({ status: 'error', message: 'La cotización no tiene servicios seleccionados' });
     }
 
-    const { rows: userRows } = await pool.query<{ id: number }>(
-        `insert into users (email, name, phone, documento) values ($1, $2, $3, $4)
-         on conflict (email) do update set name = excluded.name, phone = excluded.phone,
-            documento = coalesce(excluded.documento, users.documento)
-         returning id`,
-        [cliente.correo.trim().toLowerCase(), cliente.nombre.trim(), cliente.telefono.trim(), cliente.documento?.trim() || null]
-    );
-    const clientId = userRows[0].id;
-
-    // `total` arranca en solo el transporte (lo único que esta ruta no deriva de
-    // quote_items): la tabla `quote` tiene un trigger propio (update_total_quote) que
-    // suma/resta automáticamente el precio de cada quote_items al insertarlo/borrarlo,
-    // así que el total de los servicios NUNCA se fija a mano — eso es lo que provocaba
-    // que total quedara desincronizado (y hasta negativo) frente al constraint de la BD.
-    const { rows: quoteRows } = await pool.query<{ id: number; created_at: string }>(
-        `insert into quote (total, client_id, event_type, venue_id, transportation_id, date, venue_nombre_manual, venue_direccion_manual)
-         values ($1, $2, $3, $4, $5, $6, $7, $8)
-         returning id, created_at`,
-        [
-            totalTransporte, clientId, body.tipoEvento || null, body.venueId || null, body.transportationId || null, body.fechaEvento || null,
-            body.venueId ? null : (body.venueNombreManual?.trim() || null),
-            body.venueId ? null : (body.venueDireccionManual?.trim() || null)
-        ]
-    );
-    const quoteId = quoteRows[0].id;
-
-    await reemplazarItems(quoteId, items);
-
-    if (process.env.EMAIL_JEFE) {
-        const { rows: totalRows } = await pool.query<{ total: string }>('select total from quote where id = $1', [quoteId]);
-        const totalFinal = Number(totalRows[0]?.total || 0);
-        enviarCorreo({
-            from: `"Planet Producciones" <${process.env.EMAIL_USER}>`,
-            to: process.env.EMAIL_JEFE,
-            subject: `Nueva cotización recibida: ${cliente.nombre} (${numeroReferencia(quoteId, quoteRows[0].created_at)})`,
-            text: `Se recibió una nueva cotización para revisar en el panel.\n\nCliente: ${cliente.nombre}\nReferencia: ${numeroReferencia(quoteId, quoteRows[0].created_at)}\nTotal estimado: $ ${totalFinal.toLocaleString('es-CO')} COP\n\nIngresa a tu panel para revisarla.`
-        }).catch((err: Error) => console.error('Error enviando aviso de nueva cotización:', err.message));
+    let quoteId: number;
+    let creadaEn: string;
+    try {
+        // El cliente se identifica por su correo, pero su nombre y teléfono NO se pisan: si ese
+        // correo ya existía, se conserva lo que había (solo se completan datos que faltaban).
+        // Lo que escribió esta persona queda guardado en la propia cotización.
+        //
+        // `total` arranca en solo el transporte (lo único que esta ruta no deriva de
+        // quote_items): la tabla `quote` tiene un trigger propio (update_total_quote) que
+        // suma/resta automáticamente el precio de cada quote_items al insertarlo/borrarlo,
+        // así que el total de los servicios NUNCA se fija a mano — eso es lo que provocaba
+        // que total quedara desincronizado (y hasta negativo) frente al constraint de la BD.
+        const { rows } = await pool.query<{ id: string; created_at: string }>(
+            `with cliente as (
+                 insert into users (email, name, phone, documento) values ($1, $2, $3, $4)
+                 on conflict (email) do update set
+                    phone = coalesce(nullif(users.phone, ''), excluded.phone),
+                    documento = coalesce(nullif(users.documento, ''), excluded.documento)
+                 returning id
+             ), cotizacion as (
+                 insert into quote (total, client_id, cliente_nombre, cliente_telefono, cliente_documento,
+                                    event_type, venue_id, transportation_id, date, venue_nombre_manual, venue_direccion_manual)
+                 select coalesce((select price from transportation where id = $9::bigint), 0), cliente.id, $2, $3, $4,
+                        $5, $6::bigint, $9::bigint, $7::date, $8, $10
+                 from cliente
+                 returning id, created_at
+             ), servicios as (
+                 insert into quote_items (quote_id, variant_id, quantity, nota)
+                 select cotizacion.id, s.variante, s.cantidad, s.nota
+                 from cotizacion, unnest($11::bigint[], $12::int[], $13::text[]) as s(variante, cantidad, nota)
+                 returning 1
+             )
+             select id, created_at from cotizacion`,
+            [
+                cliente.correo, cliente.nombre, cliente.telefono, cliente.documento,
+                entrada.datos.tipoEvento, entrada.datos.venueId, entrada.datos.fechaEvento,
+                entrada.datos.venueNombreManual, entrada.datos.transportationId, entrada.datos.venueDireccionManual,
+                items.map((i) => i.variantId), items.map((i) => i.cantidad), items.map((i) => i.nota ?? null)
+            ]
+        );
+        quoteId = Number(rows[0].id);
+        creadaEn = rows[0].created_at;
+    } catch (error) {
+        // 23503: un servicio, sede o transporte que ya no existe en la base.
+        if ((error as { code?: string }).code === '23503') {
+            return res.status(400).json({ status: 'error', message: 'Alguno de los servicios elegidos ya no está disponible. Recarga la página e inténtalo de nuevo.' });
+        }
+        // 22003: el valor de un servicio (precio x cantidad) supera lo que el cálculo de totales de la base admite.
+        if ((error as { code?: string }).code === '22003') {
+            return res.status(400).json({ status: 'error', message: 'El valor de la cotización es demasiado alto. Reduce las cantidades e inténtalo de nuevo.' });
+        }
+        throw error;
     }
 
-    res.status(201).json({ status: 'ok', id: quoteId, numeroReferencia: numeroReferencia(quoteId, quoteRows[0].created_at) });
+    res.status(201).json({ status: 'ok', id: quoteId, numeroReferencia: numeroReferencia(quoteId, creadaEn) });
+
+    // El aviso a la jefa sale después de responder: quien cotiza no espera ni a la consulta del
+    // total ni al correo.
+    if (process.env.EMAIL_JEFE) {
+        void avisarNuevaCotizacion(quoteId, creadaEn, cliente.nombre);
+    }
 }));
+
+/**
+ * Correo a la jefa avisando de una cotización nueva. Se llama sin esperar y no afecta al cliente si falla.
+ */
+async function avisarNuevaCotizacion(quoteId: number, creadaEn: string, nombreCliente: string): Promise<void> {
+    try {
+        const { rows } = await pool.query<{ total: string }>('select total from quote where id = $1', [quoteId]);
+        const total = Number(rows[0]?.total || 0);
+        await enviarCorreo({
+            from: `"Planet Producciones" <${process.env.EMAIL_USER}>`,
+            to: process.env.EMAIL_JEFE,
+            subject: `Nueva cotización recibida: ${nombreCliente} (${numeroReferencia(quoteId, creadaEn)})`,
+            text: `Se recibió una nueva cotización para revisar en el panel.\n\nCliente: ${nombreCliente}\nReferencia: ${numeroReferencia(quoteId, creadaEn)}\nTotal estimado: $ ${total.toLocaleString('es-CO')} COP\n\nIngresa a tu panel para revisarla.`
+        });
+    } catch (err) {
+        console.error('Error enviando aviso de nueva cotización:', (err as Error).message);
+    }
+}
+
+// Un id que no es un número (p. ej. /api/cotizaciones/abc) es simplemente una cotización que no existe:
+// sin esto la consulta fallaba al convertirlo y el usuario veía un error 500.
+cotizacionesRouter.param('id', (_req, res, next, valor) => {
+    if (/^[0-9]{1,15}$/.test(String(valor))) return next();
+    res.status(404).json({ status: 'error', message: 'Cotización no encontrada' });
+});
 
 cotizacionesRouter.use(requireAuth);
 
+// Listado filtrable por estado (?estado=a,b). La secretaria solo recibe los estados que le corresponden.
 cotizacionesRouter.get('/', requireRole('administrador', 'secretaria'), asyncHandler(async (req, res) => {
     const estadoParam = req.query.estado as string | undefined;
     let estados = estadoParam
@@ -269,8 +366,9 @@ cotizacionesRouter.get('/', requireRole('administrador', 'secretaria'), asyncHan
     res.json(rows.map((f) => mapCotizacion(f)));
 }));
 
+// Detalle de una cotización con sus servicios. La secretaria no puede abrir las que aún se revisan.
 cotizacionesRouter.get('/:id', requireRole('administrador', 'secretaria'), asyncHandler(async (req, res) => {
-    const fila = await obtenerFilaCotizacion(req.params.id);
+    const [fila, items, extras] = await Promise.all([obtenerFilaCotizacion(req.params.id), obtenerItems(req.params.id), obtenerExtras(req.params.id)]);
     if (!fila) return res.status(404).json({ status: 'error', message: 'Cotización no encontrada' });
 
     const estado = derivarEstado(fila);
@@ -278,40 +376,90 @@ cotizacionesRouter.get('/:id', requireRole('administrador', 'secretaria'), async
         return res.status(403).json({ status: 'error', message: 'No tienes permiso para ver esta cotización' });
     }
 
-    const items = await obtenerItems(fila.id);
-    res.json(mapCotizacion(fila, items));
+    res.json(mapCotizacion(fila, items, extras, req.usuario!.rol === 'administrador'));
 }));
 
 cotizacionesRouter.put('/:id/items', requireRole('administrador'), asyncHandler(async (req, res) => {
-    const { items } = req.body as { items?: unknown };
-    if (!validarItems(items)) {
+    const items = normalizarItems((req.body as { items?: unknown }).items);
+    if (items === null) {
         return res.status(400).json({ status: 'error', message: 'La lista de servicios no es válida' });
     }
+    // Si no vienen `extras`, los elementos adicionales guardados no se tocan; si vienen, la lista reemplaza a la guardada.
+    const extras = normalizarExtras((req.body as { extras?: unknown }).extras);
+    if (extras === null) {
+        return res.status(400).json({ status: 'error', message: 'La lista de elementos adicionales no es válida. Revisa el nombre, la cantidad y el precio de cada uno.' });
+    }
 
-    const fila = await obtenerFilaCotizacion(req.params.id);
+    const [fila, itemsAntes, extrasAntes] = await Promise.all([obtenerFilaCotizacion(req.params.id), obtenerItems(req.params.id), obtenerExtras(req.params.id)]);
     if (!fila) return res.status(404).json({ status: 'error', message: 'Cotización no encontrada' });
-
-    const itemsAntes = await obtenerItems(fila.id);
-
-    // `quote.total` lo mantiene el trigger update_total_quote() con cada insert/delete de
-    // quote_items — no se recalcula ni se fija a mano aquí (ver nota en POST / más arriba).
-    await reemplazarItems(fila.id, items);
 
     const nuevoEstado = fila.quote_estado === 'recibida' ? 'en_revision' : fila.quote_estado;
 
-    await pool.query('update quote set estado = $1, updated_at = now() where id = $2', [nuevoEstado, req.params.id]);
+    // Todo o nada: antes los servicios se borraban y se insertaban por separado, y si la
+    // inserción fallaba (p. ej. un servicio que ya no existe) la cotización se quedaba SIN servicios.
+    // `quote.total` lo mantiene el trigger update_total_quote() con cada insert/delete de
+    // quote_items — no se recalcula ni se fija a mano aquí (ver nota en POST / más arriba).
+    const db = await pool.connect();
+    try {
+        await db.query('begin');
+        await db.query('delete from quote_items where quote_id = $1', [fila.id]);
+        if (extras !== undefined) {
+            // El trigger update_total_quote_extra resta cada elemento al borrarlo y suma los nuevos al insertarlos.
+            await db.query('delete from quote_extra_items where quote_id = $1', [fila.id]);
+            if (extras.length > 0) {
+                await db.query(
+                    `insert into quote_extra_items (quote_id, tag, name, description, quantity, unit_price, supplier, supplier_cost, nota)
+                     select $1, s.tag, s.nombre, s.descripcion, s.cantidad, s.precio, s.proveedor, s.costo, s.nota
+                     from unnest($2::text[], $3::text[], $4::text[], $5::int[], $6::numeric[], $7::text[], $8::numeric[], $9::text[])
+                          as s(tag, nombre, descripcion, cantidad, precio, proveedor, costo, nota)`,
+                    [
+                        fila.id,
+                        extras.map((e) => e.tag), extras.map((e) => e.nombre), extras.map((e) => e.descripcion ?? null),
+                        extras.map((e) => e.cantidad), extras.map((e) => e.precioUnit), extras.map((e) => e.proveedor ?? null),
+                        extras.map((e) => e.costoProveedor ?? null), extras.map((e) => e.nota ?? null)
+                    ]
+                );
+            }
+        }
+        if (items.length > 0) {
+            await db.query(
+                `insert into quote_items (quote_id, variant_id, quantity, nota)
+                 select $1, s.variante, s.cantidad, s.nota
+                 from unnest($2::bigint[], $3::int[], $4::text[]) as s(variante, cantidad, nota)`,
+                [fila.id, items.map((i) => i.variantId), items.map((i) => i.cantidad), items.map((i) => i.nota ?? null)]
+            );
+        }
+        await db.query(
+            `with estado as (update quote set estado = $1, updated_at = now() where id = $2 returning id)
+             insert into quote_historial (quote_id, profile_id, profile_nombre, tipo, items_antes, items_despues, estado_antes, estado_despues)
+             values ($2, $3, $4, 'edicion', $5, $6, $7, $1)`,
+            [
+                nuevoEstado, fila.id, req.usuario!.id, req.usuario!.nombre,
+                JSON.stringify([...itemsAntes, ...resumenExtras(extrasAntes)]),
+                JSON.stringify([...items, ...(extras === undefined ? resumenExtras(extrasAntes) : extras.map((e) => ({ externo: true, tag: e.tag, nombre: e.nombre, cantidad: e.cantidad, precioUnit: e.precioUnit })))]),
+                fila.quote_estado
+            ]
+        );
+        await db.query('commit');
+    } catch (error) {
+        await db.query('rollback').catch(() => undefined);
+        const code = (error as { code?: string }).code;
+        if (code === '23503') {
+            return res.status(400).json({ status: 'error', message: 'Alguno de los servicios elegidos ya no está disponible. Recarga la página e inténtalo de nuevo.' });
+        }
+        if (code === '22003') {
+            return res.status(400).json({ status: 'error', message: 'El valor de la cotización es demasiado alto. Reduce las cantidades e inténtalo de nuevo.' });
+        }
+        throw error;
+    } finally {
+        db.release();
+    }
 
-    await pool.query(
-        `insert into quote_historial (quote_id, profile_id, profile_nombre, tipo, items_antes, items_despues, estado_antes, estado_despues)
-         values ($1, $2, $3, 'edicion', $4, $5, $6, $7)`,
-        [req.params.id, req.usuario!.id, req.usuario!.nombre, JSON.stringify(itemsAntes), JSON.stringify(items), fila.quote_estado, nuevoEstado]
-    );
-
-    const filaActualizada = await obtenerFilaCotizacion(req.params.id);
-    const itemsFinal = await obtenerItems(req.params.id);
-    res.json(mapCotizacion(filaActualizada!, itemsFinal));
+    res.json(await cargarCotizacion(req.params.id));
 }));
 
+// Corrige datos de la cotización: cliente, tipo de evento, sede, transporte y fecha. Si la cotización
+// ya es un evento, los datos del evento se actualizan en la tabla events; si no, en quote.
 cotizacionesRouter.put('/:id/datos', requireRole('administrador'), asyncHandler(async (req, res) => {
     const body = req.body as {
         clienteNombre?: string;
@@ -337,22 +485,37 @@ cotizacionesRouter.put('/:id/datos', requireRole('administrador'), asyncHandler(
     const transportationIdProvisto = Object.prototype.hasOwnProperty.call(body, 'transportationId');
     const nuevoTransportationId = body.transportationId ?? null;
 
-    if (fila.client_id) {
-        await pool.query(
-            `update users set
-                name = coalesce($1, name),
-                email = coalesce($2, email),
-                phone = coalesce($3, phone),
-                documento = coalesce($4, documento)
-             where id = $5`,
-            [
-                body.clienteNombre?.trim() || null,
-                body.clienteCorreo?.trim().toLowerCase() || null,
-                body.clienteTelefono?.trim() || null,
-                body.clienteDocumento?.trim() || null,
-                fila.client_id
-            ]
+    // Nombre, teléfono y documento se corrigen SOLO en esta cotización: antes se cambiaban en el
+    // cliente compartido y arrastraban a todas las demás cotizaciones con el mismo correo.
+    await pool.query(
+        `update quote set
+            cliente_nombre = coalesce($1, cliente_nombre),
+            cliente_telefono = coalesce($2, cliente_telefono),
+            cliente_documento = coalesce($3, cliente_documento)
+         where id = $4`,
+        [
+            limpiarTexto(body.clienteNombre).slice(0, LIMITES.nombre) || null,
+            limpiarTexto(body.clienteTelefono).slice(0, LIMITES.telefono) || null,
+            limpiarTexto(body.clienteDocumento).slice(0, LIMITES.documento) || null,
+            fila.id
+        ]
+    );
+
+    // El correo identifica al cliente: si cambia, esta cotización pasa al cliente con ese correo
+    // (se crea si no existe) sin tocar a las demás cotizaciones del correo anterior.
+    const nuevoCorreo = limpiarTexto(body.clienteCorreo).toLowerCase();
+    if (nuevoCorreo && nuevoCorreo !== (fila.cliente_correo || '').toLowerCase()) {
+        if (!esCorreoValido(nuevoCorreo)) {
+            return res.status(400).json({ status: 'error', message: 'El correo no es válido' });
+        }
+        const { rows: cliente } = await pool.query<{ id: number }>(
+            `insert into users (email, name, phone, documento) values ($1, $2, $3, $4)
+             on conflict (email) do update set email = users.email
+             returning id`,
+            [nuevoCorreo, fila.cliente_nombre || nuevoCorreo.split('@')[0], fila.cliente_telefono, fila.cliente_documento]
         );
+        await pool.query('update quote set client_id = $1 where id = $2', [cliente[0].id, fila.id]);
+        if (fila.event_id) await pool.query('update events set client_id = $1 where id = $2', [cliente[0].id, fila.event_id]);
     }
 
     // venueId (sede del catálogo) y venueNombreManual (sede "Otro") son mutuamente
@@ -397,11 +560,10 @@ cotizacionesRouter.put('/:id/datos', requireRole('administrador'), asyncHandler(
         await pool.query('update quote set total = total + $1 where id = $2', [precioNuevo - precioViejo, fila.id]);
     }
 
-    const filaActualizada = await obtenerFilaCotizacion(req.params.id);
-    const items = await obtenerItems(req.params.id);
-    res.json(mapCotizacion(filaActualizada!, items));
+    res.json(await cargarCotizacion(req.params.id));
 }));
 
+// Agrega un comentario interno al historial de la cotización.
 cotizacionesRouter.post('/:id/comentarios', requireRole('administrador'), asyncHandler(async (req, res) => {
     const { comentario } = req.body as { comentario?: string };
     if (!comentario?.trim()) {
@@ -417,6 +579,7 @@ cotizacionesRouter.post('/:id/comentarios', requireRole('administrador'), asyncH
     res.status(201).json({ status: 'ok' });
 }));
 
+// Historial de la cotización: comentarios, ediciones y cambios de estado, del más antiguo al más nuevo.
 cotizacionesRouter.get('/:id/historial', requireRole('administrador'), asyncHandler(async (req, res) => {
     const { rows } = await pool.query(
         `select * from quote_historial where quote_id = $1 order by creado_en asc`,
@@ -436,6 +599,8 @@ cotizacionesRouter.get('/:id/historial', requireRole('administrador'), asyncHand
     })));
 }));
 
+// Finaliza la cotización: exige fecha del evento y crea el evento correspondiente (a las 00:00 hasta que
+// se defina la hora).
 cotizacionesRouter.post('/:id/finalizar', requireRole('administrador'), asyncHandler(async (req, res) => {
     const fila = await obtenerFilaCotizacion(req.params.id);
     if (!fila) return res.status(404).json({ status: 'error', message: 'Cotización no encontrada' });
@@ -446,27 +611,35 @@ cotizacionesRouter.post('/:id/finalizar', requireRole('administrador'), asyncHan
         return res.status(400).json({ status: 'error', message: 'Esta cotización ya fue finalizada' });
     }
 
-    await pool.query(
-        `insert into events (quote_id, venue_id, transportation_id, event_type, address, date, hour, confirmed, initial_payment, client_id, total_paid, venue_nombre_manual, venue_direccion_manual)
-         values ($1, $2, $3, $4, null, $5, '00:00:00', false, false, $6, 0, $7, $8)`,
-        [fila.id, fila.venue_id, fila.transportation_id, fila.event_type, fila.fecha_evento, fila.client_id, fila.venue_nombre_manual, fila.venue_direccion_manual]
-    );
+    // Evento + estado + historial en UNA sola sentencia: es atómica (no puede quedar un evento
+    // sin historial) y ahorra dos viajes a la base. Un doble clic ya no da un error 500: el
+    // segundo intento choca con events.quote_id (único) y se responde que ya fue finalizada.
+    try {
+        await pool.query(
+            `with evento as (
+                 insert into events (quote_id, venue_id, transportation_id, event_type, address, date, hour, confirmed, initial_payment, client_id, total_paid, venue_nombre_manual, venue_direccion_manual)
+                 values ($1, $2, $3, $4, null, $5, '00:00:00', false, false, $6, 0, $7, $8)
+                 returning id
+             ), estado as (
+                 update quote set estado = 'finalizada', updated_at = now() where id = $1 returning id
+             )
+             insert into quote_historial (quote_id, profile_id, profile_nombre, tipo, estado_antes, estado_despues)
+             values ($1, $9, $10, 'cambio_estado', $11, 'finalizada')`,
+            [fila.id, fila.venue_id, fila.transportation_id, fila.event_type, fila.fecha_evento, fila.client_id, fila.venue_nombre_manual, fila.venue_direccion_manual, req.usuario!.id, req.usuario!.nombre, fila.quote_estado]
+        );
+    } catch (error) {
+        if ((error as { code?: string }).code === '23505') {
+            return res.status(400).json({ status: 'error', message: 'Esta cotización ya fue finalizada' });
+        }
+        throw error;
+    }
 
-    await pool.query(`update quote set estado = 'finalizada', updated_at = now() where id = $1`, [fila.id]);
-
-    await pool.query(
-        `insert into quote_historial (quote_id, profile_id, profile_nombre, tipo, estado_antes, estado_despues)
-         values ($1, $2, $3, 'cambio_estado', $4, 'finalizada')`,
-        [fila.id, req.usuario!.id, req.usuario!.nombre, fila.quote_estado]
-    );
-
-    const filaActualizada = await obtenerFilaCotizacion(req.params.id);
-    const items = await obtenerItems(req.params.id);
-    res.json(mapCotizacion(filaActualizada!, items));
+    res.json(await cargarCotizacion(req.params.id));
 }));
 
+// PDF de la cotización para descargar desde el panel.
 cotizacionesRouter.get('/:id/pdf', requireRole('administrador', 'secretaria'), asyncHandler(async (req, res) => {
-    const fila = await obtenerFilaCotizacion(req.params.id);
+    const [fila, itemsGuardados, extrasGuardados] = await Promise.all([obtenerFilaCotizacion(req.params.id), obtenerItems(req.params.id), obtenerExtras(req.params.id)]);
     if (!fila) return res.status(404).json({ status: 'error', message: 'Cotización no encontrada' });
 
     const estado = derivarEstado(fila);
@@ -474,8 +647,8 @@ cotizacionesRouter.get('/:id/pdf', requireRole('administrador', 'secretaria'), a
         return res.status(403).json({ status: 'error', message: 'No tienes permiso para ver esta cotización' });
     }
 
-    const itemsGuardados = await obtenerItems(fila.id);
-    const items: ItemCotizacionPdf[] = itemsGuardados.map((i) => ({
+    // Para el cliente un elemento adicional es un servicio más: nada indica que se consigue aparte.
+    const items: ItemCotizacionPdf[] = [...itemsGuardados, ...extrasGuardados].map((i) => ({
         tag: i.tag,
         nombre: i.cantidad > 1 ? `${i.cantidad} x ${i.nombre}` : i.nombre,
         descripcion: i.descripcion,
@@ -500,6 +673,7 @@ cotizacionesRouter.get('/:id/pdf', requireRole('administrador', 'secretaria'), a
     res.send(buffer);
 }));
 
+// Deja el evento como definitivo (programado). Exige contrato enviado y contrato firmado subido.
 cotizacionesRouter.post('/:id/marcar-definitivo', requireRole('administrador'), asyncHandler(async (req, res) => {
     const fila = await obtenerFilaCotizacion(req.params.id);
     if (!fila) return res.status(404).json({ status: 'error', message: 'Cotización no encontrada' });
@@ -510,15 +684,17 @@ cotizacionesRouter.post('/:id/marcar-definitivo', requireRole('administrador'), 
         return res.status(400).json({ status: 'error', message: 'Sube el contrato firmado antes de marcar el evento como definitivo' });
     }
 
-    await pool.query('update events set confirmed = true, updated_at = now() where id = $1', [fila.event_id]);
-
+    // Estado del evento + historial en una sola sentencia (atómica, un viaje a la base en vez de dos).
+    // El historial solo se escribe si ESTA llamada fue la que lo dejó definitivo: con un doble clic
+    // (o dos personas a la vez) no se duplica, y la segunda llamada simplemente devuelve el estado actual.
     await pool.query(
-        `insert into quote_historial (quote_id, profile_id, profile_nombre, tipo, estado_antes, estado_despues)
-         values ($1, $2, $3, 'cambio_estado', 'contrato_enviado', 'programada')`,
-        [fila.id, req.usuario!.id, req.usuario!.nombre]
+        `with confirmado as (
+             update events set confirmed = true, updated_at = now() where id = $1 and confirmed = false returning id
+         )
+         insert into quote_historial (quote_id, profile_id, profile_nombre, tipo, estado_antes, estado_despues)
+         select $2::bigint, $3::uuid, $4::text, 'cambio_estado', 'contrato_enviado', 'programada' from confirmado`,
+        [fila.event_id, fila.id, req.usuario!.id, req.usuario!.nombre]
     );
 
-    const filaActualizada = await obtenerFilaCotizacion(req.params.id);
-    const items = await obtenerItems(req.params.id);
-    res.json(mapCotizacion(filaActualizada!, items));
+    res.json(await cargarCotizacion(req.params.id));
 }));

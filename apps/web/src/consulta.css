@@ -298,7 +298,7 @@
 .consulta-detalle-titulos h2 {
     font-size: 1.35rem;
     line-height: 1.25;
-    color: #fff;
+    color: var(--ink);
 }
 
 .consulta-detalle-titulos h2:focus {
@@ -366,7 +366,7 @@
     font-size: 0.72rem;
     text-align: center;
     font-variant-numeric: tabular-nums;
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--sunken);
     border-radius: 999px;
 }
 
@@ -430,7 +430,7 @@
     padding: 0.75rem 0.9rem;
     font-size: 0.85rem;
     line-height: 1.45;
-    color: #fed7aa;
+    color: var(--orange-text);
     background: rgba(249, 115, 22, 0.12);
     border: 1px solid rgba(249, 115, 22, 0.3);
     border-radius: 12px;
@@ -561,11 +561,11 @@
 .servicios-tabla td {
     padding: 0.65rem 0.6rem;
     vertical-align: top;
-    border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+    border-bottom: 1px dashed var(--line);
 }
 
 .servicios-tabla tbody tr:hover td {
-    background: rgba(255, 255, 255, 0.025);
+    background: var(--sunken);
 }
 
 .servicios-tabla .num {
@@ -577,7 +577,7 @@
 .servicios-nombre strong {
     display: block;
     font-weight: 600;
-    color: #fff;
+    color: var(--ink);
 }
 
 .servicios-incluye,
@@ -603,7 +603,7 @@
 
 .servicios-subtotal {
     font-weight: 700;
-    color: #fff;
+    color: var(--ink);
 }
 
 .servicios-sin-resultados {
@@ -665,7 +665,7 @@
 
 .servicios-pagina[aria-current="page"] {
     font-weight: 700;
-    color: #fff;
+    color: var(--ink);
     background: linear-gradient(to right, var(--orange-main), var(--orange-hover));
     border-color: transparent;
 }
@@ -704,7 +704,7 @@
 }
 
 .consulta-hist {
-    border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+    border-bottom: 1px dashed var(--line);
 }
 
 .consulta-hist:last-child {
@@ -977,7 +977,7 @@
         grid-template-columns: minmax(0, 1fr) auto;
         gap: 0.3rem 0.75rem;
         padding: 0.75rem 0;
-        border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+        border-bottom: 1px dashed var(--line);
     }
 
     .servicios-tabla td {

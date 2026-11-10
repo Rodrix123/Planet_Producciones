@@ -1,3 +1,8 @@
+// Herramienta de línea de comandos: carga en la base el catálogo de servicios y precios del cotizador.
+//   npm run seed:catalogo
+// Se puede ejecutar varias veces sin duplicar nada. Los precios que se editan después en la base
+// son los que cuentan: este archivo es el punto de partida.
+
 import 'dotenv/config';
 import { pool } from '../db';
 
@@ -21,8 +26,10 @@ interface InventorySeed {
     label?: string;
 }
 
+// Sedes (recintos) del cotizador.
 const VENUES = ['Hacienda La Soledad', 'Centro de Eventos VIP', 'Recinto Privado'];
 
+// Costo de transporte por ciudad; se suma al total cuando el cliente elige su ciudad.
 const TRANSPORTATION: { city: string; precio: number }[] = [
     { city: 'Manizales', precio: 450000 },
     { city: 'Chinchiná - Santágueda', precio: 550000 },
@@ -30,6 +37,7 @@ const TRANSPORTATION: { city: string; precio: number }[] = [
     { city: 'Armenia', precio: 1000000 }
 ];
 
+// Servicios que se eligen con una lista desplegable (una opción por categoría).
 const INVENTORIOS: InventorySeed[] = [
     {
         type: 'MONTAJE & CARPAS',
@@ -252,6 +260,7 @@ const EFECTOS_SELECT: InventorySeed[] = [
 ];
 
 // Cada checkbox es su propio inventory de una sola variante.
+// Efectos que se agregan con una casilla (uno por inventario, con una sola variante).
 const EFECTOS_CHECKBOX: { nombre: string; precio: number; detalle?: string }[] = [
     { nombre: 'Fuentes de Pirotecnia Indoor (30 seg x 3 mtrs)', precio: 130000, detalle: 'Con disparadores inalámbricos' },
     { nombre: 'Fuentes con Humo de Colores (1 minuto)', precio: 100000 },
@@ -273,6 +282,7 @@ const GENERADORES_CHECKBOX: { nombre: string; precio: number; detalle?: string }
     { nombre: '2 Plantas Eléctricas - Backup', precio: 800000, detalle: 'Costo adicional de $100.000 por hora tras agotarse el combustible inicial' }
 ];
 
+// Mobiliario que se pide por cantidad (precio por unidad).
 const MOBILIARIO_QTY: { nombre: string; precioUnit: number; tag: string }[] = [
     { nombre: 'Mesas tipo Bar', precioUnit: 35000, tag: 'MOBILIARIO CÓCTEL DE BIENVENIDA' },
     { nombre: 'Sillas tipo Bar', precioUnit: 35000, tag: 'MOBILIARIO CÓCTEL DE BIENVENIDA' },
@@ -282,6 +292,9 @@ const MOBILIARIO_QTY: { nombre: string; precioUnit: number; tag: string }[] = [
     { nombre: 'Metro de Bombillo Ping Pong (sin instalación)', precioUnit: 6000, tag: 'EFECTO ESPECIAL FX' }
 ];
 
+/**
+ * Inserta un inventario con sus variantes y precios; si ya existe, actualiza sus datos.
+ */
 async function insertarInventory(seed: InventorySeed): Promise<void> {
     const { rows } = await pool.query<{ id: number }>(
         `insert into inventory (name, type, control_type) values ($1, $2, $3) returning id`,
@@ -304,6 +317,9 @@ async function insertarInventory(seed: InventorySeed): Promise<void> {
     }
 }
 
+/**
+ * Recorre todas las categorías y las carga en orden.
+ */
 async function main() {
     const yaHayDatos = await pool.query('select count(*)::int as n from inventory');
     if (yaHayDatos.rows[0].n > 0) {

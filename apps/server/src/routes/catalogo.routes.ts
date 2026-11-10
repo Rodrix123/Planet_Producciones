@@ -1,6 +1,8 @@
+// Catálogo de servicios y precios (/api/catalogo). Lo consume el cotizador para armar el
+// formulario en vivo desde la base, así los precios nunca quedan desactualizados en la página.
+
 import { Router } from 'express';
 import { pool } from '../db';
-import { requireAuth, requireRole } from '../auth';
 import { asyncHandler } from '../asyncHandler';
 
 export const catalogoRouter = Router();
@@ -32,12 +34,15 @@ catalogoRouter.get('/', asyncHandler(async (_req, res) => {
         )
     ]);
 
+    // Se agrupan los datos por id para armar la respuesta sin consultar de nuevo.
     const variantsPorInventory = new Map<number, typeof variants.rows>();
     for (const v of variants.rows) {
         if (!variantsPorInventory.has(v.inventory_id)) variantsPorInventory.set(v.inventory_id, []);
         variantsPorInventory.get(v.inventory_id)!.push(v);
     }
 
+    // Tramos de precio de cada variante: [{ cantidad, precio }]. El precio de un tramo es el TOTAL de esa
+    // cantidad (ej. 8 unidades = $600.000), no un precio por unidad.
     const tramosPorVariante = new Map<number, { cantidad: number; precio: number }[]>();
     for (const t of tramos.rows) {
         if (!tramosPorVariante.has(t.id_variant)) tramosPorVariante.set(t.id_variant, []);
@@ -54,6 +59,7 @@ catalogoRouter.get('/', asyncHandler(async (_req, res) => {
             controlType: inv.control_type,
             variants: (variantsPorInventory.get(inv.id) || []).map((v) => {
                 const tramosVariante = tramosPorVariante.get(v.id) || [];
+                // Precio de referencia de la variante: el tramo de 1 unidad (o el primero si no existe).
                 const base = tramosVariante.find((t) => t.cantidad === 1) || tramosVariante[0];
                 return {
                     id: v.id,
@@ -64,43 +70,5 @@ catalogoRouter.get('/', asyncHandler(async (_req, res) => {
                 };
             })
         }))
-    });
-}));
-
-// Administradora: crea un ítem "manual" (no viene del catálogo público) para agregarlo
-// a una cotización puntual. Queda como inventory/inventory_variant real, pero oculto
-// del cotizador público (visible_publico = false) para no contaminarlo.
-catalogoRouter.post('/manual', requireAuth, requireRole('administrador'), asyncHandler(async (req, res) => {
-    const body = req.body as { tag?: string; nombre?: string; descripcion?: string; precio?: number };
-    const tag = body.tag?.trim() || 'SERVICIO MANUAL';
-    const nombre = body.nombre?.trim();
-    const precio = Number(body.precio) || 0;
-
-    if (!nombre || precio <= 0) {
-        return res.status(400).json({ status: 'error', message: 'Indica un nombre y un precio mayor a 0' });
-    }
-
-    const { rows: invRows } = await pool.query<{ id: number }>(
-        `insert into inventory (name, type, control_type, visible_publico) values ($1, $2, 'select', false) returning id`,
-        [tag, tag]
-    );
-    const { rows: varRows } = await pool.query(
-        `insert into inventory_variants (inventory_id, simple_description, detailed_description)
-         values ($1, $2, $3) returning id`,
-        [invRows[0].id, nombre, body.descripcion?.trim() || null]
-    );
-    // El precio vive en "PriceVariants" (tramo quantity=1), no en inventory_variants
-    // (esa columna ya no existe): sin esta fila, el ítem manual costaría $0.
-    await pool.query(
-        `insert into "PriceVariants" (id_variant, quantity, price) values ($1, 1, $2)`,
-        [varRows[0].id, precio]
-    );
-
-    res.status(201).json({
-        variantId: Number(varRows[0].id),
-        tag,
-        nombre,
-        descripcion: body.descripcion?.trim() || '',
-        precioUnit: precio
     });
 }));

@@ -1,3 +1,5 @@
+// Inventario en solo lectura (/api/inventario), para la administradora y el jefe de logística.
+
 import { Router } from 'express';
 import { pool } from '../db';
 import { requireAuth, requireRole } from '../auth';
@@ -9,7 +11,8 @@ export const inventarioRouter = Router();
 // (tipo -> elemento -> variante -> unidad física) a partir de inventory,
 // inventory_variants y stock. No se crea/edita nada acá.
 inventarioRouter.get('/', requireAuth, requireRole('administrador', 'jefe_logistica'), asyncHandler(async (_req, res) => {
-    const [elementos, variantes, unidades, tramosBase] = await Promise.all([
+    // Consultas independientes: van en paralelo para esperar una sola vez a la base.
+    const [elementos, variantes, unidades, tramosBase, restriccionEstado] = await Promise.all([
         pool.query<{ id: number; name: string; type: string }>('select id, name, type from inventory order by id'),
         pool.query<{ id: number; inventory_id: number; simple_description: string | null; detailed_description: string | null }>(
             'select id, inventory_id, simple_description, detailed_description from inventory_variants order by id'
@@ -19,9 +22,19 @@ inventarioRouter.get('/', requireAuth, requireRole('administrador', 'jefe_logist
         ),
         // Precio base de cada variante (tramo quantity=1); el precio ya no vive en
         // inventory_variants sino en "PriceVariants".
-        pool.query<{ id_variant: number; price: string }>('select id_variant, price from "PriceVariants" where quantity = 1')
+        pool.query<{ id_variant: number; price: string }>('select id_variant, price from "PriceVariants" where quantity = 1'),
+        // Estados posibles de una unidad: salen de la restricción CHECK de stock.state
+        // (stock_state_check), así la lista sigue a la base si se agrega un estado.
+        pool.query<{ def: string }>(
+            `select pg_get_constraintdef(oid) as def from pg_constraint
+             where conrelid = 'public.stock'::regclass and conname = 'stock_state_check'`
+        )
     ]);
 
+    // "CHECK ((state = ANY (ARRAY['bueno'::text, ...])))" -> ['bueno', ...], en el orden de la base.
+    const estados = [...(restriccionEstado.rows[0]?.def ?? '').matchAll(/'([^']+)'::text/g)].map((m) => m[1]);
+
+    // Se indexa por id para armar el árbol sin volver a consultar ni recorrer listas en cada vuelta.
     const precioBasePorVariante = new Map<number, number>();
     for (const t of tramosBase.rows) precioBasePorVariante.set(t.id_variant, Number(t.price));
 
@@ -37,6 +50,7 @@ inventarioRouter.get('/', requireAuth, requireRole('administrador', 'jefe_logist
         variantesPorElemento.get(v.inventory_id)!.push(v);
     }
 
+    // Árbol final: tipo -> elementos -> variantes -> unidades físicas.
     const tipos = new Map<string, { id: number; nombre: string; variantes: unknown[] }[]>();
     for (const e of elementos.rows) {
         const elemento = {
@@ -61,6 +75,7 @@ inventarioRouter.get('/', requireAuth, requireRole('administrador', 'jefe_logist
         tipos.get(e.type)!.push(elemento);
     }
 
+    // Orden alfabético en español (respeta tildes y eñes).
     const porNombre = (a: string, b: string) => a.localeCompare(b, 'es');
     const respuesta = {
         tipos: [...tipos.entries()]
@@ -68,7 +83,8 @@ inventarioRouter.get('/', requireAuth, requireRole('administrador', 'jefe_logist
                 nombre,
                 elementos: elementos.sort((a, b) => porNombre(a.nombre, b.nombre))
             }))
-            .sort((a, b) => porNombre(a.nombre, b.nombre))
+            .sort((a, b) => porNombre(a.nombre, b.nombre)),
+        estados
     };
 
     res.json(respuesta);

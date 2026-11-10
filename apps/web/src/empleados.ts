@@ -1,3 +1,7 @@
+// Panel de empleados de la administradora (Maritza). Tiene dos partes independientes:
+//   1. Nómina: el personal operativo por tipo de contrato (salario, documento, cuenta bancaria).
+//   2. Cuentas de acceso: quién puede entrar al sistema y con qué rol, y sus días no disponibles.
+
 import './style.css';
 import './shared/panelRail.css';
 import { apiFetch, conManejoDeErrores, exigirSesion } from './shared/api';
@@ -7,8 +11,10 @@ import { avisar, abrirDrawer, cerrarDrawer, abrirModal, cerrarModal, initPanelSh
 declare const Swal: any;
 
 // ---------- Nómina (empleados.id es uuid, tipo_contrato en 3 categorías) ----------
+// Los tres tipos de contrato; deben coincidir con los del servidor (empleados.routes.ts).
 type TipoContrato = 'con_contrato' | 'freelance_fijo' | 'freelance_no_fijo';
 
+// Un empleado de la nómina tal como lo devuelve /api/empleados.
 interface Empleado {
     id: string;
     nombre: string;
@@ -22,6 +28,7 @@ interface Empleado {
 
 const formatterCOP = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
 
+// Trae la nómina y la reparte en sus tres grupos según el tipo de contrato.
 async function cargarEmpleados() {
     const res = await apiFetch('/api/empleados');
     const empleados = (await res.json()) as Empleado[];
@@ -31,6 +38,7 @@ async function cargarEmpleados() {
     renderGrupo('listaFreelanceNoFijo', empleados.filter((e) => e.tipoContrato === 'freelance_no_fijo'));
 }
 
+// Dibuja un grupo de la nómina; tocar una tarjeta abre su formulario y la papelera la elimina.
 function renderGrupo(contenedorId: string, empleados: Empleado[]) {
     const cont = document.getElementById(contenedorId) as HTMLElement;
     cont.innerHTML = '';
@@ -45,8 +53,8 @@ function renderGrupo(contenedorId: string, empleados: Empleado[]) {
         card.className = 'item-card';
         card.innerHTML = `
             <div class="item-card-main">
-                <h3>${emp.nombre}</h3>
-                <p>${emp.documento ? 'CC ' + emp.documento + ' · ' : ''}${emp.telefono || 'Sin teléfono'}${emp.numeroCuenta ? ' · Cuenta ' + emp.numeroCuenta + (emp.banco ? ' (' + emp.banco + ')' : '') : ''}</p>
+                <h3>${esc(emp.nombre)}</h3>
+                <p>${esc((emp.documento ? 'CC ' + emp.documento + ' · ' : '') + (emp.telefono || 'Sin teléfono') + (emp.numeroCuenta ? ' · Cuenta ' + emp.numeroCuenta + (emp.banco ? ' (' + emp.banco + ')' : '') : ''))}</p>
             </div>
             <div class="item-card-side">
                 <div class="item-card-total">${emp.salario ? formatterCOP.format(emp.salario) : 'Sin salario definido'}</div>
@@ -64,6 +72,8 @@ function renderGrupo(contenedorId: string, empleados: Empleado[]) {
     });
 }
 
+// Formulario para crear (sin empleado) o editar un empleado. `tipoPorDefecto` preselecciona el tipo de
+// contrato cuando se crea desde el botón de un grupo.
 async function abrirFormularioEmpleado(empleado?: Empleado, tipoPorDefecto?: TipoContrato) {
     const { value: datos } = await Swal.fire({
         title: `<i class="fa-solid ${empleado ? 'fa-user-pen' : 'fa-user-plus'}" style="color:var(--orange-main); margin-right:0.5rem;"></i>${empleado ? 'Editar empleado' : 'Nuevo empleado'}`,
@@ -79,15 +89,15 @@ async function abrirFormularioEmpleado(empleado?: Empleado, tipoPorDefecto?: Tip
             <div class="form-grid-campos">
                 <div class="campo-full">
                     <label for="swalNombre">Nombre completo</label>
-                    <input id="swalNombre" placeholder="Ej. Juan Pérez" value="${empleado?.nombre || ''}">
+                    <input id="swalNombre" placeholder="Ej. Juan Pérez" value="${esc(empleado?.nombre || '')}">
                 </div>
                 <div>
                     <label for="swalDocumento">Documento / Cédula</label>
-                    <input id="swalDocumento" placeholder="Ej. 1012345678" value="${empleado?.documento || ''}">
+                    <input id="swalDocumento" placeholder="Ej. 1012345678" value="${esc(empleado?.documento || '')}">
                 </div>
                 <div>
                     <label for="swalTelefono">Teléfono</label>
-                    <input id="swalTelefono" placeholder="Ej. 300 123 4567" value="${empleado?.telefono || ''}">
+                    <input id="swalTelefono" placeholder="Ej. 300 123 4567" value="${esc(empleado?.telefono || '')}">
                 </div>
                 <div>
                     <label for="swalSalario">Salario</label>
@@ -103,11 +113,11 @@ async function abrirFormularioEmpleado(empleado?: Empleado, tipoPorDefecto?: Tip
                 </div>
                 <div>
                     <label for="swalCuenta">Número de cuenta bancaria</label>
-                    <input id="swalCuenta" placeholder="Ej. 1234567890" value="${empleado?.numeroCuenta || ''}">
+                    <input id="swalCuenta" placeholder="Ej. 1234567890" value="${esc(empleado?.numeroCuenta || '')}">
                 </div>
                 <div>
                     <label for="swalBanco">Banco</label>
-                    <input id="swalBanco" placeholder="Ej. Bancolombia" value="${empleado?.banco || ''}">
+                    <input id="swalBanco" placeholder="Ej. Bancolombia" value="${esc(empleado?.banco || '')}">
                 </div>
             </div>
         `,
@@ -145,6 +155,7 @@ async function abrirFormularioEmpleado(empleado?: Empleado, tipoPorDefecto?: Tip
     await cargarEmpleados();
 }
 
+// Pide confirmación y desactiva al empleado (deja de aparecer en la lista).
 async function eliminarEmpleado(id: string) {
     const confirmacion = await Swal.fire({
         icon: 'warning',
@@ -162,12 +173,14 @@ async function eliminarEmpleado(id: string) {
 }
 
 // ---------- Cuentas de acceso (administrador/secretaria/jefe_logistica) ----------
+// Un rol del sistema, tal como lo devuelve /api/cuentas-acceso.
 interface Rol {
     id: number;
     nombre: string;
     descripcion: string | null;
 }
 
+// Una cuenta de acceso con su rol y sus días no disponibles.
 interface Cuenta {
     id: string;
     nombre: string;
@@ -180,12 +193,14 @@ interface Cuenta {
     ultimoAcceso: string | null;
 }
 
+// Cómo se muestra cada rol.
 const NOMBRE_ROL: Record<string, string> = {
     administrador: 'Administradora',
     secretaria: 'Secretaria',
     jefe_logistica: 'Jefe de Logística'
 };
 
+// Estado de la pantalla: roles, cuentas cargadas y la cuenta abierta en el panel lateral.
 let roles: Rol[] = [];
 let cuentas: Cuenta[] = [];
 let cuentaSeleccionadaId: string | null = null;
@@ -193,14 +208,17 @@ let cuentaSeleccionadaId: string | null = null;
 const rolesGrid = document.getElementById('rolesGrid') as HTMLElement;
 const drawerDelete = document.getElementById('drawerDelete') as HTMLButtonElement;
 
+// Nombre legible de un rol.
 function tituloRol(nombre: string): string {
     return NOMBRE_ROL[nombre] || nombre;
 }
 
+// Iniciales (hasta dos) para el círculo de la cuenta.
 function iniciales(nombre: string): string {
     return nombre.split(/\s+/).slice(0, 2).map(p => p[0]?.toUpperCase() ?? '').join('');
 }
 
+// Fecha corta en español, o "—" si no hay.
 function formatearFecha(iso: string | null): string {
     if (!iso) return '—';
     const d = new Date(iso);
@@ -208,6 +226,7 @@ function formatearFecha(iso: string | null): string {
     return d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+// Trae roles y cuentas y las dibuja agrupadas por rol.
 async function cargarCuentas(): Promise<void> {
     const res = await apiFetch('/api/cuentas-acceso');
     if (!res.ok) return;
@@ -217,6 +236,7 @@ async function cargarCuentas(): Promise<void> {
     renderCuentas();
 }
 
+// Dibuja las tarjetas de las cuentas agrupadas por rol.
 function renderCuentas(): void {
     rolesGrid.innerHTML = roles.map((rol) => {
         const deEsteRol = cuentas.filter(c => c.rolId === rol.id);
@@ -238,6 +258,7 @@ function renderCuentas(): void {
     });
 }
 
+// HTML de la tarjeta de una cuenta.
 function cuentaCardHtml(c: Cuenta): string {
     return `
         <button type="button" class="empleado-card" data-cuenta-id="${c.id}">
@@ -250,6 +271,7 @@ function cuentaCardHtml(c: Cuenta): string {
     `;
 }
 
+// HTML de la lista de días no disponibles de una cuenta, con su botón para quitar cada día.
 function diasHtml(c: Cuenta): string {
     if (c.diasNoDisponibles.length === 0) return '<p class="dias-vacio">Sin días marcados como no disponible.</p>';
     return `<div class="dias-lista">${c.diasNoDisponibles.map(d => `
@@ -257,6 +279,7 @@ function diasHtml(c: Cuenta): string {
     `).join('')}</div>`;
 }
 
+// Abre el panel lateral de una cuenta: datos editables, rol y días no disponibles.
 async function abrirDetalleCuenta(id: string): Promise<void> {
     const c = cuentas.find(x => x.id === id);
     if (!c) return;
@@ -307,6 +330,7 @@ async function abrirDetalleCuenta(id: string): Promise<void> {
     });
 }
 
+// Guarda los cambios de la cuenta abierta; si el servidor los rechaza, muestra el motivo en el panel.
 async function guardarCambiosCuenta(id: string): Promise<void> {
     const nombre = (document.getElementById('inpNombre') as HTMLInputElement).value.trim();
     const correo = (document.getElementById('inpCorreo') as HTMLInputElement).value.trim();
@@ -332,6 +356,7 @@ async function guardarCambiosCuenta(id: string): Promise<void> {
     await cargarCuentas();
 }
 
+// Marca un día como no disponible para la cuenta y refresca el panel.
 async function agregarDia(id: string): Promise<void> {
     const fecha = (document.getElementById('inpNuevoDia') as HTMLInputElement).value;
     if (!fecha) return;
@@ -340,12 +365,14 @@ async function agregarDia(id: string): Promise<void> {
     await abrirDetalleCuenta(id);
 }
 
+// Quita un día no disponible y refresca el panel.
 async function quitarDia(id: string, fecha: string): Promise<void> {
     await apiFetch(`/api/cuentas-acceso/${id}/no-disponible/${fecha}`, { method: 'DELETE' });
     await cargarCuentas();
     await abrirDetalleCuenta(id);
 }
 
+// Ventana para crear una cuenta nueva. La persona entra con una contraseña temporal y debe cambiarla.
 function abrirModalCrearCuenta(): void {
     abrirModal(`
         <button type="button" class="modal-cerrar" id="btnCerrarModalCrear"><i class="fa-solid fa-xmark"></i></button>
@@ -395,6 +422,7 @@ function abrirModalCrearCuenta(): void {
     }));
 }
 
+// Pide confirmación antes de eliminar la cuenta abierta (no se puede deshacer).
 function abrirModalEliminarCuenta(): void {
     if (!cuentaSeleccionadaId) return;
     const c = cuentas.find(x => x.id === cuentaSeleccionadaId);
@@ -427,6 +455,7 @@ function abrirModalEliminarCuenta(): void {
     }));
 }
 
+// Arranque: exige sesión de administradora, conecta los botones y carga nómina y cuentas a la vez.
 document.addEventListener('DOMContentLoaded', async () => {
     const sesion = await exigirSesion('administrador');
     initPanelLayout(sesion);
