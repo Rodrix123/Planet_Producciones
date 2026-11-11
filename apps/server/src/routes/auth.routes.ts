@@ -19,6 +19,9 @@ import {
 
 export const authRouter = Router();
 
+/** Roles que entran al panel (los de UsuarioRol). */
+const ROLES_DEL_PANEL: readonly string[] = ['administrador', 'secretaria', 'jefe_logistica'] satisfies UsuarioRol[];
+
 // Inicio de sesión: valida correo y contraseña en Supabase Auth, busca el rol del perfil y deja
 // la sesión en una cookie. Los mensajes de error no dicen cuál de los dos datos falló. Tras 8 intentos
 // fallidos seguidos con el mismo correo desde la misma IP se bloquea unos minutos (ver limitador.ts).
@@ -48,6 +51,10 @@ authRouter.post('/login', limiteLogin, asyncHandler(async (req, res) => {
     // Una cuenta que existe en Auth pero no tiene rol asignado no puede entrar a ningún panel.
     if (!perfil?.rol) {
         return res.status(403).json({ status: 'error', message: 'Tu cuenta no tiene un rol asignado. Contacta al desarrollador.' });
+    }
+    // El personal de eventos (rol "trabajador") tiene cuenta solo para asignarlo; no usa el panel.
+    if (!ROLES_DEL_PANEL.includes(perfil.rol)) {
+        return res.status(403).json({ status: 'error', message: 'Tu cuenta no tiene acceso al panel. Si crees que es un error, contacta a la administradora.' });
     }
 
     // Lo que viaja dentro de la cookie de sesión (no incluye la contraseña ni datos sensibles).

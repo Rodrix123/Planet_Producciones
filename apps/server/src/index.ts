@@ -19,6 +19,7 @@ import { inventarioRouter } from './routes/inventario.routes';
 import { cuentasAccesoRouter } from './routes/cuentasAcceso.routes';
 import { panelRouter } from './routes/panel.routes';
 import { eventosRouter } from './routes/eventos.routes';
+import { asignacionesRouter } from './routes/asignaciones.routes';
 import { pagosRouter } from './routes/pagos.routes';
 import { crearConsultaRouter } from './routes/consulta.routes';
 import { manejadorErrores } from './manejadorErrores';
@@ -71,6 +72,8 @@ app.use('/api/pqrs', pqrsRouter);
 app.use('/api/inventario', inventarioRouter);
 app.use('/api/cuentas-acceso', cuentasAccesoRouter);
 app.use('/api/panel', panelRouter);
+// Antes que /api/eventos: personal asignado a cada evento (historia de usuario 2)
+app.use('/api/eventos/:eventoId/personal', asignacionesRouter);
 app.use('/api/eventos', eventosRouter);
 app.use('/api/pagos', pagosRouter);
 app.use('/api/consulta', crearConsultaRouter(pool));

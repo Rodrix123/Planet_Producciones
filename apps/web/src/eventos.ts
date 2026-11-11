@@ -7,6 +7,8 @@ import './eventos.css';
 import { api } from './api';
 import { exigirSesion, rutaPanelPorRol, type SesionActual } from './shared/api';
 import { initPanelLayout } from './shared/layout';
+import { abrirAsignacionPersonal } from './asignacion-personal';
+import { hidratarBloquePersonal, htmlBloquePersonal } from './personal-evento';
 
 // Un evento tal como lo devuelve /api/eventos.
 interface Evento {
@@ -373,9 +375,11 @@ function htmlDetalle(e: Evento): string {
            <p><small>${esc(e.cliente.email ?? 'Sin correo')}</small></p>
            <p><small>${esc(e.cliente.telefono ?? 'Sin teléfono')}</small></p>`
         : '<p>—</p>';
-    const personal = e.personal.length
-        ? `<div class="personal-lista">${e.personal.map(n => `<span>${esc(n)}</span>`).join('')}</div>`
-        : '<p>Sin personal asignado</p>';
+    // Solo un evento confirmado admite personal (el servidor lo vuelve a comprobar).
+    const accionPersonal = e.confirmado
+        ? `<button type="button" class="btn-asignar-personal" data-asignar-personal="${e.id}">
+               <i class="fa-solid fa-user-plus" aria-hidden="true"></i> Asignar personal</button>`
+        : '';
 
     return `
         <div class="detalle-head">
@@ -385,6 +389,7 @@ function htmlDetalle(e: Evento): string {
                 ${badge(e.pagoInicial, 'fa-money-bill-wave', 'Pago inicial')}
                 ${badge(e.firmado, 'fa-file-signature', 'Firmado')}
             </div>
+            ${accionPersonal}
         </div>
         <div class="detalle-grid">
             ${bloque('Fecha y hora', `<p>${esc(e.fecha ? formatearFechaLarga(e.fecha) : 'Fecha por definir')}</p><p><small>${esc(horaTexto(e))}</small></p>`)}
@@ -394,10 +399,10 @@ function htmlDetalle(e: Evento): string {
                 <p>Total: ${esc(formatearMoneda(e.total))}</p>
                 <p>Pagado: ${esc(formatearMoneda(e.totalPagado))}</p>
                 <p>Saldo: ${esc(formatearMoneda(saldo))}</p>`)}
-            ${bloque('Personal', personal)}
             ${bloque('Logística y contrato', `
                 <p>Transporte: ${esc(e.transporte ?? '—')}</p>
                 <p>Contrato enviado: ${esc(formatearFechaHora(e.contratoEnviadoEn))}</p>`)}
+            ${htmlBloquePersonal(e)}
         </div>
         <div class="detalle-acciones">
             <button type="button" class="btn-secundario" data-elementos="${e.id}">
@@ -416,12 +421,14 @@ function mostrarDetalle(id: number | null, inmediato = false): void {
     window.clearTimeout(fadeTimer);
     if (inmediato) {
         detalleContenido.innerHTML = html;
+        void hidratarBloquePersonal(detalleContenido);
         return;
     }
     detalleContenido.classList.add('oculto');
     fadeTimer = window.setTimeout(() => {
         detalleContenido.innerHTML = html;
         detalleContenido.classList.remove('oculto');
+        void hidratarBloquePersonal(detalleContenido); // personal por etapa
     }, FADE_MS);
 }
 
@@ -594,7 +601,43 @@ async function cargar(): Promise<void> {
     }
 }
 
+/** Vuelve a pedir los eventos sin perder la selección (p. ej. después de asignar personal). */
+async function recargarEventos(): Promise<void> {
+    try {
+        const json = await api<{ eventos: Evento[] }>('GET', '/api/eventos');
+        eventos = json.eventos;
+        render();
+        mostrarDetalle(seleccionadoId, true);
+    } catch (err) {
+        avisar(`No se pudo actualizar la lista de eventos: ${(err as Error).message}`);
+    }
+}
+
+/**
+ * "Asignar personal" abre un panel que ocupa el lugar de la vista de eventos (filtros, lista,
+ * calendario y detalle); al volver se muestran de nuevo y, si hubo cambios, se refrescan.
+ */
+function abrirPanelPersonal(id: number): void {
+    const vista = [document.querySelector<HTMLElement>('.eventos-filtros'), deck, detalle];
+    vista.forEach(el => { if (el) el.hidden = true; });
+    abrirAsignacionPersonal(id, {
+        avisar,
+        alCerrar: async (huboCambios) => {
+            vista.forEach(el => { if (el) el.hidden = false; });
+            if (huboCambios) await recargarEventos();
+            detalle.scrollIntoView({ block: 'start' });
+            detalleContenido.querySelector<HTMLElement>('[data-asignar-personal]')?.focus({ preventScroll: true });
+        }
+    });
+    window.scrollTo({ top: 0 });
+}
+
 // ---------- Eventos de la interfaz ----------
+detalleContenido.addEventListener('click', ev => {
+    const boton = (ev.target as HTMLElement).closest<HTMLElement>('[data-asignar-personal]');
+    if (boton) abrirPanelPersonal(Number(boton.dataset.asignarPersonal));
+});
+
 segmentos.forEach(s => s.addEventListener('click', () => {
     filtrosEstado[s.dataset.filtro as ClaveToggle] = s.dataset.valor as ValorFiltro;
     render();

@@ -1,4 +1,4 @@
---text-muted/* Estilos de eventos.html. Se apoya en panel.css (riel, filtros, botones) y
+/* Estilos de eventos.html. Se apoya en panel.css (riel, filtros, botones) y
    en las variables de style.css para conservar la identidad visual. */
 
 /* Barra de filtros compacta y pegada a los paneles de abajo (solo en eventos; empleados usa los tamaños de panel.css). */
@@ -796,5 +796,1991 @@
 
     .cal-grid {
         grid-auto-rows: minmax(92px, auto);
+    }
+}
+
+/* ---------- Personal del evento por etapas (src/personal-evento.ts) ---------- */
+/* Botón "Asignar personal": arriba a la derecha del detalle, a la altura del título. */
+.btn-asignar-personal {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+    padding: 0.6rem 1.1rem;
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--ink);
+    background: var(--orange-main);
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: filter 0.15s;
+}
+
+.btn-asignar-personal:hover {
+    filter: brightness(1.06);
+}
+
+.btn-asignar-personal:focus-visible {
+    outline: 2px solid var(--text-light);
+    outline-offset: 2px;
+}
+
+/* El detalle es un contenedor: la composición y las tarjetas se acomodan a su ancho real. */
+.detalle-contenido {
+    container: detalle / inline-size;
+}
+
+/* Colores por modalidad de contratación (tonos oscuros para que se lean sobre fondo claro) */
+.contrato-con {
+    --contrato: #1d6b49;
+    --contrato-fondo: rgba(29, 107, 73, 0.08);
+    --contrato-borde: rgba(29, 107, 73, 0.35);
+}
+
+.contrato-fijo {
+    --contrato: #1f4fc4;
+    --contrato-fondo: rgba(31, 79, 196, 0.07);
+    --contrato-borde: rgba(31, 79, 196, 0.32);
+}
+
+.contrato-no-fijo {
+    --contrato: #7a2bb8;
+    --contrato-fondo: rgba(122, 43, 184, 0.07);
+    --contrato-borde: rgba(122, 43, 184, 0.32);
+}
+
+.contrato-sin {
+    --contrato: var(--text-muted);
+    --contrato-fondo: rgba(90, 82, 72, 0.06);
+    --contrato-borde: rgba(90, 82, 72, 0.3);
+}
+
+/* ----- Composición del personal: a la derecha de "Logística y contrato" ----- */
+.detalle-composicion {
+    container: composicion / inline-size;
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.9rem 1.25rem;
+    align-self: start;
+    padding: 0.9rem 1.2rem;
+    background: linear-gradient(90deg, rgba(229, 96, 26, 0.07), rgba(229, 96, 26, 0.02));
+    border: 1px solid rgba(229, 96, 26, 0.65);
+    border-radius: 16px;
+}
+
+.composicion-titulo {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.composicion-titulo > i {
+    font-size: 1.6rem;
+    color: var(--orange-main);
+}
+
+.composicion-titulo h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-light);
+}
+
+.composicion-titulo p {
+    margin-top: 0.1rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.composicion-divisor {
+    align-self: stretch;
+    width: 1px;
+    background: var(--border-color);
+}
+
+.composicion-tipos {
+    display: flex;
+    flex: 1;
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* Las modalidades se reparten el ancho por igual y nunca parten su nombre. */
+.composicion-tipo {
+    display: flex;
+    flex: 1 1 0;
+    min-width: max-content;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+    padding: 0.55rem 0.9rem;
+    background: var(--contrato-fondo);
+    border: 1px solid var(--contrato-borde);
+    border-radius: 12px;
+}
+
+.composicion-icono {
+    flex-shrink: 0;
+    font-size: 1.2rem;
+    color: var(--contrato);
+}
+
+.composicion-dato {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.15;
+}
+
+.composicion-dato strong {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: var(--text-light);
+}
+
+.composicion-dato span {
+    font-size: 0.82rem;
+    white-space: nowrap;
+    color: var(--text-light);
+}
+
+/* Resumen de ancho mediano: el título arriba y las modalidades con el total en una fila. */
+@container composicion (max-width: 1000px) {
+    .composicion-titulo {
+        flex-basis: 100%;
+    }
+
+    .composicion-titulo + .composicion-divisor {
+        display: none;
+    }
+}
+
+/* Resumen angosto (celular): modalidades en dos columnas y el total en una línea. */
+@container composicion (max-width: 560px) {
+    .composicion-tipos {
+        flex-wrap: wrap;
+    }
+
+    .composicion-tipo {
+        flex: 1 1 calc(50% - 0.75rem);
+        min-width: 0;
+    }
+
+    .composicion-divisor {
+        display: none;
+    }
+
+    .composicion-total {
+        flex-direction: row;
+        align-items: center;
+        gap: 0.6rem;
+    }
+}
+
+.composicion-total {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+}
+
+.composicion-total > span {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.composicion-total strong {
+    padding: 0.35rem 0.9rem;
+    font-size: 1rem;
+    font-weight: 700;
+    white-space: nowrap;
+    color: var(--text-light);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+}
+
+.composicion-total b {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--orange-main);
+}
+
+/* ----- Personal por etapa: a todo el ancho del detalle ----- */
+.detalle-personal {
+    grid-column: 1 / -1;
+}
+
+.detalle-personal h3 .personal-total {
+    margin-left: 0.35rem;
+    font-weight: 600;
+    letter-spacing: normal;
+}
+
+.personal-etapas {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.85rem;
+}
+
+.personal-etapa {
+    container: etapa / inline-size;
+    min-width: 0;
+    padding: 0.8rem 1rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+}
+
+.personal-etapa-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
+}
+
+.personal-etapa-head i {
+    font-size: 1.05rem;
+    color: var(--orange-main);
+}
+
+.personal-sin-etapa .personal-etapa-head i {
+    color: var(--text-muted);
+}
+
+.personal-etapa-head h4 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-light);
+}
+
+.personal-conteo {
+    margin-left: auto;
+    min-width: 1.9rem;
+    padding: 0.1rem 0.55rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-align: center;
+    color: var(--text-light);
+    background: var(--bg-input);
+    border-radius: 999px;
+}
+
+.personal-filas {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* Una fila por persona: ícono, nombre y su etiqueta de contrato. */
+.personal-fila {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.personal-fila:last-child {
+    border-bottom: none;
+}
+
+.personal-fila-icono {
+    flex-shrink: 0;
+    margin-top: 0.15rem;
+    font-size: 1rem;
+    color: var(--text-muted);
+}
+
+/* En tarjetas angostas la etiqueta va debajo del nombre; en anchas, a la derecha. */
+.personal-fila-datos {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
+    min-width: 0;
+}
+
+.personal-fila-nombre {
+    font-size: 0.88rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--text-light);
+    overflow-wrap: break-word;
+}
+
+.personal-fila-nombre .fa-whatsapp {
+    margin-left: 0.2rem;
+    color: var(--emerald-green);
+}
+
+.contrato-tag {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.15rem 0.6rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--contrato);
+    background: var(--contrato-fondo);
+    border: 1px solid var(--contrato-borde);
+    border-radius: 8px;
+}
+
+@container etapa (min-width: 380px) {
+    .personal-fila {
+        align-items: center;
+    }
+
+    .personal-fila-icono {
+        margin-top: 0;
+    }
+
+    .personal-fila-datos {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.4rem 0.75rem;
+    }
+}
+
+.personal-sin-etapa {
+    border-style: dashed;
+}
+
+.personal-vacio,
+.personal-nota {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+.personal-vacio {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.5rem 0 0.6rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.personal-vacio i {
+    font-size: 1rem;
+}
+
+.personal-nota {
+    margin-top: 0.55rem;
+}
+
+.personal-lista .fa-whatsapp {
+    margin-left: 0.2rem;
+    color: var(--emerald-green);
+}
+
+/* Detalle ancho: la composición sube junto a "Logística y contrato" (cuarta columna en adelante) y
+   las cuatro tarjetas van en una fila, con "Sin etapa" más ancha. */
+@container detalle (min-width: 560px) {
+    .personal-etapas {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@container detalle (min-width: 1056px) {
+    .detalle-composicion {
+        grid-column: 2 / -1;
+    }
+
+    .personal-etapas {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .personal-etapas.con-sin-etapa {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.5fr);
+    }
+}
+
+/* ---------- Panel "Asignar personal" (src/asignacion-personal.ts) ---------- */
+/* Tonos propios del panel, tomados de la paleta clara de style.css: tarjetas porcelana, controles
+   y filas hundidos, naranja para la acción y verde para lo disponible. */
+.asig-panel {
+    --asig-superficie: var(--bg-card);
+    --asig-superficie-alta: var(--bg-dark);
+    --asig-control: var(--bg-input);
+    --asig-fila: var(--bg-input);
+    --asig-fila-hover: #e3e6dc;
+    --asig-borde: var(--border-color);
+    --asig-borde-fuerte: #c4c9ba;
+    --asig-tenue: var(--text-muted);
+    --asig-azul: #2b54b8;
+    --asig-naranja-suave: rgba(229, 96, 26, 0.12);
+    --asig-verde: var(--emerald-green);
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.asig-panel[hidden] {
+    display: none;
+}
+
+/* Con el panel abierto, el contenido usa todo el ancho: sin el tope de 1400 px que style.css pone
+   a <main> ni su margen superior, y con un encabezado de página más compacto. */
+.panel-main:has(> .asig-panel:not([hidden])) {
+    max-width: none;
+    margin: 0;
+    padding: 1rem 1.75rem 1.25rem;
+}
+
+.panel-main:has(> .asig-panel:not([hidden])) .panel-topbar {
+    margin-bottom: 0.85rem;
+}
+
+.panel-main:has(> .asig-panel:not([hidden])) .panel-topbar h1 {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1.75rem;
+}
+
+.panel-main:has(> .asig-panel:not([hidden])) .panel-topbar h1::before {
+    content: '';
+    width: 5px;
+    height: 1.45rem;
+    background: var(--orange-main);
+    border-radius: 3px;
+}
+
+/* Con el panel abierto, el aviso flotante sale arriba para no tapar el botón de asignar. */
+.panel-main:has(> .asig-panel:not([hidden])) ~ .toast {
+    top: 1.25rem;
+    bottom: auto;
+}
+
+#asigAviso:empty {
+    display: none;
+}
+
+/* ----- Encabezado ----- */
+.asig-barra {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.15rem;
+    padding: 0.75rem 1.25rem;
+    background:
+        radial-gradient(120% 160% at 100% 50%, rgba(229, 96, 26, 0.12), transparent 55%),
+        var(--asig-superficie);
+    border: 1px solid var(--asig-borde);
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(28, 20, 16, 0.06);
+}
+
+.asig-volver {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.6rem 1rem;
+    font: inherit;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-light);
+    background: var(--asig-superficie-alta);
+    border: 1px solid var(--asig-borde-fuerte);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.asig-volver:hover,
+.asig-volver:focus-visible {
+    border-color: var(--orange-main);
+    background: var(--asig-fila-hover);
+}
+
+.asig-divisor-v {
+    flex-shrink: 0;
+    align-self: center;
+    width: 1px;
+    height: 2.3rem;
+    background: var(--asig-borde-fuerte);
+}
+
+.asig-barra-icono {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 2.7rem;
+    height: 2.7rem;
+    font-size: 1.25rem;
+    color: var(--orange-main);
+    background: var(--asig-naranja-suave);
+    border: 1px solid rgba(229, 96, 26, 0.35);
+    border-radius: 12px;
+}
+
+.asig-titulos {
+    flex: 1;
+    min-width: 220px;
+}
+
+.asig-titulos h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.asig-titulos h2:focus {
+    outline: none;
+}
+
+.asig-sub {
+    margin-top: 0.2rem;
+    font-size: 0.86rem;
+    color: var(--asig-tenue);
+}
+
+.asig-estado-evento {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--asig-tenue);
+    border: 1px solid var(--asig-borde-fuerte);
+    border-radius: 999px;
+}
+
+.asig-estado-evento.confirmado {
+    color: var(--asig-verde);
+    background: rgba(52, 211, 153, 0.1);
+    border-color: rgba(52, 211, 153, 0.45);
+}
+
+.asig-estado-evento.confirmado i {
+    font-size: 1.05rem;
+}
+
+/* ----- Cuerpo en dos columnas: Personal (57 %) y Personal del evento (43 %) ----- */
+.asig-cuerpo {
+    display: grid;
+    grid-template-columns: minmax(0, 57fr) minmax(0, 43fr);
+    gap: 1.25rem;
+    align-items: start;
+}
+
+.asig-cuerpo.solo-etapas {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.asig-estado-carga {
+    grid-column: 1 / -1;
+    padding: 3rem 0;
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--asig-tenue);
+}
+
+.asig-col {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    min-width: 0;
+    padding: 1.1rem 1.25rem;
+    background: var(--asig-superficie);
+    border: 1px solid var(--asig-borde);
+    border-radius: 18px;
+}
+
+.asig-col[hidden] {
+    display: none;
+}
+
+.asig-col-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.asig-col-head h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    font-size: 1.35rem;
+    font-weight: 700;
+}
+
+.asig-col-head h3 i {
+    font-size: 1.2rem;
+    color: var(--orange-main);
+}
+
+.asig-pastilla {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.85rem;
+    font-size: 0.82rem;
+    color: var(--text-light);
+    background: var(--asig-control);
+    border: 1px solid var(--asig-borde-fuerte);
+    border-radius: 10px;
+}
+
+.asig-pastilla i {
+    color: var(--asig-tenue);
+}
+
+.asig-pastilla-fuerte {
+    padding: 0.4rem 1rem;
+    font-size: 0.88rem;
+    font-weight: 700;
+    border-radius: 999px;
+}
+
+/* ----- Controles de la lista ----- */
+.asig-herramientas {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid var(--asig-borde);
+}
+
+/* La columna Personal es un contenedor: sus controles se reacomodan según su ancho real, no el de
+   la ventana (sirve igual con zoom y con la columna angosta). */
+.asig-col-personal {
+    container: personal / inline-size;
+}
+
+/* Hora, "Inicio" y contrato en una sola línea; el contrato al extremo derecho. */
+.asig-controles {
+    display: grid;
+    grid-template-columns: minmax(10rem, 16.5rem) auto minmax(12.5rem, 22rem);
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.7rem 1rem;
+}
+
+/* Caja con ícono, rótulo pequeño y valor grande (hora de finalización, tipo de contrato) */
+.asig-caja {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    min-height: 3.3rem;
+    padding: 0.35rem 0.65rem 0.35rem 1rem;
+    background: var(--asig-control);
+    border: 1px solid var(--asig-borde-fuerte);
+    border-radius: 12px;
+    transition: border-color 0.15s;
+}
+
+.asig-caja:focus-within {
+    border-color: var(--orange-main);
+}
+
+.asig-caja.activa {
+    border-color: rgba(229, 96, 26, 0.6);
+}
+
+.asig-hora {
+    min-width: 0;
+    cursor: text;
+}
+
+.asig-contrato {
+    min-width: 0;
+}
+
+.asig-caja-icono {
+    flex-shrink: 0;
+    font-size: 1.1rem;
+    color: var(--asig-tenue);
+}
+
+.asig-caja-campo {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.asig-caja-campo label {
+    margin: 0;
+    font-size: 0.72rem;
+    color: var(--asig-tenue);
+}
+
+.asig-caja-campo input[type="time"],
+.asig-caja-campo select {
+    width: 100%;
+    padding: 0;
+    font: inherit;
+    font-size: 1.02rem;
+    font-weight: 700;
+    color: var(--text-light);
+    color-scheme: dark;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    outline: none;
+}
+
+.asig-caja-campo select {
+    padding-right: 2rem;
+    appearance: none;
+    cursor: pointer;
+}
+
+.asig-caja-campo select option {
+    font-weight: 500;
+    color: var(--text-light);
+    background: var(--bg-card);
+}
+
+/* La flecha abre el selector; el ícono del navegador sobra. */
+.asig-caja-campo input[type="time"]::-webkit-calendar-picker-indicator {
+    display: none;
+}
+
+.asig-caja-abrir {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    color: var(--asig-tenue);
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.asig-caja-abrir:hover,
+.asig-caja-abrir:focus-visible {
+    color: var(--orange-main);
+    background: var(--asig-fila-hover);
+    outline: none;
+}
+
+.asig-caja-flecha {
+    position: absolute;
+    right: 1rem;
+    color: var(--asig-tenue);
+    pointer-events: none;
+}
+
+.asig-inicio {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-size: 0.95rem;
+    white-space: nowrap;
+    color: var(--asig-tenue);
+}
+
+.asig-hora-nota {
+    font-size: 0.78rem;
+}
+
+.asig-hora-nota:empty {
+    display: none;
+}
+
+.asig-hora-nota.dia-siguiente {
+    align-self: flex-start;
+    padding: 0.15rem 0.6rem;
+    font-weight: 600;
+    color: var(--asig-azul);
+    background: rgba(43, 84, 184, 0.08);
+    border: 1px solid rgba(43, 84, 184, 0.3);
+    border-radius: 999px;
+}
+
+.asig-destino {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem 1rem;
+}
+
+.asig-destino-nombre {
+    font-size: 0.98rem;
+    font-weight: 700;
+}
+
+.asig-segmentos {
+    display: inline-flex;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    background: var(--asig-control);
+    border: 1px solid var(--asig-borde-fuerte);
+    border-radius: 999px;
+}
+
+.asig-segmento {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    height: 2.5rem;
+    padding: 0 1.5rem;
+    font: inherit;
+    font-size: 0.96rem;
+    font-weight: 600;
+    color: var(--text-light);
+    background: transparent;
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.asig-segmento i {
+    color: var(--asig-tenue);
+    transition: color 0.15s;
+}
+
+.asig-segmento:hover {
+    background: var(--asig-fila-hover);
+}
+
+.asig-segmento:focus-visible {
+    outline: 2px solid var(--orange-main);
+    outline-offset: 2px;
+}
+
+/* Naranja sólido con texto tinta, como los demás botones activos de la paleta clara (contraste AA). */
+.asig-segmento[aria-pressed="true"] {
+    color: var(--ink);
+    background: var(--orange-main);
+    box-shadow: 0 6px 16px rgba(229, 96, 26, 0.25);
+}
+
+.asig-segmento[aria-pressed="true"] i {
+    color: var(--ink);
+}
+
+.asig-filtros {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.asig-buscar {
+    display: flex;
+    flex: 1 1 10rem;
+    align-items: center;
+    gap: 0.7rem;
+    height: 2.65rem;
+    margin: 0;
+    padding: 0 1rem;
+    font-size: 1rem;
+    color: var(--asig-tenue);
+    background: var(--asig-control);
+    border: 1px solid var(--asig-borde-fuerte);
+    border-radius: 12px;
+    transition: border-color 0.15s;
+}
+
+.asig-buscar:focus-within {
+    border-color: var(--orange-main);
+}
+
+.asig-buscar input {
+    flex: 1;
+    min-width: 0;
+    font: inherit;
+    font-size: 0.93rem;
+    color: var(--text-light);
+    background: transparent;
+    border: none;
+    outline: none;
+}
+
+.asig-buscar input::placeholder {
+    color: var(--asig-tenue);
+}
+
+/* Desplegable "Mostrar" (src/shared/desplegable.ts): Todos, Disponibles o Ya en [etapa]. La lista
+   se abre encima de las filas, sin desplazarlas. */
+.desplegable {
+    position: relative;
+    flex: 0 1 13.5rem;
+    min-width: 11rem;
+}
+
+.desplegable-boton {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+    height: 2.65rem;
+    padding: 0 1rem;
+    font: inherit;
+    font-size: 0.93rem;
+    font-weight: 700;
+    color: var(--text-light);
+    background: var(--asig-control);
+    border: 1px solid var(--asig-borde-fuerte);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.desplegable-boton:hover {
+    border-color: var(--asig-tenue);
+}
+
+/* Con un filtro distinto de "Todos" el borde queda naranja suave; abierto o con foco, naranja pleno. */
+.desplegable.cambiado .desplegable-boton {
+    border-color: rgba(229, 96, 26, 0.6);
+}
+
+.desplegable.abierto .desplegable-boton,
+.desplegable-boton:focus-visible {
+    border-color: var(--orange-main);
+    box-shadow: 0 0 0 1px var(--orange-main);
+    outline: none;
+}
+
+.desplegable-valor {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.desplegable-flecha {
+    flex-shrink: 0;
+    font-size: 0.85rem;
+    color: var(--asig-tenue);
+    transition: transform 0.15s;
+}
+
+.desplegable.abierto .desplegable-flecha {
+    color: var(--text-light);
+    transform: rotate(180deg);
+}
+
+.desplegable-opciones {
+    position: absolute;
+    top: calc(100% + 0.35rem);
+    left: 0;
+    z-index: 30;
+    min-width: 100%;
+    margin: 0;
+    padding: 0.35rem;
+    list-style: none;
+    background: var(--asig-superficie);
+    border: 1px solid var(--asig-borde-fuerte);
+    border-radius: 12px;
+    box-shadow: 0 16px 36px rgba(28, 20, 16, 0.16);
+}
+
+.desplegable-opciones[hidden] {
+    display: none;
+}
+
+.desplegable-opciones:focus {
+    outline: none;
+}
+
+.desplegable-opcion {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    color: var(--text-light);
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.desplegable-opcion:hover,
+.desplegable-opcion.resaltada {
+    background: var(--asig-fila-hover);
+}
+
+.desplegable-opciones:focus-visible .desplegable-opcion.resaltada {
+    outline: 1px solid var(--asig-borde-fuerte);
+}
+
+.desplegable-opcion[aria-selected="true"] {
+    font-weight: 700;
+    background: rgba(229, 96, 26, 0.14);
+}
+
+.desplegable-icono {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 1.1rem;
+    color: var(--asig-tenue);
+}
+
+.desplegable-opcion[aria-selected="true"] .desplegable-icono {
+    color: var(--text-light);
+}
+
+.desplegable-icono .asig-icono-disponible {
+    font-size: 0.55rem;
+    color: var(--asig-verde);
+}
+
+.asig-sel-visibles {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    height: 2.65rem;
+    margin: 0;
+    padding: 0 1.05rem;
+    font: inherit;
+    font-size: 0.88rem;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--text-light);
+    background: var(--asig-control);
+    border: 1px solid var(--asig-borde-fuerte);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+}
+
+.asig-sel-visibles:hover {
+    border-color: var(--asig-tenue);
+}
+
+.asig-sel-visibles .asig-check {
+    width: 1.2rem;
+    height: 1.2rem;
+}
+
+.asig-sel-visibles:has(input:checked) {
+    border-color: var(--orange-main);
+}
+
+.asig-sel-visibles.deshabilitado {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.asig-instruccion {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.5rem;
+    margin: 0;
+    padding-top: 0.75rem;
+    font-size: 0.8rem;
+    color: var(--asig-tenue);
+    border-top: 1px solid var(--asig-borde);
+}
+
+.asig-instruccion strong {
+    font-weight: 600;
+    color: var(--text-light);
+}
+
+/* Columna Personal mediana: el buscador a todo el ancho y debajo, repartidos, el desplegable y
+   "Seleccionar visibles" (en una sola fila el buscador quedaría muy corto). */
+@container personal (max-width: 600px) {
+    .asig-buscar {
+        flex-basis: 100%;
+    }
+
+    .desplegable,
+    .asig-sel-visibles {
+        flex: 1 1 10rem;
+        min-width: 0;
+    }
+
+    .asig-sel-visibles {
+        justify-content: center;
+    }
+}
+
+/* Columna Personal angosta: la instrucción se queda en una línea y los controles se reparten. */
+@container personal (max-width: 640px) {
+    .asig-instruccion-extra {
+        display: none;
+    }
+
+    /* Sin íconos en las cajas, para que la hora y "Todos los contratos" quepan enteros. */
+    .asig-caja .asig-caja-icono {
+        display: none;
+    }
+
+    .asig-caja {
+        padding-left: 0.85rem;
+    }
+}
+
+@container personal (max-width: 520px) {
+    .asig-controles {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .asig-contrato {
+        grid-column: 1 / -1;
+    }
+}
+
+@container personal (max-width: 380px) {
+    .asig-controles {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+/* ----- Lista de personal ----- */
+.asig-lista,
+.asig-etapa-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.asig-lista,
+.asig-etapas {
+    scrollbar-width: thin;
+    scrollbar-color: var(--asig-borde-fuerte) transparent;
+}
+
+.asig-fila {
+    --asig-fila-gap: 1rem;
+    display: flex;
+    align-items: center;
+    gap: var(--asig-fila-gap);
+    min-height: 3.6rem;
+    margin: 0;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    color: var(--text-light);
+    background: var(--asig-fila);
+    border: 1px solid var(--asig-borde);
+    border-radius: 12px;
+}
+
+/* Toda la fila es la etiqueta de su casilla: un clic en cualquier parte la marca o desmarca. */
+.asig-opcion {
+    cursor: pointer;
+    user-select: none;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.asig-opcion:hover {
+    background: var(--asig-fila-hover);
+    border-color: var(--asig-borde-fuerte);
+}
+
+.asig-opcion.marcada,
+.asig-opcion:has(input:checked) {
+    background: linear-gradient(90deg, rgba(229, 96, 26, 0.16), rgba(229, 96, 26, 0.05));
+    border-color: var(--orange-main);
+}
+
+.asig-opcion.bloqueada {
+    cursor: default;
+}
+
+.asig-opcion.bloqueada:hover {
+    background: var(--asig-fila);
+    border-color: var(--asig-borde);
+}
+
+/* Quien no se puede elegir se ve más discreto, pero su nombre, contrato y estado siguen legibles. */
+.asig-opcion.bloqueada .asig-avatar {
+    color: var(--asig-tenue);
+    background: #e2e5db;
+}
+
+.asig-opcion.bloqueada .asig-contrato-tag {
+    opacity: 0.8;
+}
+
+/* Casilla propia, grande: cuadrada, naranja al marcarla, guion si la selección es parcial. */
+.asig-check {
+    flex-shrink: 0;
+    width: 1.5rem;
+    height: 1.5rem;
+    margin: 0;
+    background: transparent;
+    border: 1.5px solid #80867a;
+    border-radius: 6px;
+    appearance: none;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.asig-check:checked {
+    background: var(--orange-main) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round' d='M3.5 8.5l3 3 6-7'/%3E%3C/svg%3E") center / 70% no-repeat;
+    border-color: var(--orange-main);
+}
+
+.asig-check:indeterminate {
+    background: var(--orange-main) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' d='M4 8h8'/%3E%3C/svg%3E") center / 70% no-repeat;
+    border-color: var(--orange-main);
+}
+
+.asig-check:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.asig-check:focus-visible {
+    outline: 2px solid var(--orange-main);
+    outline-offset: 2px;
+}
+
+.asig-avatar {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--text-light);
+    background: #d9ddd0;
+    border-radius: 50%;
+}
+
+.asig-opcion.marcada .asig-avatar {
+    background: #f3d3bf;
+}
+
+.asig-avatar-mini {
+    width: 1.55rem;
+    height: 1.55rem;
+    font-size: 0.62rem;
+}
+
+.asig-persona {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;
+}
+
+/* Los nombres largos pasan a la línea siguiente por palabras, sin cortarse a la mitad. */
+.asig-persona strong {
+    font-size: 0.98rem;
+    font-weight: 700;
+    line-height: 1.3;
+    overflow-wrap: break-word;
+}
+
+.asig-persona small {
+    font-size: 0.82rem;
+    line-height: 1.4;
+    color: var(--asig-tenue);
+}
+
+.asig-opcion.bloqueada .asig-persona strong {
+    color: var(--asig-tenue);
+}
+
+.asig-persona small.asig-motivo {
+    color: var(--orange-text);
+}
+
+.asig-persona small.asig-motivo-alerta {
+    color: var(--danger);
+}
+
+/* Debajo del nombre: la etapa (o etapas) en la que ya está la persona en este evento. */
+.asig-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-top: 0.2rem;
+}
+
+.asig-etapa-chip,
+.asig-evento-chip {
+    padding: 0.05rem 0.5rem;
+    font-size: 0.76rem;
+    font-weight: 600;
+    line-height: 1.45;
+    border-radius: 6px;
+}
+
+.asig-etapa-chip {
+    color: var(--orange-main);
+    background: rgba(229, 96, 26, 0.1);
+    border: 1px solid rgba(229, 96, 26, 0.55);
+}
+
+.asig-evento-chip {
+    color: var(--asig-tenue);
+    background: rgba(90, 82, 72, 0.06);
+    border: 1px solid var(--asig-borde-fuerte);
+}
+
+/* A la derecha: tipo de contrato y disponibilidad, con ancho mínimo para que formen columnas. */
+.asig-fila-etiquetas {
+    display: flex;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem 0.75rem;
+}
+
+.asig-contrato-tag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-width: 9.75rem;
+    padding: 0.32rem 0.9rem;
+    font-size: 0.84rem;
+    font-weight: 700;
+    white-space: nowrap;
+    color: var(--text-light);
+    background: var(--contrato-relleno, var(--contrato-fondo));
+    border: 1px solid var(--contrato-borde);
+    border-radius: 999px;
+}
+
+.asig-contrato-tag i {
+    color: var(--contrato);
+}
+
+/* Relleno algo más intenso que en el detalle del evento, como en el diseño del panel. */
+.asig-contrato-tag.contrato-con {
+    --contrato-relleno: rgba(29, 107, 73, 0.12);
+}
+
+.asig-contrato-tag.contrato-fijo {
+    --contrato-relleno: rgba(31, 79, 196, 0.1);
+}
+
+.asig-contrato-tag.contrato-no-fijo {
+    --contrato-relleno: rgba(122, 43, 184, 0.1);
+}
+
+.asig-estado {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-width: 8.5rem;
+    padding: 0.32rem 0.85rem;
+    font-size: 0.84rem;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--asig-tenue);
+    border: 1px solid var(--asig-borde-fuerte);
+    border-radius: 999px;
+}
+
+/* Columna Personal mediana: las etiquetas toman su ancho justo para dejar más espacio al nombre. */
+@container personal (max-width: 640px) {
+    .asig-contrato-tag,
+    .asig-estado {
+        min-width: 0;
+    }
+}
+
+/* Columna Personal angosta: el contrato y el estado bajan debajo del nombre, alineados con él. */
+@container personal (max-width: 520px) {
+    .asig-fila {
+        flex-wrap: wrap;
+        row-gap: 0.5rem;
+    }
+
+    .asig-fila-etiquetas {
+        flex: 1 0 100%;
+        justify-content: flex-start;
+        padding-left: calc(1.5rem + 2.5rem + 2 * var(--asig-fila-gap));
+    }
+}
+
+.asig-punto {
+    width: 0.45rem;
+    height: 0.45rem;
+    background: currentColor;
+    border-radius: 50%;
+}
+
+.asig-estado-disponible {
+    color: var(--asig-verde);
+    background: rgba(52, 211, 153, 0.08);
+    border-color: rgba(52, 211, 153, 0.4);
+}
+
+.asig-estado-no_disponible,
+.asig-estado-rechazo_whatsapp {
+    color: var(--orange-text);
+    border-color: rgba(166, 62, 8, 0.35);
+}
+
+.asig-vacio,
+.asig-ayuda {
+    font-size: 0.86rem;
+    color: var(--asig-tenue);
+}
+
+.asig-lista-vacia {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 2rem 0.5rem;
+    text-align: center;
+}
+
+.asig-lista-vacia i {
+    font-size: 1.4rem;
+}
+
+.asig-btn-texto {
+    flex-shrink: 0;
+    padding: 0.25rem 0.4rem;
+    font: inherit;
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: var(--asig-tenue);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    background: none;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.asig-btn-texto:hover,
+.asig-btn-texto:focus-visible {
+    color: var(--text-light);
+    outline: none;
+}
+
+/* ----- Pie de selección: queda visible aunque la lista se desplace ----- */
+.asig-pie {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    background: var(--asig-superficie);
+}
+
+.asig-pie-barra {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem 1rem;
+    padding: 0.6rem 0.7rem 0.6rem 1rem;
+    background: var(--asig-control);
+    border: 1px solid var(--asig-borde-fuerte);
+    border-radius: 14px;
+}
+
+.asig-seleccion {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.asig-seleccion-numero {
+    font-size: 2.1rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--orange-main);
+}
+
+.asig-seleccion.vacia .asig-seleccion-numero {
+    color: var(--asig-tenue);
+}
+
+.asig-seleccion-texto {
+    font-size: 0.85rem;
+    line-height: 1.2;
+}
+
+/* Las etiquetas se encogen (con puntos suspensivos) antes que esconder el botón de asignar. */
+.asig-elegidos {
+    display: flex;
+    flex: 1;
+    flex-wrap: nowrap;
+    gap: 0.5rem;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    list-style: none;
+}
+
+.asig-elegido {
+    display: inline-flex;
+    flex: 0 1 auto;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 7.5rem;
+    max-width: 13rem;
+    padding: 0.3rem 0.35rem 0.3rem 0.3rem;
+    font-size: 0.74rem;
+    font-weight: 700;
+    background: var(--asig-fila);
+    border: 1px solid var(--asig-borde-fuerte);
+    border-radius: 10px;
+}
+
+.asig-elegido-nombre {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.asig-elegido button {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 1.35rem;
+    height: 1.35rem;
+    margin-left: auto;
+    font-size: 0.72rem;
+    color: var(--asig-tenue);
+    background: transparent;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.asig-elegido button:hover,
+.asig-elegido button:focus-visible {
+    color: var(--ink);
+    background: var(--asig-borde-fuerte);
+    outline: none;
+}
+
+.asig-elegido-mas {
+    flex-shrink: 0;
+    min-width: auto;
+    padding: 0.3rem 0.7rem;
+    color: var(--asig-tenue);
+}
+
+.asig-btn-asignar {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0.6rem;
+    margin-left: auto;
+    padding: 0.85rem 1.6rem;
+    font-size: 1.02rem;
+    white-space: nowrap;
+    box-shadow: 0 8px 22px rgba(229, 96, 26, 0.28);
+}
+
+.asig-btn-asignar:disabled {
+    box-shadow: none;
+}
+
+.asig-error {
+    margin: 0;
+    line-height: 1.45;
+}
+
+/* ----- Personal del evento por etapa (compacto para ver a más personas) ----- */
+.asig-etapas {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.asig-etapa {
+    padding: 0.8rem 1rem;
+    background: var(--asig-superficie-alta);
+    border: 1px solid var(--asig-borde);
+    border-radius: 14px;
+    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+
+.asig-etapa.destino {
+    background: linear-gradient(90deg, rgba(229, 96, 26, 0.2), rgba(229, 96, 26, 0.05) 70%), var(--asig-superficie-alta);
+    border-color: var(--orange-main);
+    box-shadow: 0 0 0 1px rgba(229, 96, 26, 0.35), 0 10px 28px rgba(229, 96, 26, 0.12);
+}
+
+.asig-etapa-head {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    margin-bottom: 0.55rem;
+}
+
+.asig-etapa-icono {
+    width: 1.5rem;
+    font-size: 1.25rem;
+    text-align: center;
+    color: var(--asig-tenue);
+}
+
+.asig-etapa.destino .asig-etapa-icono {
+    color: var(--orange-main);
+}
+
+.asig-etapa-head h4 {
+    font-size: 1.08rem;
+    font-weight: 700;
+}
+
+.asig-etapa-conteo {
+    font-size: 1.02rem;
+    font-weight: 700;
+    color: var(--asig-azul);
+}
+
+.asig-etapa-elegir {
+    margin-left: auto;
+    padding: 0.4rem 0.95rem;
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-light);
+    background: transparent;
+    border: 1px solid var(--asig-borde-fuerte);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.asig-etapa-elegir:hover,
+.asig-etapa-elegir:focus-visible {
+    border-color: var(--orange-main);
+    outline: none;
+}
+
+.asig-etapa-elegir[aria-pressed="true"] {
+    color: var(--orange-main);
+    background: rgba(229, 96, 26, 0.1);
+    border-color: var(--orange-main);
+}
+
+.asig-etapa-vacia {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+    color: var(--asig-tenue);
+    border: 1px dashed var(--asig-borde-fuerte);
+    border-radius: 10px;
+}
+
+.asig-etapa-vacia i {
+    font-size: 1.05rem;
+}
+
+.asig-ayuda {
+    margin: -0.2rem 0 0.6rem;
+}
+
+.asig-etapa-lista {
+    gap: 0.35rem;
+}
+
+.asig-etapa-persona {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.4rem 0.6rem 0.4rem 0.5rem;
+    font-size: 0.9rem;
+    background: var(--asig-control);
+    border: 1px solid var(--asig-borde);
+    border-radius: 10px;
+}
+
+.asig-avatar-icono {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 1.8rem;
+    height: 1.8rem;
+    font-size: 0.8rem;
+    color: var(--asig-tenue);
+    border: 1px solid var(--asig-borde-fuerte);
+    border-radius: 50%;
+}
+
+.asig-etapa-persona .asig-persona strong {
+    font-size: 0.92rem;
+}
+
+.asig-etapa-persona .fa-whatsapp {
+    color: var(--asig-verde);
+}
+
+.asig-quitar {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    margin-left: auto;
+    font-size: 0.8rem;
+    color: var(--text-light);
+    background: transparent;
+    border: 1.5px solid #9aa08f;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+}
+
+.asig-quitar:hover,
+.asig-quitar:focus-visible {
+    color: var(--danger);
+    border-color: var(--danger);
+    outline: none;
+}
+
+.asig-confirmar {
+    display: inline-flex;
+    flex-shrink: 0;
+    gap: 0.4rem;
+    margin-left: auto;
+}
+
+.asig-btn-no {
+    padding: 0.35rem 0.75rem;
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--asig-tenue);
+    background: transparent;
+    border: 1px solid var(--asig-borde-fuerte);
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.asig-btn-no:hover,
+.asig-btn-no:focus-visible {
+    color: var(--text-light);
+    border-color: var(--asig-tenue);
+}
+
+/* ----- Avisos y botones ----- */
+.asig-aviso {
+    display: flex;
+    gap: 0.6rem;
+    padding: 0.75rem 0.9rem;
+    font-size: 0.88rem;
+    line-height: 1.45;
+    color: var(--text-light);
+    background: rgba(229, 96, 26, 0.08);
+    border: 1px solid rgba(229, 96, 26, 0.35);
+    border-radius: 12px;
+}
+
+.asig-aviso i {
+    margin-top: 0.15rem;
+    color: var(--orange-main);
+}
+
+.asig-aviso-error {
+    background: rgba(180, 35, 24, 0.06);
+    border-color: rgba(180, 35, 24, 0.35);
+}
+
+.asig-aviso-error i {
+    color: var(--danger);
+}
+
+.asig-btn-primario,
+.asig-btn-peligro {
+    padding: 0.7rem 1.25rem;
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--ink);
+    background: var(--orange-main);
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: filter 0.15s, opacity 0.15s;
+}
+
+.asig-btn-primario:not(:disabled):hover {
+    filter: brightness(1.06);
+}
+
+.asig-btn-peligro {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.78rem;
+    color: #fff;
+    background: var(--danger);
+    border-radius: 10px;
+}
+
+.asig-btn-peligro:hover {
+    background: #8f1c13;
+}
+
+.asig-btn-primario:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.asig-btn-primario:focus-visible,
+.asig-btn-peligro:focus-visible {
+    outline: 2px solid var(--text-light);
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .asig-panel *,
+    .btn-asignar-personal {
+        transition: none !important;
+    }
+}
+
+/* ----- Escritorio con altura suficiente: la página ocupa justo la ventana y cada lista se
+   desplaza por dentro, sin alturas fijas (se adapta al zoom y a la resolución). Con menos de
+   800 px de alto (zoom alto o portátil de 768 px) la lista quedaría con dos o tres filas, así que
+   ahí la página se desplaza, la lista tiene un tope alto y el pie queda fijo abajo. ----- */
+@media (min-width: 1001px) and (min-height: 800px) {
+    .panel-main:has(> .asig-panel:not([hidden])) {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+    }
+
+    .asig-panel {
+        flex: 1;
+        min-height: 0;
+    }
+
+    .asig-cuerpo {
+        flex: 1;
+        min-height: 0;
+        grid-template-rows: minmax(0, 1fr);
+        align-items: stretch;
+    }
+
+    .asig-col {
+        min-height: 0;
+    }
+
+    .asig-lista,
+    .asig-etapas {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        padding-right: 0.35rem;
+    }
+}
+
+/* Ventanas bajas o angostas: la página se desplaza y la lista tiene su propio tope. */
+@media (max-width: 1000px), (max-height: 799px) {
+    .asig-lista {
+        max-height: max(16rem, calc(100vh - 13rem));
+        overflow-y: auto;
+        padding-right: 0.35rem;
+    }
+}
+
+@media (max-width: 1000px) {
+    .asig-cuerpo {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .panel-main:has(> .asig-panel:not([hidden])) {
+        padding: 1rem;
+    }
+
+    .asig-barra,
+    .asig-col {
+        padding: 1rem;
+    }
+
+    .asig-barra .asig-divisor-v,
+    .asig-barra-icono {
+        display: none;
+    }
+
+    .asig-estado-evento {
+        padding: 0.4rem 0.85rem;
+        font-size: 0.85rem;
+    }
+
+    .asig-col-head h3 {
+        font-size: 1.2rem;
+    }
+
+    /* La etapa de destino: tres botones iguales a todo el ancho, sin íconos. */
+    .asig-segmentos {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        width: 100%;
+        border-radius: 14px;
+    }
+
+    .asig-segmento {
+        height: 2.4rem;
+        padding: 0 0.3rem;
+        font-size: 0.8rem;
+        border-radius: 10px;
+    }
+
+    .asig-segmento i {
+        display: none;
+    }
+
+    .asig-buscar {
+        flex-basis: 100%;
+    }
+
+    .asig-fila {
+        --asig-fila-gap: 0.7rem;
+    }
+
+    /* En el celular el contrato y el estado usan todo el ancho de la fila para caber en una línea. */
+    .asig-fila-etiquetas {
+        padding-left: 0;
+    }
+
+    .asig-pie-barra {
+        flex-wrap: wrap;
+    }
+
+    .asig-elegidos {
+        display: none;
+    }
+
+    .asig-btn-asignar {
+        justify-content: center;
+        width: 100%;
+    }
+
+    .btn-asignar-personal {
+        width: 100%;
+        justify-content: center;
     }
 }

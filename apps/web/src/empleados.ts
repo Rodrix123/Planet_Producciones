@@ -197,7 +197,9 @@ interface Cuenta {
 const NOMBRE_ROL: Record<string, string> = {
     administrador: 'Administradora',
     secretaria: 'Secretaria',
-    jefe_logistica: 'Jefe de Logística'
+    jefe_logistica: 'Jefe de Logística',
+    // Cuentas que crea la asignación de personal a eventos (solo celular, sin acceso al panel)
+    trabajador: 'Personal de eventos'
 };
 
 // Estado de la pantalla: roles, cuentas cargadas y la cuenta abierta en el panel lateral.
@@ -265,7 +267,7 @@ function cuentaCardHtml(c: Cuenta): string {
             <div class="avatar">${esc(iniciales(c.nombre))}</div>
             <div class="empleado-info">
                 <div class="empleado-nombre">${esc(c.nombre)}</div>
-                <div class="empleado-sub">${esc(c.correo)}</div>
+                <div class="empleado-sub">${esc(c.correo || c.telefono || '')}</div>
             </div>
         </button>
     `;
