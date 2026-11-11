@@ -10,3 +10,6 @@ apps/**/node_modules/
 apps/server/uploads/
 supabase/.temp/
 .claude/worktrees/
+
+# carpetas temporales de la prueba de arranque
+apps/server/.prueba-arranque-*/

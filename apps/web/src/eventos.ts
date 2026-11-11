@@ -1,10 +1,16 @@
+// Eventos de la administradora: calendario mensual y lista de eventos vigentes con filtros (estado y
+// rango de fechas) y un panel de detalle. Todo se filtra en el navegador a partir de /api/eventos.
+
 import './style.css';
 import './panel.css';
 import './eventos.css';
 import { api } from './api';
 import { exigirSesion, rutaPanelPorRol, type SesionActual } from './shared/api';
 import { initPanelLayout } from './shared/layout';
+import { abrirAsignacionPersonal } from './asignacion-personal';
+import { hidratarBloquePersonal, htmlBloquePersonal } from './personal-evento';
 
+// Un evento tal como lo devuelve /api/eventos.
 interface Evento {
     id: number;
     fecha: string | null; // YYYY-MM-DD; nulo si el evento aún no tiene fecha
@@ -24,10 +30,19 @@ interface Evento {
     transporte: string | null;
 }
 
+interface ElementoEvento {
+    tipo: string;
+    nombre: string;
+    descripcion: string;
+    cantidad: number;
+    nota: string | null;
+}
+
 type ClaveToggle = 'confirmado' | 'pagoInicial' | 'firmado';
 /** Cada filtro de estado busca los que sí cumplen, los que no, o todos (sin filtrar). */
 type ValorFiltro = 'todos' | 'si' | 'no';
 
+// Eventos que se muestran en una casilla del calendario antes de pasar a "ver más", y duración (ms) del fundido del detalle.
 const MAX_VISIBLES = 4;
 const FADE_MS = 180;
 
@@ -41,6 +56,8 @@ const estadoCarga = $('estado');
 const deck = $('deck');
 const detalle = $('detalle');
 const detalleContenido = $('detalleContenido');
+const modal = $('modal');
+const modalContenido = $('modalContenido');
 const listaEventos = $('listaEventos');
 const listaConteo = $('listaConteo');
 const calTitulo = $('calTitulo');
@@ -50,11 +67,19 @@ const fHasta = $<HTMLInputElement>('fHasta');
 const fLimpiar = $('fLimpiar');
 const segmentos = document.querySelectorAll<HTMLButtonElement>('.segmento');
 
+// Estado de la pantalla: eventos cargados, evento elegido, día con el cuadro "ver más" abierto y filtros de estado.
 let eventos: Evento[] = [];
 let seleccionadoId: number | null = null;
 let popoverFecha: string | null = null;
 let fadeTimer: number | undefined;
 let toastTimer: number | undefined;
+// Cambia al abrir o cerrar el menú de elementos: una respuesta de un pedido anterior se descarta.
+let pedidoElementos = 0;
+let botonElementos: HTMLElement | null = null;
+// Vista del menú de elementos; se recuerda entre aperturas mientras la página esté abierta.
+type VistaElementos = 'tabla' | 'tipo';
+let vistaElementos: VistaElementos = 'tabla';
+let elementosActuales: ElementoEvento[] = [];
 const filtrosEstado: Record<ClaveToggle, ValorFiltro> = { confirmado: 'todos', pagoInicial: 'todos', firmado: 'todos' };
 const CLAVES_ESTADO = Object.keys(filtrosEstado) as ClaveToggle[];
 
@@ -128,33 +153,60 @@ function nombreTipo(e: Evento): string {
     return e.tipo?.trim() || 'Evento';
 }
 
+/** Tipo del evento y, a su lado, el nombre del cliente si lo tiene. */
+function tituloEvento(e: Evento): string {
+    const cliente = e.cliente ? ` <span class="evento-cliente">· ${esc(e.cliente.nombre)}</span>` : '';
+    return `${esc(nombreTipo(e))}${cliente}`;
+}
+
 function lugarTexto(e: Evento): string {
     return [e.lugar, e.ciudad].filter(Boolean).join(' · ') || 'Lugar por definir';
 }
 
 // ---------- Filtros ----------
-function hayFiltros(): boolean {
-    return CLAVES_ESTADO.some(c => filtrosEstado[c] !== 'todos') || fDesde.value !== '' || fHasta.value !== '';
+/** El rango con el que arranca la página: desde hoy y sin fecha final. */
+function rangoInicial(): boolean {
+    return fDesde.value === HOY_ISO && fHasta.value === '';
 }
 
-function filtrar(): Evento[] {
+function reiniciarRango(): void {
+    fDesde.value = HOY_ISO;
+    fHasta.value = '';
+    fHasta.min = HOY_ISO;
+}
+
+function hayFiltrosEstado(): boolean {
+    return CLAVES_ESTADO.some(c => filtrosEstado[c] !== 'todos');
+}
+
+function hayFiltros(): boolean {
+    return hayFiltrosEstado() || !rangoInicial();
+}
+
+function enRango(e: Evento): boolean {
     const desde = fDesde.value;
     const hasta = fHasta.value;
-    return eventos.filter(e => {
-        // 'si' deja solo los que cumplen; 'no', solo los que no; 'todos' no filtra.
-        for (const clave of CLAVES_ESTADO) {
-            const valor = filtrosEstado[clave];
-            if (valor !== 'todos' && e[clave] !== (valor === 'si')) return false;
-        }
-        // Sin fecha no se puede saber si cae dentro de un rango: con un rango activo se oculta.
-        if ((desde || hasta) && !e.fecha) return false;
-        if (desde && e.fecha! < desde) return false;
-        if (hasta && e.fecha! > hasta) return false;
-        return true;
+    // Sin fecha no se puede saber si cae dentro de un rango: se oculta si se eligió uno.
+    // No cuenta el rango inicial: esos eventos están pendientes y no se pueden dar por pasados.
+    if (!e.fecha) return rangoInicial() || (!desde && !hasta);
+    if (desde && e.fecha < desde) return false;
+    if (hasta && e.fecha > hasta) return false;
+    return true;
+}
+
+/** 'si' deja solo los que cumplen; 'no', solo los que no; 'todos' no filtra. */
+function cumpleEstados(e: Evento): boolean {
+    return CLAVES_ESTADO.every(clave => {
+        const valor = filtrosEstado[clave];
+        return valor === 'todos' || e[clave] === (valor === 'si');
     });
 }
 
-// ---------- Lista de eventos vigentes ----------
+function filtrar(): Evento[] {
+    return eventos.filter(e => enRango(e) && cumpleEstados(e));
+}
+
+// ---------- Lista de eventos ----------
 function iconosEstado(e: Evento): string {
     return `<span class="estados">
         <i class="fa-solid fa-circle-check ${e.confirmado ? 'on' : ''}" title="Confirmado"></i>
@@ -167,13 +219,18 @@ function renderLista(visibles: Evento[]): void {
 
     // Todos los eventos que pasan los filtros, del más antiguo al más reciente.
     const items = [...visibles].sort(porFechaYHora);
-    // Único contador de eventos: los que coinciden con los filtros ("N de M" cuando hay filtros activos).
-    listaConteo.textContent = hayFiltros() ? `${items.length} de ${eventos.length}` : String(items.length);
+    // Único contador de eventos. El total son los del rango de fechas; con filtros de estado activos
+    // se muestra "N de M": N son los de ese rango que además pasan esos filtros.
+    listaConteo.textContent = hayFiltrosEstado()
+        ? `${items.length} de ${eventos.filter(enRango).length}`
+        : String(items.length);
     listaConteo.title = `${listaConteo.textContent} eventos`;
 
 
     if (items.length === 0) {
-        listaEventos.innerHTML = `<p class="lista-vacia">${hayFiltros()
+        // Sin filtros y con eventos solo pasados, la lista queda vacía y sin aviso.
+        const soloPasados = !hayFiltros() && eventos.length > 0;
+        listaEventos.innerHTML = soloPasados ? '' : `<p class="lista-vacia">${hayFiltros()
             ? 'Ningún evento coincide con los filtros.'
             : 'No hay eventos registrados.'}</p>`;
         return;
@@ -193,27 +250,25 @@ function renderLista(visibles: Evento[]): void {
             <div class="lista-fecha"><strong>${dia}</strong><span>${esc(mesCorto)}</span></div>
 
             <div class="lista-info">
-                <div class="lista-tipo">${esc(nombreTipo(e))}</div>
+                <div class="lista-tipo">${tituloEvento(e)}</div>
                 <div class="lista-sub">${esc(horaTexto(e))} · ${esc(lugarTexto(e))}</div>
             </div>
             ${iconosEstado(e)}
         </button>`;
     }).join('');
 
-
-    // El API solo trae eventos vigentes: el primero de la lista es el próximo.
-
-
     listaEventos.scrollTop = 0;
 }
 
 // ---------- Calendario ----------
+// Etiqueta de un evento dentro de una casilla del calendario.
 function pildora(e: Evento, conHora = false): string {
     const hora = conHora ? `<span class="pop-hora">${esc(e.hora ? formatearHora(e.hora) : '—')}</span>` : '';
     return `<button type="button" class="cal-evt" data-evento="${e.id}" data-confirmado="${e.confirmado}"
         title="${esc(nombreTipo(e))} · ${esc(lugarTexto(e))}">${hora}${esc(nombreTipo(e))}</button>`;
 }
 
+// Dibuja el mes (la semana empieza el lunes) con los eventos que pasan los filtros.
 function renderCalendario(visibles: Evento[]): void {
     cerrarPopover();
     calTitulo.textContent = capitalizar(mes.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' }));
@@ -302,14 +357,17 @@ function marcarSeleccion(): void {
     });
 }
 
+// Sección con título del panel de detalle.
 function bloque(titulo: string, contenido: string): string {
     return `<div class="detalle-bloque"><h3>${titulo}</h3>${contenido}</div>`;
 }
 
+// Etiqueta de sí/no (confirmado, pago inicial, firmado).
 function badge(activo: boolean, icono: string, texto: string): string {
     return `<span class="badge ${activo ? 'on' : ''}"><i class="fa-solid ${icono}"></i> ${texto}</span>`;
 }
 
+// Contenido del panel de detalle de un evento: cliente, fecha y lugar, pagos, personal y logística.
 function htmlDetalle(e: Evento): string {
     const saldo = e.total === null ? null : Math.max(0, e.total - e.totalPagado);
     const cliente = e.cliente
@@ -317,18 +375,21 @@ function htmlDetalle(e: Evento): string {
            <p><small>${esc(e.cliente.email ?? 'Sin correo')}</small></p>
            <p><small>${esc(e.cliente.telefono ?? 'Sin teléfono')}</small></p>`
         : '<p>—</p>';
-    const personal = e.personal.length
-        ? `<div class="personal-lista">${e.personal.map(n => `<span>${esc(n)}</span>`).join('')}</div>`
-        : '<p>Sin personal asignado</p>';
+    // Solo un evento confirmado admite personal (el servidor lo vuelve a comprobar).
+    const accionPersonal = e.confirmado
+        ? `<button type="button" class="btn-asignar-personal" data-asignar-personal="${e.id}">
+               <i class="fa-solid fa-user-plus" aria-hidden="true"></i> Asignar personal</button>`
+        : '';
 
     return `
         <div class="detalle-head">
-            <h2>${esc(nombreTipo(e))}</h2>
+            <h2>${tituloEvento(e)}</h2>
             <div class="detalle-badges">
                 ${badge(e.confirmado, 'fa-circle-check', 'Confirmado')}
                 ${badge(e.pagoInicial, 'fa-money-bill-wave', 'Pago inicial')}
                 ${badge(e.firmado, 'fa-file-signature', 'Firmado')}
             </div>
+            ${accionPersonal}
         </div>
         <div class="detalle-grid">
             ${bloque('Fecha y hora', `<p>${esc(e.fecha ? formatearFechaLarga(e.fecha) : 'Fecha por definir')}</p><p><small>${esc(horaTexto(e))}</small></p>`)}
@@ -338,10 +399,15 @@ function htmlDetalle(e: Evento): string {
                 <p>Total: ${esc(formatearMoneda(e.total))}</p>
                 <p>Pagado: ${esc(formatearMoneda(e.totalPagado))}</p>
                 <p>Saldo: ${esc(formatearMoneda(saldo))}</p>`)}
-            ${bloque('Personal', personal)}
             ${bloque('Logística y contrato', `
                 <p>Transporte: ${esc(e.transporte ?? '—')}</p>
                 <p>Contrato enviado: ${esc(formatearFechaHora(e.contratoEnviadoEn))}</p>`)}
+            ${htmlBloquePersonal(e)}
+        </div>
+        <div class="detalle-acciones">
+            <button type="button" class="btn-secundario" data-elementos="${e.id}">
+                <i class="fa-solid fa-boxes-stacked"></i> Ver elementos
+            </button>
         </div>`;
 }
 
@@ -355,15 +421,18 @@ function mostrarDetalle(id: number | null, inmediato = false): void {
     window.clearTimeout(fadeTimer);
     if (inmediato) {
         detalleContenido.innerHTML = html;
+        void hidratarBloquePersonal(detalleContenido);
         return;
     }
     detalleContenido.classList.add('oculto');
     fadeTimer = window.setTimeout(() => {
         detalleContenido.innerHTML = html;
         detalleContenido.classList.remove('oculto');
+        void hidratarBloquePersonal(detalleContenido); // personal por etapa
     }, FADE_MS);
 }
 
+// Elige un evento (tocarlo otra vez lo deselecciona) y lo muestra en el detalle.
 function seleccionar(id: number): void {
     seleccionadoId = seleccionadoId === id ? null : id;
     marcarSeleccion();
@@ -378,6 +447,111 @@ function seleccionar(id: number): void {
             renderCalendario(filtrar());
         }
     }
+}
+
+// ---------- Menú de elementos del evento ----------
+function envolverTabla(encabezados: string, filas: string): string {
+    return `
+        <div class="elementos-tabla-wrap">
+            <table class="elementos-tabla">
+                <thead><tr>${encabezados}</tr></thead>
+                <tbody>${filas}</tbody>
+            </table>
+        </div>`;
+}
+
+/** Vista "Tabla": una fila por elemento, en el orden del API (tipo y nombre). */
+function htmlTablaElementos(elementos: ElementoEvento[]): string {
+    const filas = elementos.map(el => `
+        <tr>
+            <td>${esc(el.nombre)}</td>
+            <td class="col-tipo">${esc(el.tipo)}</td>
+            <td class="num">${el.cantidad}</td>
+        </tr>`).join('');
+    return envolverTabla(
+        '<th scope="col">Elementos</th><th scope="col" class="col-tipo">Tipo</th><th scope="col" class="num">Cantidad</th>',
+        filas);
+}
+
+/** Vista "Por tipo": una tabla por tipo, con el tipo como encabezado del elemento y la cantidad. */
+function htmlElementosPorTipo(elementos: ElementoEvento[]): string {
+    // El API los entrega ordenados por tipo: basta con agruparlos en orden de llegada.
+    const porTipo = new Map<string, ElementoEvento[]>();
+    for (const el of elementos) porTipo.set(el.tipo, [...(porTipo.get(el.tipo) ?? []), el]);
+
+    return [...porTipo].map(([tipo, lista]) => `
+        <div class="elementos-grupo">
+            ${envolverTabla(
+                `<th scope="col">${esc(tipo)}</th><th scope="col" class="num">Cantidad</th>`,
+                lista.map(el => `<tr><td>${esc(el.nombre)}</td><td class="num">${el.cantidad}</td></tr>`).join(''))}
+        </div>`).join('');
+}
+
+function htmlVistaElementos(): string {
+    return vistaElementos === 'tipo'
+        ? htmlElementosPorTipo(elementosActuales)
+        : htmlTablaElementos(elementosActuales);
+}
+
+function htmlElementos(elementos: ElementoEvento[]): string {
+    if (elementos.length === 0) return '<p class="modal-texto">Este evento no tiene elementos registrados.</p>';
+
+    const botonVista = (vista: VistaElementos, texto: string) =>
+        `<button type="button" class="segmento" data-vista="${vista}" aria-pressed="${vistaElementos === vista}">${texto}</button>`;
+    return `
+        <div class="elementos-vistas">
+            <div class="segmentos" role="group" aria-label="Vista de los elementos">
+                ${botonVista('tabla', 'Tabla')}${botonVista('tipo', 'Por tipo')}
+            </div>
+        </div>
+        <div id="elementosVista" class="elementos-vista">${htmlVistaElementos()}</div>`;
+}
+
+/** Cambia de vista sin volver a pedir los elementos; solo se reemplaza la vista, el selector conserva el foco. */
+function cambiarVista(vista: VistaElementos): void {
+    vistaElementos = vista;
+    modal.querySelectorAll<HTMLElement>('[data-vista]').forEach(b =>
+        b.setAttribute('aria-pressed', String(b.dataset.vista === vista)));
+    $('elementosVista').innerHTML = htmlVistaElementos();
+}
+
+async function abrirElementos(boton: HTMLElement): Promise<void> {
+    const evento = eventos.find(e => e.id === Number(boton.dataset.elementos));
+    if (!evento) return;
+    const pedido = ++pedidoElementos;
+    botonElementos = boton;
+
+    modalContenido.innerHTML = `
+        <div class="elementos-head">
+            <h2 id="elementosTitulo">Elementos del evento</h2>
+            <button type="button" class="modal-cerrar" id="elementosCerrar" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div id="elementosCuerpo"><p class="modal-texto"><i class="fa-solid fa-spinner fa-spin"></i> Cargando elementos...</p></div>`;
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+    $('elementosCerrar').focus();
+
+    let cuerpo: string;
+    try {
+        const json = await api<{ elementos: ElementoEvento[] }>('GET', `/api/eventos/${evento.id}/elementos`);
+        if (pedido !== pedidoElementos) return;
+        elementosActuales = json.elementos;
+        cuerpo = htmlElementos(json.elementos);
+    } catch (err) {
+        if (pedido !== pedidoElementos) return;
+        cuerpo = `<p class="modal-texto"><i class="fa-solid fa-triangle-exclamation"></i> No se pudieron cargar los elementos: ${esc((err as Error).message)}</p>`;
+    }
+    $('elementosCuerpo').innerHTML = cuerpo;
+}
+
+function cerrarElementos(): void {
+    pedidoElementos++;
+    elementosActuales = [];
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    modalContenido.innerHTML = '';
+    botonElementos?.focus();
+    botonElementos = null;
 }
 
 // ---------- Render general ----------
@@ -400,6 +574,7 @@ function render(): void {
 }
 
 // ---------- Carga ----------
+// Trae los eventos vigentes y pinta la pantalla.
 async function cargar(): Promise<void> {
     try {
         const json = await api<{ eventos: Evento[] }>('GET', '/api/eventos');
@@ -426,7 +601,43 @@ async function cargar(): Promise<void> {
     }
 }
 
+/** Vuelve a pedir los eventos sin perder la selección (p. ej. después de asignar personal). */
+async function recargarEventos(): Promise<void> {
+    try {
+        const json = await api<{ eventos: Evento[] }>('GET', '/api/eventos');
+        eventos = json.eventos;
+        render();
+        mostrarDetalle(seleccionadoId, true);
+    } catch (err) {
+        avisar(`No se pudo actualizar la lista de eventos: ${(err as Error).message}`);
+    }
+}
+
+/**
+ * "Asignar personal" abre un panel que ocupa el lugar de la vista de eventos (filtros, lista,
+ * calendario y detalle); al volver se muestran de nuevo y, si hubo cambios, se refrescan.
+ */
+function abrirPanelPersonal(id: number): void {
+    const vista = [document.querySelector<HTMLElement>('.eventos-filtros'), deck, detalle];
+    vista.forEach(el => { if (el) el.hidden = true; });
+    abrirAsignacionPersonal(id, {
+        avisar,
+        alCerrar: async (huboCambios) => {
+            vista.forEach(el => { if (el) el.hidden = false; });
+            if (huboCambios) await recargarEventos();
+            detalle.scrollIntoView({ block: 'start' });
+            detalleContenido.querySelector<HTMLElement>('[data-asignar-personal]')?.focus({ preventScroll: true });
+        }
+    });
+    window.scrollTo({ top: 0 });
+}
+
 // ---------- Eventos de la interfaz ----------
+detalleContenido.addEventListener('click', ev => {
+    const boton = (ev.target as HTMLElement).closest<HTMLElement>('[data-asignar-personal]');
+    if (boton) abrirPanelPersonal(Number(boton.dataset.asignarPersonal));
+});
+
 segmentos.forEach(s => s.addEventListener('click', () => {
     filtrosEstado[s.dataset.filtro as ClaveToggle] = s.dataset.valor as ValorFiltro;
     render();
@@ -444,12 +655,12 @@ function alCambiarRango(): void {
 }
 fDesde.addEventListener('change', alCambiarRango);
 fHasta.addEventListener('change', alCambiarRango);
+reiniciarRango();
 
 fLimpiar.addEventListener('click', () => {
     CLAVES_ESTADO.forEach(c => { filtrosEstado[c] = 'todos'; });
-    fDesde.value = '';
-    fHasta.value = '';
-    fHasta.min = '';
+    reiniciarRango();
+    mes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
     render();
 });
 
@@ -500,13 +711,33 @@ document.addEventListener('click', ev => {
     if (popoverFecha && !t.closest('.cal-popover') && !t.closest('[data-mas]')) cerrarPopover();
 });
 document.addEventListener('keydown', ev => {
-    if (ev.key === 'Escape') cerrarPopover();
+    if (ev.key !== 'Escape') return;
+    cerrarPopover();
+    if (modal.classList.contains('open')) cerrarElementos();
+});
+
+// El contenido del detalle se reemplaza al cambiar de evento: el clic se escucha en su contenedor.
+detalleContenido.addEventListener('click', ev => {
+    const boton = (ev.target as HTMLElement).closest<HTMLElement>('[data-elementos]');
+    if (boton) void abrirElementos(boton);
+});
+
+// Cerrar el menú de elementos con la X o al hacer click en el fondo.
+modal.addEventListener('click', ev => {
+    const objetivo = ev.target as HTMLElement;
+    if (objetivo === modal || objetivo.closest('#elementosCerrar')) {
+        cerrarElementos();
+        return;
+    }
+    const vista = objetivo.closest<HTMLElement>('[data-vista]');
+    if (vista) cambiarVista(vista.dataset.vista as VistaElementos);
 });
 
 // El calendario cambia de ancho al hacer hover (se extiende y la lista se retrae) y al redimensionar la
 // ventana: reubicar el cuadro abierto.
 new ResizeObserver(() => posicionarPopover()).observe(calGrid);
 
+// Arranque: solo la administradora entra a esta pantalla; los demás roles van a su panel.
 document.addEventListener('DOMContentLoaded', async () => {
     const sesion = (await exigirSesion()) as SesionActual;
     if (sesion.rol !== 'administrador') {

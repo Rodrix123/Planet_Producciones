@@ -1,7 +1,12 @@
+// Lista de carga en PDF para el jefe de logística: los equipos de un evento agrupados por tipo,
+// con una casilla para marcar cada uno al cargarlo en el camión. Nunca incluye precios.
+
 import PDFDocument from 'pdfkit';
 import path from 'path';
 import fs from 'fs';
+import { CARPETA_ASSETS } from '../rutas';
 
+// Un equipo a cargar y cuántas unidades.
 export interface EquipoListaCarga {
     tag: string;
     nombre: string;
@@ -9,6 +14,15 @@ export interface EquipoListaCarga {
     cantidad: number;
 }
 
+// Un elemento que NO sale de la bodega: se alquila o se consigue aparte y hay que tenerlo listo para el evento.
+export interface ElementoExternoListaCarga {
+    nombre: string;
+    descripcion: string;
+    cantidad: number;
+    nota: string | null;
+}
+
+// Datos que necesita la lista; el módulo no consulta la base de datos.
 export interface ListaCargaParaPdf {
     numeroReferencia: string;
     clienteNombre: string;
@@ -18,8 +32,10 @@ export interface ListaCargaParaPdf {
     direccion: string | null;
     fechaEvento: string | null; // 'YYYY-MM-DD' o null
     equipos: EquipoListaCarga[];
+    externos?: ElementoExternoListaCarga[];
 }
 
+// AAAA-MM-DD -> DD/MM/AAAA (o "Sin fecha").
 const formatearFecha = (fecha: string | null) => {
     if (!fecha) return 'Sin fecha';
     const [anio, mes, dia] = fecha.split('-');
@@ -36,12 +52,13 @@ export function generarListaCargaPdfBuffer(lista: ListaCargaParaPdf): Promise<Bu
             doc.on('data', buffers.push.bind(buffers));
             doc.on('end', () => resolve(Buffer.concat(buffers)));
 
-            const logoPath = path.join(__dirname, '..', '..', 'assets', 'logo.png');
+            const logoPath = path.join(CARPETA_ASSETS, 'logo.png');
             const tieneLogo = fs.existsSync(logoPath);
             const ANCHO = doc.page.width;
             const MARGEN = 40;
             const LIMITE_INFERIOR = doc.page.height - 60;
 
+            // Franja naranja, logo y referencia; se repite en cada página.
             function encabezado() {
                 doc.rect(0, 0, ANCHO, 6).fill('#f97316');
 
@@ -60,6 +77,7 @@ export function generarListaCargaPdfBuffer(lista: ListaCargaParaPdf): Promise<Bu
                 doc.moveTo(MARGEN, 64).lineTo(ANCHO - MARGEN, 64).strokeColor('#cbd5e1').lineWidth(0.8).stroke();
             }
 
+            // Si lo que sigue no cabe en la página, abre una nueva (con su encabezado) y devuelve dónde seguir.
             function asegurarEspacio(alturaNecesaria: number, yActual: number): number {
                 if (yActual + alturaNecesaria > LIMITE_INFERIOR) {
                     doc.addPage();
@@ -128,6 +146,36 @@ export function generarListaCargaPdfBuffer(lista: ListaCargaParaPdf): Promise<Bu
                     y += 6;
                 });
             });
+
+            // Elementos que no salen de la bodega: van aparte para que nadie los busque en el almacén.
+            const externos = lista.externos || [];
+            if (externos.length > 0) {
+                y = asegurarEspacio(60, y + 6);
+                doc.fontSize(10).font('Helvetica-Bold').fillColor('#1e293b').text('POR CONSEGUIR / ALQUILAR', MARGEN, y);
+                y += 13;
+                doc.fontSize(7.5).font('Helvetica-Oblique').fillColor('#64748b')
+                    .text('No salen de la bodega: hay que alquilarlos o conseguirlos aparte antes del evento.', MARGEN, y, { width: ANCHO - MARGEN * 2 });
+                y += 16;
+
+                externos.forEach((item) => {
+                    y = asegurarEspacio(26, y);
+
+                    // Casilla para marcar cuando ya está conseguido.
+                    doc.rect(MARGEN, y + 1, ladoCasilla, ladoCasilla).strokeColor('#94a3b8').lineWidth(0.8).stroke();
+
+                    const nombreMostrado = item.cantidad > 1 ? `${item.cantidad} x ${item.nombre}` : item.nombre;
+                    doc.fontSize(9).font('Helvetica-Bold').fillColor('#0f172a')
+                        .text(nombreMostrado, MARGEN + ladoCasilla + 8, y, { width: ANCHO - MARGEN * 2 - ladoCasilla - 8 });
+                    y += 13;
+                    for (const linea of [item.descripcion && `Incluye: ${item.descripcion}`, item.nota && `Nota: ${item.nota}`]) {
+                        if (!linea) continue;
+                        doc.fontSize(7.5).font('Helvetica').fillColor('#64748b')
+                            .text(linea, MARGEN + ladoCasilla + 8, y, { width: ANCHO - MARGEN * 2 - ladoCasilla - 8 });
+                        y += 11;
+                    }
+                    y += 6;
+                });
+            }
 
             doc.end();
         } catch (err) {

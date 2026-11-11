@@ -31,6 +31,15 @@
         ],
         "createdAt": "2026-10-18T02:22:59.588Z",
         "reason": "Agent: el detector solo lee el HTML y no ve institucional.css (lo importa main.ts con Vite), por eso informa todo a 16px; la escala real es h1 clamp(1.6rem,3.6vw,2.3rem), h2 1.4rem y h3 1.1rem sobre cuerpo de 0.98rem (h2 = 1.43x), verificada en Edge"
+      },
+      {
+        "rule": "flat-type-hierarchy",
+        "value": "*",
+        "files": [
+          "apps/web/panel-admin.html"
+        ],
+        "createdAt": "2026-11-04T21:53:07.855Z",
+        "reason": "Decidido por Claude, no confirmado por el usuario: el detector no resuelve el CSS importado desde src/panel-admin.ts; los tamanos reales son h1 1.9rem, h3 1.15rem y p 0.88rem (saltos de 1.65x y 1.31x)."
       }
     ]
   }

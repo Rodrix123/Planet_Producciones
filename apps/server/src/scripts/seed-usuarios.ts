@@ -1,20 +1,30 @@
+// Herramienta de línea de comandos: crea (o actualiza) las 3 cuentas internas del sistema con su rol.
+//   npm run seed:usuarios
+// CUIDADO: cada ejecución genera contraseñas temporales NUEVAS y reemplaza las actuales de esas 3
+// cuentas. Usa reset-password.ts para cambiar la de una sola persona.
+
 import 'dotenv/config';
 import crypto from 'crypto';
 import { pool } from '../db';
 import { supabaseAdmin } from '../supabaseAdmin';
 
+// Una cuenta a crear: nombre, correo y rol.
 interface SeedUsuario {
     nombre: string;
     correo: string;
     rol: 'administrador' | 'secretaria' | 'jefe_logistica';
 }
 
+// Las tres cuentas del equipo: administradora, secretaria y jefe de logística.
 const USUARIOS: SeedUsuario[] = [
     { nombre: 'Maritza Galeano Muñoz', correo: 'maritza@planetproducciones.com', rol: 'administrador' },
     { nombre: 'Mariana Ortiz', correo: 'mariana@planetproducciones.com', rol: 'secretaria' },
     { nombre: 'Andrés Camilo Jiménez', correo: 'andres@planetproducciones.com', rol: 'jefe_logistica' }
 ];
 
+/**
+ * Contraseña al azar de 12 caracteres, sin letras ni números que se confunden (0/O, 1/I/l).
+ */
 function generarPasswordTemporal(): string {
     const alfabeto = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
     let password = '';
@@ -24,6 +34,9 @@ function generarPasswordTemporal(): string {
     return password;
 }
 
+/**
+ * Id del rol con ese nombre; lo crea si todavía no existe.
+ */
 async function obtenerORearRol(nombre: string): Promise<number> {
     const existente = await pool.query<{ id: number }>('select id from role where name = $1', [nombre]);
     if (existente.rows[0]) return existente.rows[0].id;

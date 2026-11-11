@@ -1,7 +1,13 @@
+// PDF de la cotización que descarga la administradora desde su panel: datos del cliente y del
+// evento, servicios agrupados por categoría y el total. (El PDF que recibe el cliente al cotizar se
+// arma en el navegador, ver apps/web/src/main.ts.)
+
 import PDFDocument from 'pdfkit';
 import path from 'path';
 import fs from 'fs';
+import { CARPETA_ASSETS } from '../rutas';
 
+// Un servicio de la cotización; el precio ya viene multiplicado por la cantidad.
 export interface ItemCotizacionPdf {
     tag: string;
     nombre: string;
@@ -9,6 +15,7 @@ export interface ItemCotizacionPdf {
     precio: number;
 }
 
+// Todo lo que necesita el PDF; el módulo no consulta la base de datos.
 export interface CotizacionParaPdf {
     numeroReferencia: string;
     clienteNombre: string;
@@ -22,14 +29,19 @@ export interface CotizacionParaPdf {
     total: number;
 }
 
+// Pesos colombianos sin decimales: $ 1.250.000 COP.
 const formatearCOP = (valor: number) => `$ ${Math.round(valor).toLocaleString('es-CO')} COP`;
 
+// AAAA-MM-DD -> DD/MM/AAAA (o "A convenir" si el evento aún no tiene fecha).
 const formatearFecha = (fecha: string | null) => {
     if (!fecha) return 'A convenir';
     const [anio, mes, dia] = fecha.split('-');
     return `${dia}/${mes}/${anio}`;
 };
 
+/**
+ * Genera el PDF en memoria y lo devuelve como Buffer para enviarlo como respuesta o adjunto.
+ */
 export function generarCotizacionPdfBuffer(cotizacion: CotizacionParaPdf): Promise<Buffer> {
     return new Promise((resolve, reject) => {
         try {
@@ -38,12 +50,13 @@ export function generarCotizacionPdfBuffer(cotizacion: CotizacionParaPdf): Promi
             doc.on('data', buffers.push.bind(buffers));
             doc.on('end', () => resolve(Buffer.concat(buffers)));
 
-            const logoPath = path.join(__dirname, '..', '..', 'assets', 'logo.png');
+            const logoPath = path.join(CARPETA_ASSETS, 'logo.png');
             const tieneLogo = fs.existsSync(logoPath);
             const ANCHO = doc.page.width;
             const MARGEN = 40;
             const LIMITE_INFERIOR = doc.page.height - 60;
 
+            // Franja naranja, logo y referencia; se repite en cada página.
             function encabezado() {
                 doc.rect(0, 0, ANCHO, 6).fill('#f97316');
 
@@ -63,6 +76,7 @@ export function generarCotizacionPdfBuffer(cotizacion: CotizacionParaPdf): Promi
                 doc.moveTo(MARGEN, 64).lineTo(ANCHO - MARGEN, 64).strokeColor('#cbd5e1').lineWidth(0.8).stroke();
             }
 
+            // Si lo que sigue no cabe en la página, abre una nueva (con su encabezado) y devuelve dónde seguir.
             function asegurarEspacio(alturaNecesaria: number, yActual: number): number {
                 if (yActual + alturaNecesaria > LIMITE_INFERIOR) {
                     doc.addPage();

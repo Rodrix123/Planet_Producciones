@@ -1,12 +1,32 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { nombreDeUsuario } from "./empleados.js";
+// Eventos de la administradora: listado, validación de fecha y hora, y creación de un evento junto
+// con su cotización y sus servicios.
+//
+// Un evento siempre nace con su propia cotización (events.quote_id es obligatorio y único). Los
+// datos de logística (fecha, hora, lugar, cliente) existen tanto en el evento como en su cotización;
+// al mostrarlos se usa primero el del evento y, si falta, el de la cotización.
 
+import type { SupabaseClient, User } from "@supabase/supabase-js";
+
+/**
+ * Nombre de un usuario de auth.users: lo que guardan sus metadatos (full_name, nombre, name o
+ * display_name). public.profiles no guarda nombre ni correo.
+ */
+function nombreDeUsuario(u: User): string | null {
+  const meta = (u.user_metadata ?? {}) as Record<string, unknown>;
+  for (const valor of [meta.full_name, meta.nombre, meta.name, meta.display_name]) {
+    if (typeof valor === "string" && valor.trim() !== "") return valor.trim();
+  }
+  return null;
+}
+
+// Cliente del evento: el nombre y el teléfono salen de la cotización (lo que dio esa persona).
 export interface ClienteEvento {
   nombre: string;
   email: string | null;
   telefono: string | null;
 }
 
+// Un evento tal como lo ve la web (ya con los datos de evento y cotización unificados).
 export interface Evento {
   id: number;
   /** YYYY-MM-DD. Nulo si ni el evento ni su cotización tienen fecha. */
@@ -48,9 +68,13 @@ interface Logistica {
   transportation: { city: string } | null;
 }
 
-/** public.quote: además de la logística, lo que se cotizó. */
+/** public.quote: además de la logística, lo que se cotizó y los datos que dio quien la pidió. */
 interface FilaCotizacion extends Logistica {
   total: number | string;
+  /** Datos del cliente propios de esta cotización (el cliente de public.users se comparte por correo). */
+  cliente_nombre?: string | null;
+  cliente_telefono?: string | null;
+  cliente_documento?: string | null;
 }
 
 /** public.events: estado del evento (confirmación, pagos, contrato) y su cotización. */
@@ -62,9 +86,11 @@ interface FilaEvento extends Logistica {
   contrato_enviado_en: string | null;
   contrato_firmado_subido_en: string | null;
   quote: FilaCotizacion | null;
-  event_staff: { profile_id: string }[] | null;
+  /** estado_respuesta: null = asignado a mano; PENDIENTE/CONFIRMADO/RECHAZADO = convocatoria por WhatsApp. */
+  event_staff: { profile_id: string; estado_respuesta: string | null }[] | null;
 }
 
+// Columnas de logística que comparten events y quote (se piden juntas a la base).
 const LOGISTICA = [
   "date, hour, event_type, address, venue_nombre_manual, venue_direccion_manual",
   "venue(name, city)",
@@ -72,14 +98,16 @@ const LOGISTICA = [
   "transportation(city)",
 ].join(", ");
 
+// Columnas que se piden de un evento: su estado, su logística y los datos de su cotización.
 const COLUMNAS = [
   "id, confirmed, initial_payment, total_paid",
   "contrato_enviado_en, contrato_firmado_subido_en",
   LOGISTICA,
-  `quote(total, ${LOGISTICA})`,
-  "event_staff(profile_id)",
+  `quote(total, cliente_nombre, cliente_telefono, cliente_documento, ${LOGISTICA})`,
+  "event_staff(profile_id, estado_respuesta)",
 ].join(", ");
 
+// Filas por página al leer de la base.
 const POR_PAGINA = 200;
 
 /**
@@ -114,9 +142,18 @@ async function nombresPorPerfil(supabase: SupabaseClient, ids: string[]): Promis
   return nombres;
 }
 
-const idsDelPersonal = (filas: FilaEvento[]): string[] =>
-  filas.flatMap((f) => (f.event_staff ?? []).map((s) => s.profile_id));
+/**
+ * Personal asignado al evento: las filas de event_staff hechas a mano (sin respuesta) y las
+ * convocatorias de WhatsApp confirmadas. Una convocatoria pendiente o rechazada no es asignación.
+ */
+const personalAsignado = (f: FilaEvento): { profile_id: string }[] =>
+  (f.event_staff ?? []).filter((s) => s.estado_respuesta === null || s.estado_respuesta === "CONFIRMADO");
 
+// Ids de todo el personal asignado a una lista de eventos (para buscar sus nombres de una vez).
+const idsDelPersonal = (filas: FilaEvento[]): string[] =>
+  filas.flatMap((f) => personalAsignado(f).map((s) => s.profile_id));
+
+// Los datos de logística de un evento ya unificados.
 type DatosEvento = Pick<
   Evento,
   "fecha" | "hora" | "tipo" | "lugar" | "ciudad" | "direccion" | "cliente" | "transporte"
@@ -137,6 +174,9 @@ function datosDelEvento(f: Logistica & { quote: Logistica | null }): DatosEvento
     return null;
   };
   const cliente = primero((l) => l.client);
+  // Nombre y teléfono: los de la cotización (lo que dio esta persona); el cliente compartido
+  // por correo solo sirve de respaldo para cotizaciones antiguas.
+  const propios = f.quote as FilaCotizacion | null;
   return {
     fecha: primero((l) => l.date),
     hora: primero((l) => l.hour),
@@ -144,11 +184,20 @@ function datosDelEvento(f: Logistica & { quote: Logistica | null }): DatosEvento
     lugar: primero((l) => l.venue?.name ?? l.venue_nombre_manual),
     ciudad: primero((l) => l.venue?.city),
     direccion: primero((l) => l.address ?? l.venue_direccion_manual),
-    cliente: cliente ? { nombre: cliente.name, email: cliente.email, telefono: cliente.phone } : null,
+    cliente: cliente
+      ? {
+          nombre: propios?.cliente_nombre || cliente.name,
+          email: cliente.email,
+          telefono: propios?.cliente_telefono || cliente.phone,
+        }
+      : null,
     transporte: primero((l) => l.transportation?.city),
   };
 }
 
+/**
+ * Convierte la fila de la base en el Evento que usa la web.
+ */
 function aEvento(f: FilaEvento, nombrePorPerfil: Map<string, string>): Evento {
   return {
     id: f.id,
@@ -159,7 +208,9 @@ function aEvento(f: FilaEvento, nombrePorPerfil: Map<string, string>): Evento {
     pagoInicial: f.initial_payment,
     firmado: f.contrato_firmado_subido_en !== null,
     contratoEnviadoEn: f.contrato_enviado_en,
-    personal: (f.event_staff ?? []).map((s) => nombrePorPerfil.get(s.profile_id) ?? "Sin nombre"),
+    personal: personalAsignado(f)
+      .map((s) => nombrePorPerfil.get(s.profile_id) ?? "Sin nombre")
+      .sort((a, b) => ALFABETICO.compare(a, b)),
   };
 }
 
@@ -167,16 +218,9 @@ function aEvento(f: FilaEvento, nombrePorPerfil: Map<string, string>): Evento {
 const claveDeOrden = (e: Evento): string => `${e.fecha ?? "9999-99-99"} ${e.hora ?? "99:99:99"}`;
 
 /**
- * Fecha de hoy en Colombia (YYYY-MM-DD). Se usa la hora local y no la UTC para que
- * un evento de hoy siga vigente toda la tarde y la noche, cuando en UTC ya es mañana.
- */
-const hoyEnColombia = (): string => new Date().toLocaleDateString("en-CA", { timeZone: "America/Bogota" });
-
-/**
- * Solo lectura. Devuelve los eventos vigentes: los de hoy en adelante, más los que
- * todavía no tienen fecha (no se pueden dar por pasados). Un evento de hoy cuenta como
- * vigente todo el día, aunque su hora ya haya pasado, porque los eventos no guardan
- * duración y puede seguir en curso.
+ * Solo lectura. Devuelve todos los eventos, también los pasados y los que todavía no
+ * tienen fecha: el menú de eventos decide qué mostrar con su filtro de fechas, que
+ * arranca en el día de hoy.
  *
  * - public.events + public.quote (+ venue, users, transportation) -> datos del evento
  * - public.event_staff + auth.users (Admin API)                   -> personal asignado y su nombre
@@ -194,19 +238,29 @@ export async function listarEventos(supabase: SupabaseClient): Promise<{ eventos
   const eventosRes = await supabase.from("events").select(COLUMNAS);
   if (eventosRes.error) throw eventosRes.error;
 
-  const hoy = hoyEnColombia();
-  const filas = (eventosRes.data as unknown as FilaEvento[]).filter((f) => {
-    const { fecha } = datosDelEvento(f);
-    return fecha === null || fecha >= hoy;
-  });
-
+  const filas = eventosRes.data as unknown as FilaEvento[];
   const nombrePorPerfil = await nombresPorPerfil(supabase, idsDelPersonal(filas));
   const eventos = filas.map((f) => aEvento(f, nombrePorPerfil));
   eventos.sort((a, b) => claveDeOrden(a).localeCompare(claveDeOrden(b)));
   return { eventos };
 }
 
-async function cargarEvento(supabase: SupabaseClient, id: number): Promise<Evento> {
+/**
+ * Solo lectura. Todos los eventos confirmados (events.confirmed = true), sin importar
+ * su fecha: un evento ya realizado puede seguir debiendo dinero. Lo usa el menú de Pagos.
+ */
+export async function listarEventosConfirmados(supabase: SupabaseClient): Promise<Evento[]> {
+  const eventosRes = await supabase.from("events").select(COLUMNAS).eq("confirmed", true);
+  if (eventosRes.error) throw eventosRes.error;
+
+  const filas = eventosRes.data as unknown as FilaEvento[];
+  const nombrePorPerfil = await nombresPorPerfil(supabase, idsDelPersonal(filas));
+  const eventos = filas.map((f) => aEvento(f, nombrePorPerfil));
+  eventos.sort((a, b) => claveDeOrden(a).localeCompare(claveDeOrden(b)));
+  return eventos;
+}
+
+export async function cargarEvento(supabase: SupabaseClient, id: number): Promise<Evento> {
   const eventoRes = await supabase.from("events").select(COLUMNAS).eq("id", id).single();
   if (eventoRes.error) throw eventoRes.error;
 
@@ -216,21 +270,80 @@ async function cargarEvento(supabase: SupabaseClient, id: number): Promise<Event
 }
 
 // ---------------------------------------------------------------------------
+// Elementos del evento
+// ---------------------------------------------------------------------------
+
+/** Un elemento cotizado para el evento (public.quote_items), sin precios. */
+export interface ElementoEvento {
+  /** Categoría del elemento (inventory.type). */
+  tipo: string;
+  nombre: string;
+  descripcion: string;
+  cantidad: number;
+  nota: string | null;
+}
+
+interface FilaElemento {
+  quantity: number;
+  nota: string | null;
+  inventory_variants: {
+    simple_description: string | null;
+    detailed_description: string | null;
+    inventory: { type: string } | null;
+  } | null;
+}
+
+/**
+ * Solo lectura. Lo que lleva el evento según su cotización, por categoría y nombre.
+ * Son los elementos cotizados, no unidades físicas: ningún flujo asigna todavía stock a un evento.
+ */
+export async function listarElementosEvento(
+  supabase: SupabaseClient,
+  id: unknown,
+): Promise<{ elementos: ElementoEvento[] }> {
+  const eventoId = idOpcional(id, "El evento");
+  if (eventoId === null) throw new ErrorEvento("El evento no es válido.");
+
+  const eventoRes = await supabase.from("events").select("quote_id").eq("id", eventoId).maybeSingle();
+  if (eventoRes.error) throw eventoRes.error;
+  if (!eventoRes.data) throw new ErrorEvento("El evento no existe.", 404);
+
+  const { data, error } = await supabase
+    .from("quote_items")
+    .select("quantity, nota, inventory_variants(simple_description, detailed_description, inventory(type))")
+    .eq("quote_id", eventoRes.data.quote_id);
+  if (error) throw error;
+
+  const elementos = (data as unknown as FilaElemento[]).map((f) => ({
+    tipo: f.inventory_variants?.inventory?.type ?? "Sin categoría",
+    nombre: f.inventory_variants?.simple_description ?? "Sin nombre",
+    descripcion: f.inventory_variants?.detailed_description ?? "",
+    cantidad: f.quantity,
+    nota: f.nota,
+  }));
+  elementos.sort((a, b) => ALFABETICO.compare(a.tipo, b.tipo) || ALFABETICO.compare(a.nombre, b.nombre));
+  return { elementos };
+}
+
+// ---------------------------------------------------------------------------
 // Creación de eventos
 // ---------------------------------------------------------------------------
 
+// Una sede que se puede elegir al crear un evento.
 export interface SedeEvento {
   id: number;
   nombre: string;
   ciudad: string | null;
 }
 
+// Un transporte (ciudad y precio) que se puede elegir al crear un evento.
 export interface TransporteEvento {
   id: number;
   ciudad: string;
   precio: number;
 }
 
+// Opciones del formulario de nuevo evento.
 export interface OpcionesEvento {
   sedes: SedeEvento[];
   transportes: TransporteEvento[];
@@ -251,6 +364,7 @@ export interface ItemCotizacionEvento {
   nota?: string;
 }
 
+// Datos que manda el formulario de nuevo evento.
 export interface NuevoEvento {
   tipo: string;
   /** YYYY-MM-DD */
@@ -285,19 +399,28 @@ export class ErrorEvento extends Error {
   }
 }
 
+// Límites y formatos que se validan antes de tocar la base.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const HORA_RE = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
 const MAX_ITEMS = 200;
 const MAX_CANTIDAD = 999;
+// Códigos de error de Postgres que se reconocen: P0001 es una regla de negocio de la base (p. ej.
+// fecha demasiado lejana) y 23505 es un valor repetido.
 const CODIGO_EXCEPCION_TRIGGER = "P0001"; // RAISE EXCEPTION en la base de datos
 const CODIGO_DUPLICADO = "23505";
 
+/**
+ * Texto recortado (vacío si no es texto); lanza ErrorEvento si supera `max` caracteres.
+ */
 function texto(valor: unknown, max: number, campo: string): string {
   const limpio = typeof valor === "string" ? valor.trim() : "";
   if (limpio.length > max) throw new ErrorEvento(`${campo} no puede superar los ${max} caracteres.`);
   return limpio;
 }
 
+/**
+ * Fecha real en formato AAAA-MM-DD.
+ */
 function fechaValida(valor: unknown): string {
   const fecha = typeof valor === "string" ? valor : "";
   const d = new Date(`${fecha}T00:00:00Z`);
@@ -307,12 +430,16 @@ function fechaValida(valor: unknown): string {
   return fecha;
 }
 
+/**
+ * Hora válida en formato HH:MM (o HH:MM:SS); lanza ErrorEvento si no lo es.
+ */
 function horaValida(valor: unknown): string {
   const hora = typeof valor === "string" ? valor : "";
   if (!HORA_RE.test(hora)) throw new ErrorEvento("La hora del evento no es válida.");
   return hora;
 }
 
+// Resultado de validarFechaEvento: si la fecha se puede usar y, si no, por qué.
 export interface ValidacionFecha {
   valida: boolean;
   /** Última fecha aceptada (YYYY-MM-DD); null si la base no define un límite. */
@@ -323,6 +450,7 @@ export interface ValidacionFecha {
   mensaje: string | null;
 }
 
+// Hora en formato legible en español (7:30 p. m.).
 const formatearHora = (hora: string): string => {
   const [h = "0", m = "0"] = hora.split(":");
   return new Date(2000, 0, 1, Number(h), Number(m)).toLocaleTimeString("es-CO", { hour: "numeric", minute: "2-digit" });
@@ -399,6 +527,9 @@ export async function validarFechaEvento(
   return { valida: true, fechaMaxima, motivo: null, mensaje: null };
 }
 
+/**
+ * Identificador entero positivo, o null si viene vacío.
+ */
 function idOpcional(valor: unknown, campo: string): number | null {
   if (valor === undefined || valor === null || valor === "") return null;
   const n = Number(valor);
@@ -406,6 +537,9 @@ function idOpcional(valor: unknown, campo: string): number | null {
   return n;
 }
 
+/**
+ * Lanza ErrorEvento si la sede o el transporte indicado no existe.
+ */
 async function existeFila(supabase: SupabaseClient, tabla: "venue" | "transportation", id: number, nombre: string) {
   const { data, error } = await supabase.from(tabla).select("id").eq("id", id).maybeSingle();
   if (error) throw error;
@@ -442,6 +576,7 @@ export async function listarOpcionesEvento(supabase: SupabaseClient): Promise<Op
   };
 }
 
+// Un servicio ya identificado en el catálogo, con su precio vigente.
 interface ItemResuelto {
   varianteId: number;
   cantidad: number;
@@ -450,8 +585,10 @@ interface ItemResuelto {
   nota: string | null;
 }
 
+// Largo máximo de la nota de un servicio.
 const MAX_NOTA = 500;
 
+// Filas de catálogo y de precios que se leen para resolver los servicios.
 interface FilaVariante {
   id: number;
   simple_description: string;
@@ -642,7 +779,16 @@ export async function crearEvento(supabase: SupabaseClient, datos: NuevoEvento):
       venue_direccion_manual: venueId === null ? direccionLugarManual || null : null,
     };
 
-    const quote = await supabase.from("quote").insert(logistica).select("id").single();
+    const quote = await supabase
+      .from("quote")
+      .insert({
+        ...logistica,
+        cliente_nombre: nombre,
+        cliente_telefono: telefono || null,
+        cliente_documento: documento || null,
+      })
+      .select("id")
+      .single();
     if (quote.error) throw quote.error;
     quoteId = quote.data.id as number;
 

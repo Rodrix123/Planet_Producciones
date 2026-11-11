@@ -20,10 +20,14 @@ JS + Express) migrada a esta estructura de monorepo en TypeScript.
 | Cambiar la landing / página promocional         | `apps/web/index.html` + `apps/web/src/landing.css` + `apps/web/src/home.ts` |
 | Cambiar el catálogo de precios / los servicios de la cotización | `apps/web/src/catalogo.html` (se monta en `cotizador.html`) |
 | Cambiar el cálculo del total | `apps/web/src/catalogo.ts` |
-| Cambiar la generación de PDF/Excel del navegador, o el guardado de la cotización junto con el evento en creación | `apps/web/src/main.ts` |
+| Cambiar la generación de PDF del navegador, o el guardado de la cotización junto con el evento en creación | `apps/web/src/main.ts` |
+| Cambiar el Excel de la cotización (lo usan el cotizador y el panel de consulta) | `apps/web/src/shared/cotizacionExcel.ts` |
+| Cambiar el panel de consulta (clientes > eventos > cotizaciones, solo lectura) | `apps/web/consulta.html` + `apps/web/src/consulta.ts` + `apps/web/src/consulta.css`; filtros y reglas en `apps/web/src/shared/consultaDatos.ts`; endpoint `GET /api/consulta/clientes` en `apps/server/src/routes/consulta.routes.ts` |
 | Cambiar el formulario de nuevo evento (solo datos del evento; de ahí se pasa a cotizar) | `apps/web/src/eventos.ts` + `apps/web/src/borrador-evento.ts` |
+| Cambiar los elementos adicionales de una cotización (lo que no sale de la bodega y se alquila o se consigue aparte: nombre, cantidad, precio al cliente, proveedor y costo) | tabla `quote_extra_items` (migración `20261107120000`); edición en `apps/web/src/cotizaciones.ts` y `apps/server/src/routes/cotizaciones.routes.ts`; validación en `apps/server/src/cotizacionEntrada.ts`; lista de carga en `apps/server/src/routes/logistica.routes.ts` |
 | Cambiar cómo se guarda un evento nuevo (evento + cotización + servicios) | `packages/db/src/eventos.ts` |
 | Cambiar el menú de inventario (tipo > elemento > variante > unidad física, solo lectura) | `apps/web/inventario.html` + `apps/web/src/inventario.ts` + `apps/web/src/inventario.css`; consulta en `packages/db/src/inventario.ts` y endpoint `GET /api/inventario` en `apps/server/src/index.ts` |
+| Cambiar el menú de pagos (eventos confirmados sin pagar / pagados, registro manual de pagos con paso de confirmación) | `apps/web/pagos.html` + `apps/web/src/pagos.ts` + `apps/web/src/pagos.css`; consultas en `packages/db/src/pagos.ts` y endpoints `GET/POST /api/pagos` en `apps/server/src/routes/pagos.routes.ts` |
 | Cambiar estilos del cotizador                   | `apps/web/src/style.css`          |
 | Cambiar la página de login                      | `apps/web/login.html` + `apps/web/src/login.ts` |
 | Cambiar el endpoint de la API / envío de correo | `apps/server/src/index.ts`        |
