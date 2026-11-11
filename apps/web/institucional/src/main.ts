@@ -1,5 +1,9 @@
+// Las mismas tipografías y la misma paleta que la web pública del aplicativo
+// (landing.css ya no se importa: ahora es la cabecera de los paneles internos)
+import '@fontsource/tenor-sans/latin-400.css';
+import '@fontsource/tenor-sans/latin-ext-400.css';
+import '@fontsource-variable/hanken-grotesk/wght.css';
 import '../../src/style.css';
-import '../../src/landing.css';
 import './institucional.css';
 
 // Menú desplegable en pantallas pequeñas

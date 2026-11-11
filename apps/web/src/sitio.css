@@ -1781,6 +1781,13 @@
     color: var(--paper);
 }
 
+/* Enlaces a las páginas legales (privacidad, términos, eliminación de datos) */
+.sitio-pie-legal {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 1.4rem;
+}
+
 /* ---------- Movimiento: una sola entrada por bloque, y la del hero ---------- */
 @keyframes sube {
     from {

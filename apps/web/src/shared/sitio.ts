@@ -92,6 +92,11 @@ function htmlFooter(): string {
 
         <div class="sitio-pie-base">
             <p>© 2026 Planet Producciones. Todos los derechos reservados.</p>
+            <nav class="sitio-pie-legal" aria-label="Información legal">
+                <a href="institucional/privacidad.html">Política de privacidad</a>
+                <a href="institucional/terminos.html">Términos y condiciones</a>
+                <a href="institucional/eliminacion-datos.html">Eliminación de datos</a>
+            </nav>
             <a href="login.html"><i class="fa-solid fa-right-to-bracket"></i> Iniciar Sesión</a>
         </div>
     </footer>`;

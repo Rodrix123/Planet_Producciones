@@ -56,6 +56,9 @@ export default defineConfig({
         // El sitio tiene un solo archivo JS: sin el polyfill de modulepreload (usa fetch), el
         // JavaScript publicado no hace ninguna petición y la auditoría puede exigirlo.
         modulePreload: { polyfill: false },
+        // Nada incrustado como data: (la CSP solo admite fuentes e imágenes del propio sitio):
+        // cada tipografía e imagen sale como su propio archivo en assets/
+        assetsInlineLimit: 0,
         rollupOptions: {
             input: Object.fromEntries(
                 PAGINAS.filter((pagina) => existsSync(resolve(RAIZ, `${pagina}.html`))).map((pagina) => [pagina, resolve(RAIZ, `${pagina}.html`)])

@@ -64,6 +64,21 @@ El texto se consultó en el gestor normativo de Función Pública:
 9. **Domicilio.** El artículo 13 del Decreto 1377 pide identificar al responsable con su
    domicilio y sus datos de contacto. ¿Basta con la ciudad, el correo y el teléfono, o debe
    publicarse la dirección registrada, que parece una vivienda?
+10. **Las páginas legales ahora también se enlazan desde la web del aplicativo** (pendiente
+    desde el 10/11/2026). El pie de la web pública del aplicativo (inicio, servicios, galería,
+    contacto…) enlaza a estas tres páginas, que se muestran tal cual. Pero los textos describen
+    solo el sitio institucional, y la web del aplicativo es distinta:
+    - la política dice «Este sitio no tiene formularios y no usa cookies propias», y el
+      aplicativo tiene el cotizador, el formulario de PQRS y el inicio de sesión, que usa una
+      cookie de sesión;
+    - la política nombra a Cloudflare como el que aloja «este sitio web», y al aplicativo lo
+      sirve su propio backend (apps/server), no Cloudflare Pages;
+    - los términos regulan «el uso de este sitio web» y describen para qué sirve el sitio
+      institucional, no el cotizador ni el PQRS.
+    Antes de llevar el aplicativo a producción con esos enlaces, decidir con la dueña y la
+    revisión jurídica si se amplían estos textos para cubrir las dos webs o si el aplicativo
+    necesita sus propios avisos (por ejemplo, un aviso de privacidad junto al cotizador y al
+    formulario de PQRS, que también está en el punto 2).
 
 ## Ley colombiana y requisitos de Meta
 
