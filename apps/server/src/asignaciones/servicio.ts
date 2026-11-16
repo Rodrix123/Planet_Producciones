@@ -11,16 +11,20 @@
 //   Supabase Auth solo con su celular, sin correo ni contraseña, y su perfil "trabajador").
 // - Fecha y hora de inicio salen del evento o, si faltan, de su cotización; la hora de fin es
 //   events.hora_fin, que la administradora define al asignar.
+// - La asignación (y quitar personal) se cierra 12 horas después de que termina el evento, en la
+//   hora de Colombia (reglas.ts, cierreDeAsignacion); después solo se puede consultar.
 //
 // Las consultas reciben la conexión por parámetro (ver conexion.ts) para poder probarlas con un
 // Postgres embebido sin tocar la base real.
 
 import type { BaseDeDatos, Conexion } from './conexion';
 import {
+    cierreDeAsignacion,
     esHora,
     intervaloDe,
     motivoDelEvento,
     motivosDePersona,
+    msHastaElCierre,
     normalizarCelular,
     terminaAlDiaSiguiente,
     diasQueOcupa,
@@ -94,6 +98,12 @@ export interface EventoDto {
     confirmado: boolean;
     asignable: boolean;
     motivo: { codigo: string; mensaje: string } | null;
+    /**
+     * Milisegundos que faltan para que se cierre la asignación de personal (12 horas después de que
+     * termina el evento; ver cierreDeAsignacion), medidos con el reloj del servidor. 0 si ya se cerró;
+     * null si el evento no tiene fecha. La pantalla lo usa para bloquear "Asignar personal" a tiempo.
+     */
+    asignacionCierraEnMs: number | null;
 }
 
 export interface AsignadoDto {
@@ -171,7 +181,8 @@ interface FilaEvento {
     hora_fin: string | null;
     nombre: string;
     lugar: string | null;
-    vigente: boolean;
+    /** Ahora en Colombia, en minutos desde la época como reglas.minutosDesdeEpoca (con fracción). */
+    ahora: number;
 }
 
 // La hora 00:00 de events es relleno de "finalizar cotización" cuando nadie indicó la hora: se toma la
@@ -189,7 +200,8 @@ async function leerEvento(c: Conexion, eventoId: number, bloquear = false): Prom
                 to_char(e.hora_fin, 'HH24:MI') as hora_fin,
                 ${NOMBRE_EVENTO_SQL} as nombre,
                 nullif(concat_ws(' · ', coalesce(v.name, e.venue_nombre_manual, q.venue_nombre_manual), v.city), '') as lugar,
-                coalesce(coalesce(e.date, q.date) >= (now() at time zone 'America/Bogota')::date, false) as vigente
+                -- Hora de pared de Colombia: extract da los segundos "nominales" desde 1970, sin zona
+                extract(epoch from (now() at time zone 'America/Bogota'))::float8 / 60 as ahora
            from public.events e
            join public.quote q on q.id = e.quote_id
            left join public.venue v on v.id = coalesce(e.venue_id, q.venue_id)
@@ -399,8 +411,9 @@ function aEventoDto(fila: FilaEvento): EventoDto {
         confirmado: fila.confirmado,
         cancelado: fila.cancelado,
         fecha: fila.fecha,
-        vigente: fila.vigente,
-        horaInicio: fila.hora_inicio
+        horaInicio: fila.hora_inicio,
+        horaFin: fila.hora_fin,
+        ahora: Number(fila.ahora)
     });
     return {
         id: Number(fila.id),
@@ -411,7 +424,8 @@ function aEventoDto(fila: FilaEvento): EventoDto {
         lugar: fila.lugar,
         confirmado: fila.confirmado,
         asignable: motivo === null,
-        motivo
+        motivo,
+        asignacionCierraEnMs: msHastaElCierre(cierreDeAsignacion(fila.fecha, fila.hora_inicio, fila.hora_fin), Number(fila.ahora))
     };
 }
 

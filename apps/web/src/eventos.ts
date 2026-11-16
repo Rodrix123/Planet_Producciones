@@ -9,6 +9,7 @@ import { exigirSesion, rutaPanelPorRol, type SesionActual } from './shared/api';
 import { initPanelLayout } from './shared/layout';
 import { abrirAsignacionPersonal } from './asignacion-personal';
 import { hidratarBloquePersonal, htmlBloquePersonal } from './personal-evento';
+import type { ConsultaPersonal } from './shared/etapasPersonal';
 
 // Un evento tal como lo devuelve /api/eventos.
 interface Evento {
@@ -414,21 +415,50 @@ function htmlDetalle(e: Evento): string {
 const HTML_VACIO = `<div class="detalle-vacio"><i class="fa-regular fa-hand-pointer"></i>
     Selecciona un evento en la lista o en el calendario para ver su información.</div>`;
 
+// ---------- Plazo para asignar personal ----------
+// El servidor cierra la asignación 12 horas después de que termina el evento (sin hora de fin, al
+// terminar el día del evento) y rechaza lo que llegue después. El detalle lo refleja con la consulta
+// del personal que ya hace: el botón queda deshabilitado en su lugar, con el motivo debajo, y si el
+// plazo vence con el detalle abierto se deshabilita en ese momento.
+let plazoTimer: number | undefined;
+// setTimeout no admite esperas de más de ~24,8 días: un plazo tan lejano se programa al volver a abrir el detalle.
+const ESPERA_MAXIMA_MS = 2 ** 31 - 1;
+
+function cerrarAsignacion(boton: HTMLButtonElement): void {
+    if (!boton.isConnected || boton.disabled) return;
+    boton.disabled = true;
+    boton.setAttribute('aria-describedby', 'asignacionCerrada');
+    boton.insertAdjacentHTML('afterend', `
+        <p class="asignacion-cerrada" id="asignacionCerrada">
+            <i class="fa-solid fa-lock" aria-hidden="true"></i> La asignación de personal está cerrada para este evento
+        </p>`);
+}
+
+function aplicarPlazoAsignacion(datos: ConsultaPersonal | null): void {
+    const boton = datos && detalleContenido.querySelector<HTMLButtonElement>(`[data-asignar-personal="${datos.evento.id}"]`);
+    const faltan = datos?.evento.asignacionCierraEnMs ?? null;
+    if (!boton || faltan === null) return;
+    window.clearTimeout(plazoTimer);
+    if (faltan === 0) cerrarAsignacion(boton);
+    else if (faltan <= ESPERA_MAXIMA_MS) plazoTimer = window.setTimeout(() => cerrarAsignacion(boton), faltan);
+}
+
 /** Cambia el contenido del detalle con un fade out / fade in. */
 function mostrarDetalle(id: number | null, inmediato = false): void {
     const evento = id === null ? undefined : eventos.find(e => e.id === id);
     const html = evento ? htmlDetalle(evento) : HTML_VACIO;
     window.clearTimeout(fadeTimer);
+    window.clearTimeout(plazoTimer); // el plazo pendiente era del evento que se deja de mostrar
     if (inmediato) {
         detalleContenido.innerHTML = html;
-        void hidratarBloquePersonal(detalleContenido);
+        void hidratarBloquePersonal(detalleContenido).then(aplicarPlazoAsignacion);
         return;
     }
     detalleContenido.classList.add('oculto');
     fadeTimer = window.setTimeout(() => {
         detalleContenido.innerHTML = html;
         detalleContenido.classList.remove('oculto');
-        void hidratarBloquePersonal(detalleContenido); // personal por etapa
+        void hidratarBloquePersonal(detalleContenido).then(aplicarPlazoAsignacion); // personal por etapa y plazo
     }, FADE_MS);
 }
 
@@ -634,8 +664,8 @@ function abrirPanelPersonal(id: number): void {
 
 // ---------- Eventos de la interfaz ----------
 detalleContenido.addEventListener('click', ev => {
-    const boton = (ev.target as HTMLElement).closest<HTMLElement>('[data-asignar-personal]');
-    if (boton) abrirPanelPersonal(Number(boton.dataset.asignarPersonal));
+    const boton = (ev.target as HTMLElement).closest<HTMLButtonElement>('[data-asignar-personal]');
+    if (boton && !boton.disabled) abrirPanelPersonal(Number(boton.dataset.asignarPersonal));
 });
 
 segmentos.forEach(s => s.addEventListener('click', () => {

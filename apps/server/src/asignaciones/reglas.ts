@@ -11,7 +11,7 @@ export function esHora(valor: unknown): valor is string {
 }
 
 /** Minutos desde el 1970-01-01 (sin zona horaria: fecha y hora son locales de Colombia). */
-function minutosDesdeEpoca(fecha: string, hora: string): number {
+export function minutosDesdeEpoca(fecha: string, hora: string): number {
     const [anio, mes, dia] = fecha.split('-').map(Number);
     const [h, m] = hora.split(':').map(Number);
     const dias = Date.UTC(anio, mes - 1, dia) / 86_400_000;
@@ -72,29 +72,64 @@ export interface DatosDeEvento {
     confirmado: boolean;
     cancelado: boolean;
     fecha: string | null;
-    /** La fecha es hoy o futura, en la hora de Colombia. */
-    vigente: boolean;
     horaInicio: string | null;
+    /** Hora de finalización guardada (events.hora_fin); null mientras no se haya definido. */
+    horaFin: string | null;
+    /** El momento actual en Colombia, en minutos como minutosDesdeEpoca (los segundos como fracción). */
+    ahora: number;
+}
+
+/** Horas después del final del evento durante las que todavía se puede asignar personal. */
+export const HORAS_PARA_ASIGNAR_TRAS_EL_FIN = 12;
+
+/**
+ * Momento (en minutos, como minutosDesdeEpoca) desde el que el evento ya no admite cambios en su
+ * personal: 12 horas después de que termina. Si la hora de fin es menor que la de inicio, el evento
+ * termina al día siguiente (ver intervaloDe).
+ *
+ * Sin horario completo (falta la hora de fin, que la administradora define al asignar, o la de
+ * inicio) no se sabe cuándo termina y no se supone ninguna duración: se mantiene la regla de antes,
+ * que permite asignar mientras dure el día del evento (se cierra a las 00:00 del día siguiente).
+ * null si el evento no tiene fecha.
+ */
+export function cierreDeAsignacion(fecha: string | null, inicio: string | null, fin: string | null): number | null {
+    if (!fecha || !FECHA.test(fecha)) return null;
+    const intervalo = intervaloDe(fecha, inicio, fin);
+    return intervalo
+        ? intervalo.hasta + HORAS_PARA_ASIGNAR_TRAS_EL_FIN * 60
+        : minutosDesdeEpoca(fecha, '00:00') + MINUTOS_DIA;
+}
+
+/** Milisegundos que faltan para el cierre (0 si ya llegó); null si no hay cierre (evento sin fecha). */
+export function msHastaElCierre(cierre: number | null, ahora: number): number | null {
+    return cierre === null ? null : Math.max(0, Math.ceil((cierre - ahora) * 60_000));
 }
 
 const MENSAJE_EVENTO: Record<CodigoEvento, string> = {
     EVENTO_NO_CONFIRMADO: 'Solo se puede asignar personal a eventos confirmados (con el contrato firmado).',
     EVENTO_CANCELADO: 'El evento está cancelado.',
     EVENTO_SIN_FECHA: 'El evento no tiene fecha definida.',
-    EVENTO_PASADO: 'La fecha del evento ya pasó.',
+    EVENTO_PASADO: 'La asignación de personal está cerrada para este evento: su fecha ya pasó.',
     EVENTO_SIN_HORA:
         'El evento no tiene hora de inicio registrada; sin ella no se puede comprobar la disponibilidad del personal.'
 };
 
+const MENSAJE_CERRADO_TRAS_EL_FIN =
+    `La asignación de personal está cerrada para este evento: ya pasaron ${HORAS_PARA_ASIGNAR_TRAS_EL_FIN} horas desde que terminó.`;
+
 /** Por qué el evento no admite asignaciones, o null si las admite. El orden importa: la primera causa. */
 export function motivoDelEvento(evento: DatosDeEvento): { codigo: CodigoEvento; mensaje: string } | null {
+    const cierre = cierreDeAsignacion(evento.fecha, evento.horaInicio, evento.horaFin);
     let codigo: CodigoEvento | null = null;
     if (!evento.confirmado) codigo = 'EVENTO_NO_CONFIRMADO';
     else if (evento.cancelado) codigo = 'EVENTO_CANCELADO';
     else if (!evento.fecha) codigo = 'EVENTO_SIN_FECHA';
-    else if (!evento.vigente) codigo = 'EVENTO_PASADO';
+    else if (cierre !== null && evento.ahora >= cierre) codigo = 'EVENTO_PASADO';
     else if (!esHora(evento.horaInicio)) codigo = 'EVENTO_SIN_HORA';
-    return codigo ? { codigo, mensaje: MENSAJE_EVENTO[codigo] } : null;
+    if (!codigo) return null;
+    // Con horario completo se sabe cuándo terminó; sin él, el cierre fue por la fecha (regla de antes).
+    const trasElFin = codigo === 'EVENTO_PASADO' && intervaloDe(evento.fecha, evento.horaInicio, evento.horaFin) !== null;
+    return { codigo, mensaje: trasElFin ? MENSAJE_CERRADO_TRAS_EL_FIN : MENSAJE_EVENTO[codigo] };
 }
 
 // ---------------------------------------------------------------------------------------------

@@ -36,6 +36,11 @@ export interface EventoDto {
     confirmado: boolean;
     asignable: boolean;
     motivo: Motivo | null;
+    /**
+     * Milisegundos que faltan, según el reloj del servidor, para que se cierre la asignación de
+     * personal (12 horas después de que termina el evento). 0 si ya se cerró; null si no tiene fecha.
+     */
+    asignacionCierraEnMs: number | null;
 }
 
 export interface AsignadoDto {

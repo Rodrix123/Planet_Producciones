@@ -151,15 +151,19 @@ export function htmlBloquePersonal(e: EventoResumen): string {
         </section>`;
 }
 
-/** Completa la composición y el personal por etapa que haya dentro de `raiz` (si los hay). */
-export async function hidratarBloquePersonal(raiz: HTMLElement): Promise<void> {
+/**
+ * Completa la composición y el personal por etapa que haya dentro de `raiz` (si los hay). Devuelve lo
+ * que respondió el servidor (el detalle lo usa también para el plazo de "Asignar personal"), o null
+ * si no hubo consulta, si falló o si mientras tanto se eligió otro evento.
+ */
+export async function hidratarBloquePersonal(raiz: HTMLElement): Promise<ConsultaPersonal | null> {
     const bloque = raiz.querySelector<HTMLElement>('[data-personal-evento]');
-    if (!bloque) return;
+    if (!bloque) return null;
     const composicion = raiz.querySelector<HTMLElement>('[data-personal-composicion]');
     const id = bloque.dataset.personalEvento;
     try {
         const datos = await api<ConsultaPersonal>('GET', `/api/eventos/${id}/personal?vista=asignados`);
-        if (!bloque.isConnected) return; // mientras tanto se eligió otro evento
+        if (!bloque.isConnected) return null; // mientras tanto se eligió otro evento
         const total = datos.asignados.length;
         bloque.querySelector('[data-personal-total]')!.textContent = String(total);
         bloque.querySelector('[data-personal-contenido]')!.innerHTML = htmlEtapas(datos);
@@ -167,10 +171,12 @@ export async function hidratarBloquePersonal(raiz: HTMLElement): Promise<void> {
             composicion.innerHTML = htmlComposicion(contar(datos.asignados), total);
             composicion.removeAttribute('aria-busy');
         }
+        return datos;
     } catch (err) {
-        if (!bloque.isConnected) return;
+        if (!bloque.isConnected) return null;
         composicion?.removeAttribute('aria-busy');
         const nota = bloque.querySelector('.personal-nota');
         if (nota) nota.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> No se pudieron cargar las etapas: ${esc((err as Error).message)}`;
+        return null;
     }
 }

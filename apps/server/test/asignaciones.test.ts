@@ -23,10 +23,13 @@ process.env.JWT_SECRET = JWT_SECRET;
 import type { BaseDeDatos } from '../src/asignaciones/conexion';
 import type { CuentasDePersonal } from '../src/asignaciones/servicio';
 import {
+    cierreDeAsignacion,
     diasQueOcupa,
     intervaloDe,
+    minutosDesdeEpoca,
     motivoDelEvento,
     motivosDePersona,
+    msHastaElCierre,
     normalizarCelular,
     seSolapan
 } from '../src/asignaciones/reglas';
@@ -248,13 +251,69 @@ describe('Reglas de horario', () => {
     });
 
     it('el evento debe estar confirmado, vigente, sin cancelar y con fecha y hora', () => {
-        const base = { confirmado: true, cancelado: false, fecha: '2026-11-20', vigente: true, horaInicio: '18:00' };
+        const base = { confirmado: true, cancelado: false, fecha: '2026-11-20', horaInicio: '18:00', horaFin: null, ahora: minutosDesdeEpoca('2026-11-15', '10:00') };
         assert.equal(motivoDelEvento(base), null);
         assert.equal(motivoDelEvento({ ...base, confirmado: false })?.codigo, 'EVENTO_NO_CONFIRMADO');
         assert.equal(motivoDelEvento({ ...base, cancelado: true })?.codigo, 'EVENTO_CANCELADO');
         assert.equal(motivoDelEvento({ ...base, fecha: null })?.codigo, 'EVENTO_SIN_FECHA');
-        assert.equal(motivoDelEvento({ ...base, vigente: false })?.codigo, 'EVENTO_PASADO');
+        assert.equal(motivoDelEvento({ ...base, ahora: minutosDesdeEpoca('2026-11-21', '00:00') })?.codigo, 'EVENTO_PASADO');
         assert.equal(motivoDelEvento({ ...base, horaInicio: null })?.codigo, 'EVENTO_SIN_HORA');
+    });
+
+    describe('cierre de la asignación: 12 horas después de que termina el evento', () => {
+        // El ejemplo de la historia de usuario: termina el 12 de noviembre a las 8:00 p. m.
+        const evento = { confirmado: true, cancelado: false, fecha: '2026-11-12', horaInicio: '18:00', horaFin: '20:00' };
+        const en = (fecha: string, hora: string, segundos = 0) => minutosDesdeEpoca(fecha, hora) + segundos / 60;
+        const motivoEn = (ahora: number, datos: Partial<typeof evento> = {}) => motivoDelEvento({ ...evento, ...datos, ahora })?.codigo ?? null;
+
+        it('permite asignar antes, durante y hasta 12 horas después del fin', () => {
+            assert.equal(motivoEn(en('2026-11-10', '09:00')), null); // futuro
+            assert.equal(motivoEn(en('2026-11-12', '19:00')), null); // en curso
+            assert.equal(motivoEn(en('2026-11-13', '00:30')), null); // ya cambió el día (antes se bloqueaba aquí)
+            assert.equal(motivoEn(en('2026-11-13', '07:59')), null);
+            assert.equal(motivoEn(en('2026-11-13', '07:59', 59)), null); // 11 h 59 min 59 s después
+        });
+
+        it('bloquea a las 12 horas exactas y después, con un mensaje que lo explica', () => {
+            assert.equal(motivoEn(en('2026-11-13', '08:00')), 'EVENTO_PASADO');
+            assert.equal(motivoEn(en('2026-11-14', '10:00')), 'EVENTO_PASADO');
+            assert.equal(motivoDelEvento({ ...evento, ahora: en('2026-11-13', '08:00') })?.mensaje,
+                'La asignación de personal está cerrada para este evento: ya pasaron 12 horas desde que terminó.');
+        });
+
+        it('usa el fin real: un evento que pasa la medianoche cierra 12 horas después de su fin al día siguiente', () => {
+            const trasnocho = { horaInicio: '22:00', horaFin: '03:00' }; // termina el 13 a las 3:00 a. m.
+            assert.equal(cierreDeAsignacion('2026-11-12', '22:00', '03:00'), en('2026-11-13', '15:00'));
+            assert.equal(motivoEn(en('2026-11-13', '01:00'), trasnocho), null); // en curso al día siguiente
+            assert.equal(motivoEn(en('2026-11-13', '14:59'), trasnocho), null);
+            assert.equal(motivoEn(en('2026-11-13', '15:00'), trasnocho), 'EVENTO_PASADO');
+        });
+
+        it('no se basa solo en la fecha: un evento de la madrugada se cierra el mismo día', () => {
+            const madrugada = { horaInicio: '05:00', horaFin: '07:00' };
+            assert.equal(motivoEn(en('2026-11-12', '18:59'), madrugada), null);
+            assert.equal(motivoEn(en('2026-11-12', '19:00'), madrugada), 'EVENTO_PASADO');
+        });
+
+        it('sin hora de fin no supone una duración: se puede asignar mientras dure el día del evento', () => {
+            for (const datos of [{ horaFin: null }, { horaFin: '18:00' } /* igual al inicio: duración desconocida */]) {
+                assert.equal(motivoEn(en('2026-11-12', '23:59', 59), datos), null);
+                assert.equal(motivoEn(en('2026-11-13', '00:00'), datos), 'EVENTO_PASADO');
+            }
+            assert.equal(motivoDelEvento({ ...evento, horaFin: null, ahora: en('2026-11-13', '00:00') })?.mensaje,
+                'La asignación de personal está cerrada para este evento: su fecha ya pasó.');
+            assert.equal(cierreDeAsignacion(null, '18:00', '20:00'), null);
+        });
+
+        it('calcula cuánto falta para el cierre (0 si ya pasó, null sin fecha)', () => {
+            const cierre = cierreDeAsignacion('2026-11-12', '18:00', '20:00');
+            assert.equal(msHastaElCierre(cierre, en('2026-11-13', '07:00')), 60 * 60 * 1000);
+            const unSegundo = msHastaElCierre(cierre, en('2026-11-13', '07:59', 59)) as number;
+            assert.ok(unSegundo >= 1000 && unSegundo <= 1001, String(unSegundo)); // los segundos son una fracción: ±1 ms
+            assert.equal(msHastaElCierre(cierre, en('2026-11-13', '08:00')), 0);
+            assert.equal(msHastaElCierre(cierre, en('2026-11-14', '08:00')), 0);
+            assert.equal(msHastaElCierre(null, en('2026-11-13', '07:00')), null);
+        });
     });
 
     it('detecta choques, horarios incompletos el mismo día y días no disponibles', () => {
@@ -699,6 +758,94 @@ describe('API de asignación de personal', () => {
         assert.equal((await e.pedir('POST', ruta, { horaFin: '12:00', etapa: 'organizacion', personal: ['x:123'] })).json.codigo, 'PERSONA_INVALIDA');
         assert.equal((await e.pedir('POST', ruta, { horaFin: '12:00', personal: 'todos' })).json.codigo, 'SOLICITUD_INVALIDA');
         assert.equal((await e.pedir('POST', ruta, { horaFin: '08:00', etapa: 'organizacion', personal: [`p:${perfil.sara}`] })).json.codigo, 'HORA_FIN_INVALIDA');
+    });
+});
+
+describe('API: la asignación se cierra 12 horas después del fin del evento', () => {
+    let e: Entorno;
+    const ev: Record<string, number> = {};
+    const perfil: Record<string, string> = {};
+    const HORA_MS = 60 * 60 * 1000;
+
+    /**
+     * Evento confirmado cuyo inicio y fin están a esas horas de este momento (negativas = en el pasado),
+     * en la hora de Colombia. Si el fin cae al día siguiente, la hora de fin queda menor que la de inicio.
+     */
+    async function eventoRelativo(pg: PGlite, nombre: string, inicioHoras: number, finHoras: number): Promise<number> {
+        const { id } = await uno<{ id: number }>(
+            pg,
+            `with t as (select now() at time zone 'America/Bogota' + make_interval(hours => $2::int) as inicio,
+                               now() at time zone 'America/Bogota' + make_interval(hours => $3::int) as fin),
+                  q as (insert into quote (estado, event_type, date, hour, venue_nombre_manual)
+                        select 'finalizada', $1, inicio::date, inicio::time, 'Salón de pruebas' from t
+                        returning id)
+             insert into events (quote_id, confirmed, date, hour, hora_fin)
+             select q.id, true, t.inicio::date, t.inicio::time, t.fin::time from q, t
+             returning id`,
+            [nombre, inicioHoras, finHoras]
+        );
+        return Number(id);
+    }
+
+    const pedirEvento = async (id: number) => (await e.pedir('GET', `/api/eventos/${id}/personal?vista=asignados`)).json;
+
+    before(async () => {
+        const pg = await PGlite.create();
+        await migrar(pg);
+        ev.futuro = await eventoRelativo(pg, 'Futuro', 48, 50);
+        ev.enCurso = await eventoRelativo(pg, 'En curso', -1, 2);
+        ev.hace11 = await eventoRelativo(pg, 'Terminó hace 11 horas', -13, -11);
+        ev.hace13 = await eventoRelativo(pg, 'Terminó hace 13 horas', -15, -13);
+        perfil.ana = await crearCuenta(pg, 'Ana Torres', 'trabajador', '573000000003');
+        perfil.bruno = await crearCuenta(pg, 'Bruno Díaz', 'trabajador', '573000000004');
+        // Bruno trabajó en el desmonte del evento que terminó hace 13 horas
+        await pg.query(`insert into event_staff (event_id, profile_id, etapas) values ($1, $2, '{desmonte}')`, [ev.hace13, perfil.bruno]);
+        e = await levantar(pg);
+    });
+
+    after(async () => {
+        await e.cerrar();
+        await e.pg.close();
+    });
+
+    it('permite asignar a un evento futuro, a uno en curso y a uno que terminó hace menos de 12 horas', async () => {
+        const esperado: [number, number][] = [[ev.futuro, 62 * HORA_MS], [ev.enCurso, 14 * HORA_MS], [ev.hace11, HORA_MS]];
+        for (const [id, falta] of esperado) {
+            const { evento } = await pedirEvento(id);
+            assert.equal(evento.asignable, true, evento.nombre);
+            assert.equal(evento.motivo, null);
+            // Las horas se guardan sin segundos: el cierre puede llegar hasta un minuto antes
+            assert.ok(evento.asignacionCierraEnMs > falta - 2 * 60_000 && evento.asignacionCierraEnMs <= falta, `${evento.nombre}: ${evento.asignacionCierraEnMs}`);
+            const r = await e.pedir('POST', `/api/eventos/${id}/personal`, { horaFin: evento.horaFin, etapa: 'organizacion', personal: [`p:${perfil.ana}`] });
+            assert.equal(r.status, 200, `${evento.nombre}: ${JSON.stringify(r.json)}`);
+        }
+    });
+
+    it('pasadas 12 horas no deja asignar ni quitar por la API, y el evento se sigue consultando', async () => {
+        const consulta = await pedirEvento(ev.hace13);
+        assert.equal(consulta.evento.asignable, false);
+        assert.equal(consulta.evento.motivo.codigo, 'EVENTO_PASADO');
+        assert.equal(consulta.evento.motivo.mensaje, 'La asignación de personal está cerrada para este evento: ya pasaron 12 horas desde que terminó.');
+        assert.equal(consulta.evento.asignacionCierraEnMs, 0);
+        assert.deepEqual(consulta.asignados.map((a: { nombre: string; etapas: string[] }) => [a.nombre, a.etapas]), [['Bruno Díaz', ['desmonte']]]);
+        assert.equal((await e.pedir('GET', `/api/eventos/${ev.hace13}/personal`)).status, 200);
+
+        const antes = await e.pg.query('select profile_id::text, etapas from event_staff where event_id = $1', [ev.hace13]);
+        const horaFin = consulta.evento.horaFin;
+        const intentos: [string, string, unknown?][] = [
+            ['POST', `/api/eventos/${ev.hace13}/personal`, { horaFin, etapa: 'organizacion', personal: [`p:${perfil.ana}`] }],
+            ['POST', `/api/eventos/${ev.hace13}/personal`, { horaFin: horaFin === '23:00' ? '23:30' : '23:00', personal: [] }], // solo la hora de fin
+            ['DELETE', `/api/eventos/${ev.hace13}/personal/${perfil.bruno}`],
+            ['DELETE', `/api/eventos/${ev.hace13}/personal/${perfil.bruno}?etapa=desmonte`]
+        ];
+        for (const [metodo, ruta, cuerpo] of intentos) {
+            const r = await e.pedir(metodo, ruta, cuerpo);
+            assert.equal(r.status, 409, `${metodo} ${ruta}: ${JSON.stringify(r.json)}`);
+            assert.equal(r.json.codigo, 'EVENTO_PASADO');
+        }
+        const despues = await e.pg.query('select profile_id::text, etapas from event_staff where event_id = $1', [ev.hace13]);
+        assert.deepEqual(despues.rows, antes.rows);
+        assert.equal((await pedirEvento(ev.hace13)).evento.horaFin, horaFin);
     });
 });
 
