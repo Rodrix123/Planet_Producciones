@@ -103,10 +103,12 @@ export interface ResultadoCambio extends ConsultaPersonal {
     mensaje: string;
 }
 
-/** "6:00 p. m." */
+/** "6:00 p. m." (con espacios que no se parten: la hora nunca queda cortada entre "p." y "m.") */
 export function formatearHora(hora: string): string {
     const [h = '0', m = '0'] = hora.split(':');
-    return new Date(2000, 0, 1, Number(h), Number(m)).toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit' });
+    return new Date(2000, 0, 1, Number(h), Number(m))
+        .toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit' })
+        .replace(/\s/g, ' ');
 }
 
 /** "Martes, 17 de noviembre de 2026" */
