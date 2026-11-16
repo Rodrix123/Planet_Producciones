@@ -2,20 +2,28 @@
 //
 // Es la pestaña Personal del panel del evento (panel-evento.ts).
 // Ocupa el lugar de la vista de eventos (como el detalle ampliado de Consulta) y se cierra con
-// "Volver al evento". A la izquierda está todo el personal, con buscador, filtros (qué mostrar y
-// tipo de contrato) y su disponibilidad; se eligen una o varias personas y se asignan a la etapa
-// elegida (Carga, Organización o Desmonte). A la derecha, el personal del evento por etapa, donde se
-// puede quitar a alguien de una etapa.
+// "Volver al evento". A la izquierda está todo el personal, con buscador, tipo de contrato y su
+// disponibilidad; se eligen una o varias personas y se asignan a las funciones marcadas en
+// "Asignar a" (Todos, o una o varias de Carga, Organización y Desmonte). A la derecha, el personal
+// del evento por función, con su horario, donde se puede quitar a alguien de una función.
 //
-// Las reglas (evento confirmado, choques de horario, días no disponibles, duplicados) viven solo en
-// el servidor: el panel muestra lo que responde GET /api/eventos/:id/personal y, al escribir la hora
-// de finalización, vuelve a preguntar con esa hora. Los filtros y el orden de la lista (primero
-// quienes están disponibles para la etapa de destino) solo cambian lo que se muestra.
+// La hora de finalización del evento se define en la pestaña Horarios; aquí se usa la que el evento
+// tiene guardada. Las reglas (evento confirmado, choques de horario, días no disponibles, duplicados)
+// viven solo en el servidor: el panel muestra lo que responde GET /api/eventos/:id/personal. Los
+// filtros y el orden de la lista (primero quienes están disponibles para las funciones de destino)
+// solo cambian lo que se muestra.
 
 import { api } from './api';
-import { actualizarDesplegable, conectarDesplegables, htmlDesplegable, type OpcionDesplegable } from './shared/desplegable';
 import { esc } from './shared/panelShell';
-import { disponibleEn, personasVisibles, type VistaPersonal } from './shared/listaPersonal';
+import {
+    alternarDestino,
+    disponibleEn,
+    etapasPendientes,
+    personasVisibles,
+    planDeAsignacion,
+    sonTodas,
+    unirNombres
+} from './shared/listaPersonal';
 import {
     agruparPorEtapa,
     claveContrato,
@@ -30,6 +38,7 @@ import {
     type ConsultaPersonal,
     type EstadoPersona,
     type Etapa,
+    type EventoDto,
     type Motivo,
     type PersonaDto,
     type ResultadoCambio,
@@ -43,6 +52,8 @@ export interface OpcionesAsignacion {
     alCerrar: (huboCambios: boolean) => void | Promise<void>;
     /** Tras asignar o quitar: la respuesta trae el evento (con su hora de finalización) actualizado. */
     alActualizar?: (respuesta: ResultadoCambio) => void;
+    /** Pasar a la pestaña Horarios (el evento todavía no tiene hora de finalización). */
+    irAHorarios?: () => void;
 }
 
 const ETIQUETA_ESTADO: Record<Exclude<EstadoPersona, 'ASIGNADO'>, string> = {
@@ -54,7 +65,6 @@ const ETIQUETA_ESTADO: Record<Exclude<EstadoPersona, 'ASIGNADO'>, string> = {
     SIN_COMPROBAR: 'Sin comprobar'
 };
 
-const ESPERA_HORA_MS = 400;
 /** Máximo de seleccionados con etiqueta en el pie; se muestran menos si no caben enteras (ver ajustarElegidos). */
 const ELEGIDOS_MAXIMO = 4;
 
@@ -66,31 +76,26 @@ let opciones: OpcionesAsignacion = { avisar: () => undefined, alCerrar: () => un
 let datos: ConsultaPersonal | null = null;
 let error: string | null = null;
 const seleccion = new Set<string>();
-let destino: Etapa = 'carga';
+/** Funciones de "Asignar a"; las tres = "Todos". Nunca queda vacía. */
+let destinos: Etapa[] = [...ETAPAS];
 let busqueda = '';
-let vista: VistaPersonal = 'todos';
+let soloDisponibles = false;
 /** '' = todos los contratos. */
 let contrato: TipoContrato | '' = '';
-/** Cada carga lleva un número: si llega una respuesta vieja (otra hora, otro evento), se descarta. */
+/** Cada carga lleva un número: si llega una respuesta vieja (otro evento), se descarta. */
 let generacion = 0;
 let guardando = false;
 let huboCambios = false;
 let quitarPendiente: { perfilId: string; etapa: Etapa | null } | null = null;
-let horaTimer: number | undefined;
 
 const $ = <T extends HTMLElement>(id: string): T | null => document.getElementById(id) as T | null;
-const horaEscrita = (): string => $<HTMLInputElement>('asigHoraFin')?.value ?? '';
 const nombreEtapa = (etapa: Etapa): string => ETAPA_INFO[etapa].nombre;
+const nombresDestino = (): string => unirNombres(destinos.map(nombreEtapa));
+/** El evento tiene hora de finalización: el servidor pudo comprobar la disponibilidad. */
+const conHoraFin = (): boolean => !!datos?.evento.horaFin;
 
-/** ¿Se puede elegir a esta persona para la etapa de destino? Quien ya está en ella, no. */
-const elegible = (p: PersonaDto): boolean => disponibleEn(p, destino);
-
-/** Opciones del desplegable "Mostrar"; la última cambia con la etapa de destino. */
-const opcionesVista = (): OpcionDesplegable<VistaPersonal>[] => [
-    { valor: 'todos', texto: 'Todos', icono: 'fa-solid fa-list' },
-    { valor: 'disponibles', texto: 'Disponibles', icono: 'fa-solid fa-circle asig-icono-disponible' },
-    { valor: 'en-etapa', texto: `Ya en ${nombreEtapa(destino)}`, icono: 'fa-regular fa-calendar' }
-];
+/** ¿Se puede elegir a esta persona? Debe faltarle al menos una de las funciones de destino. */
+const elegible = (p: PersonaDto): boolean => disponibleEn(p, destinos);
 
 /** "MATEO GOMEZ HERNANDEZ" -> "MG" */
 function iniciales(nombre: string): string {
@@ -103,15 +108,15 @@ function nombreCorto(nombre: string): string {
     return nombre.trim().split(/\s+/).slice(0, 2).join(' ');
 }
 
-const hayFiltros = (): boolean => busqueda.trim() !== '' || vista !== 'todos' || contrato !== '';
+const hayFiltros = (): boolean => busqueda.trim() !== '' || soloDisponibles || contrato !== '';
 
 /**
- * Personas que se ven con la búsqueda (nombre o contrato), lo que se elige mostrar y el tipo de
- * contrato; las disponibles para la etapa de destino primero. Se recalcula en cada pintada, así que
- * quien deja de estar disponible (o vuelve a estarlo) cambia de grupo solo.
+ * Personas que se ven con la búsqueda (nombre o contrato), el tipo de contrato y "solo
+ * disponibles"; las disponibles para las funciones de destino primero. Se recalcula en cada
+ * pintada, así que quien deja de estar disponible (o vuelve a estarlo) cambia de grupo solo.
  */
 function filtrados(): PersonaDto[] {
-    return datos ? personasVisibles(datos.personal, { busqueda, contrato, vista, destino }) : [];
+    return datos ? personasVisibles(datos.personal, { busqueda, contrato, soloDisponibles, destinos }) : [];
 }
 
 // ---------- Estructura ----------
@@ -135,47 +140,26 @@ function esqueleto(): string {
         </div>`;
 }
 
-function htmlColumnas(d: ConsultaPersonal): string {
-    const inicio = d.evento.horaInicio ? formatearHora(d.evento.horaInicio) : '—';
+function htmlColumnas(): string {
     return `
         <section class="asig-col asig-col-personal" id="asigColPersonal" aria-labelledby="asigTituloPersonal">
             <div class="asig-col-head">
                 <h3 id="asigTituloPersonal"><i class="fa-solid fa-users" aria-hidden="true"></i> Personal</h3>
-                <span class="asig-pastilla" id="asigConteo"></span>
+                <div class="asig-pastilla asig-conteo" id="asigConteo"></div>
             </div>
             <div class="asig-herramientas">
-                <div class="asig-controles">
-                    <div class="asig-caja asig-hora" data-asig-hora>
-                        <i class="fa-regular fa-clock asig-caja-icono" aria-hidden="true"></i>
-                        <span class="asig-caja-campo">
-                            <label for="asigHoraFin">Hora de finalización</label>
-                            <input type="time" id="asigHoraFin" value="${esc(d.evento.horaFin ?? '')}" required aria-describedby="asigHoraAyuda">
-                        </span>
-                        <button type="button" class="asig-caja-abrir" data-asig-hora-selector aria-label="Elegir la hora de finalización">
-                            <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
-                        </button>
-                    </div>
-                    <div class="asig-inicio">
-                        <span>Inicio: ${esc(inicio)}</span>
-                        <span class="asig-hora-nota" id="asigHoraAyuda"></span>
-                    </div>
-                    <div class="asig-caja asig-contrato">
-                        <i class="fa-solid fa-briefcase asig-caja-icono" aria-hidden="true"></i>
-                        <span class="asig-caja-campo">
-                            <label for="asigContrato">Tipo de contrato</label>
-                            <select id="asigContrato">
-                                <option value="">Todos los contratos</option>
-                                ${TIPOS_CONTRATO.map((t) => `<option value="${t.valor}">${esc(t.nombre)}</option>`).join('')}
-                            </select>
-                        </span>
-                        <i class="fa-solid fa-chevron-down asig-caja-flecha" aria-hidden="true"></i>
-                    </div>
-                </div>
                 <div class="asig-destino">
                     <span class="asig-destino-nombre" id="asigDestinoNombre">Asignar a:</span>
-                    <div class="asig-segmentos" role="group" aria-labelledby="asigDestinoNombre">
-                        ${ETAPAS.map((et) => `<button type="button" class="asig-segmento" data-asig-destino="${et}" aria-pressed="false">
-                            <i class="fa-solid ${ETAPA_INFO[et].icono}" aria-hidden="true"></i> ${nombreEtapa(et)}</button>`).join('')}
+                    <div class="asig-funciones" role="group" aria-labelledby="asigDestinoNombre">
+                        <label class="asig-funcion asig-funcion-todos">
+                            <input type="checkbox" class="asig-check" data-asig-todos>
+                            <span>Todos</span>
+                        </label>
+                        ${ETAPAS.map((et) => `
+                        <label class="asig-funcion">
+                            <input type="checkbox" class="asig-check" data-asig-funcion="${et}">
+                            <span>${nombreEtapa(et)}</span>
+                        </label>`).join('')}
                     </div>
                 </div>
                 <div class="asig-filtros">
@@ -183,15 +167,21 @@ function htmlColumnas(d: ConsultaPersonal): string {
                         <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
                         <input type="search" id="asigBuscar" placeholder="Buscar por nombre, apellido o contrato..." aria-label="Buscar personal por nombre, apellido o contrato" autocomplete="off">
                     </label>
-                    ${htmlDesplegable('asigVista', 'Mostrar', opcionesVista(), vista)}
+                    <span class="asig-contrato">
+                        <select id="asigContrato" aria-label="Tipo de contrato">
+                            <option value="">Todos los contratos</option>
+                            ${TIPOS_CONTRATO.map((t) => `<option value="${t.valor}">${esc(t.nombre)}</option>`).join('')}
+                        </select>
+                        <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                    </span>
                     <label class="asig-sel-visibles">
                         <input type="checkbox" class="asig-check" id="asigSelVisibles">
                         <span>Seleccionar visibles</span>
                     </label>
                 </div>
                 <p class="asig-instruccion"><i class="fa-solid fa-circle-info" aria-hidden="true"></i>
-                    <strong>Selecciona uno o varios empleados para asignarlos.</strong>
-                    <span class="asig-instruccion-extra">Haz clic en la fila o en la casilla para seleccionar.</span></p>
+                    <span>Selecciona uno o varios empleados para asignarlos.
+                    <span class="asig-instruccion-extra">Haz clic en la fila o en la casilla para seleccionar.</span></span></p>
             </div>
             <ul class="asig-lista" id="asigLista" aria-label="Personal para asignar"></ul>
             <div class="asig-pie">
@@ -214,19 +204,18 @@ function htmlMotivos(motivos: Motivo[], clase = 'asig-motivo'): string {
 }
 
 /**
- * Disponibilidad para la etapa de destino. Quien ya está en el evento en otra etapa sale
- * "Disponible" (se le puede sumar esta); sus etapas actuales se ven debajo del nombre.
+ * Disponibilidad para las funciones de destino. Quien ya está en el evento en otra función sale
+ * "Disponible" (se le pueden sumar las que le falten); sus funciones actuales se ven debajo del nombre.
  */
 function estadoDe(p: PersonaDto): { texto: string; clase: string } {
     if (p.estado === 'ASIGNADO') {
-        return (p.etapas ?? []).includes(destino)
-            ? { texto: `Ya en ${nombreEtapa(destino)}`, clase: 'en-etapa' }
-            : { texto: ETIQUETA_ESTADO.DISPONIBLE, clase: 'disponible' };
+        if (etapasPendientes(p, destinos).length > 0) return { texto: ETIQUETA_ESTADO.DISPONIBLE, clase: 'disponible' };
+        return { texto: destinos.length === 1 ? `Ya en ${nombreEtapa(destinos[0])}` : 'Ya asignado', clase: 'en-etapa' };
     }
     return { texto: ETIQUETA_ESTADO[p.estado], clase: p.estado.toLowerCase() };
 }
 
-/** Debajo del nombre: las etapas en las que ya está, o que está en el evento sin etapa. */
+/** Debajo del nombre: las funciones en las que ya está, o que está en el evento sin función. */
 function htmlEtapasDe(p: PersonaDto): string {
     if (p.estado !== 'ASIGNADO') return '';
     const etapas = p.etapas ?? [];
@@ -246,6 +235,8 @@ function htmlFila(p: PersonaDto): string {
     const puede = elegible(p);
     const marcada = seleccion.has(p.clave);
     const estado = estadoDe(p);
+    // Sin hora de finalización el aviso de arriba ya lo explica: no se repite en cada fila.
+    const motivos = p.motivos.filter((m) => m.codigo !== 'SIN_HORA_FIN');
     // La fila se identifica por la clave única de la persona (no por su posición en la lista).
     return `
         <li data-clave="${esc(p.clave)}">
@@ -255,7 +246,7 @@ function htmlFila(p: PersonaDto): string {
                 <span class="asig-persona">
                     <strong>${esc(p.nombre)}</strong>
                     ${htmlEtapasDe(p)}
-                    ${htmlMotivos(p.motivos)}
+                    ${htmlMotivos(motivos)}
                 </span>
                 <span class="asig-fila-etiquetas">
                     ${htmlContrato(p)}
@@ -265,27 +256,41 @@ function htmlFila(p: PersonaDto): string {
         </li>`;
 }
 
+/** "17 disponibles · 21 en total"; "17 disponibles" alterna mostrar solo a quienes se pueden asignar. */
+function htmlConteo(d: ConsultaPersonal): string {
+    const total = d.personal.length;
+    const icono = '<i class="fa-solid fa-users" aria-hidden="true"></i>';
+    if (!conHoraFin()) return `${icono} <span>${total} ${total === 1 ? 'persona' : 'personas'}</span>`;
+    const disponibles = d.personal.filter(elegible).length;
+    const accion = soloDisponibles ? 'Mostrar a todo el personal' : `Mostrar solo los ${disponibles} disponibles`;
+    return `${icono}
+        <button type="button" class="asig-conteo-filtro" data-asig-solo-disponibles aria-pressed="${soloDisponibles}"
+            title="${esc(accion)}" aria-label="${disponibles} disponibles. ${esc(accion)}">${disponibles} ${disponibles === 1 ? 'disponible' : 'disponibles'}</button>
+        <span aria-hidden="true">·</span>
+        <span>${total} en total</span>`;
+}
+
+function htmlListaVacia(): string {
+    const mensaje = busqueda.trim()
+        ? `Nadie coincide con «${esc(busqueda.trim())}».`
+        : soloDisponibles && contrato === ''
+            ? `Nadie está disponible para ${esc(nombresDestino())}.`
+            : hayFiltros()
+                ? 'Nadie coincide con los filtros elegidos.'
+                : 'No hay personal registrado. El personal sale de la nómina activa (menú Empleados).';
+    return `<li class="asig-vacio asig-lista-vacia"><i class="fa-regular fa-face-meh" aria-hidden="true"></i>
+        ${mensaje}
+        ${hayFiltros() ? '<button type="button" class="asig-btn-texto" data-asig-quitar-filtros>Quitar filtros</button>' : ''}</li>`;
+}
+
 function renderLista(): void {
     const lista = $('asigLista');
     if (!lista || !datos) return;
     const visibles = filtrados();
-    lista.innerHTML = visibles.length
-        ? visibles.map(htmlFila).join('')
-        : `<li class="asig-vacio asig-lista-vacia"><i class="fa-regular fa-face-meh" aria-hidden="true"></i>
-            ${busqueda.trim()
-                ? `Nadie coincide con «${esc(busqueda.trim())}».`
-                : vista === 'en-etapa' && contrato === ''
-                    ? `Nadie está asignado a ${esc(nombreEtapa(destino))} todavía.`
-                    : hayFiltros()
-                        ? 'Nadie coincide con los filtros elegidos.'
-                        : 'No hay personal registrado. El personal sale de la nómina activa (menú Empleados).'}
-            ${hayFiltros() ? '<button type="button" class="asig-btn-texto" data-asig-quitar-filtros>Quitar filtros</button>' : ''}</li>`;
-
-    const disponibles = datos.personal.filter(elegible).length;
-    const resumen = datos.horaFinEvaluada
-        ? `${disponibles} disponibles para ${nombreEtapa(destino)} · ${datos.personal.length} en total`
-        : `${datos.personal.length} personas`;
-    $('asigConteo')!.innerHTML = `<i class="fa-solid fa-users" aria-hidden="true"></i> ${esc(resumen)}`;
+    lista.innerHTML = visibles.length ? visibles.map(htmlFila).join('') : htmlListaVacia();
+    const conteo = $('asigConteo')!;
+    conteo.innerHTML = htmlConteo(datos);
+    conteo.classList.toggle('activa', soloDisponibles && conHoraFin());
     renderSeleccionarVisibles(visibles);
 }
 
@@ -331,36 +336,55 @@ function htmlPersonaEtapa(a: AsignadoDto, etapa: Etapa | null): string {
         </li>`;
 }
 
+/**
+ * Horario de cada función. Hoy el evento tiene un solo horario (su hora de inicio y su hora de
+ * finalización) para las tres funciones: es el que se usa para comprobar los choques.
+ */
+function htmlHorarioEtapa(e: EventoDto): string {
+    const hora = (valor: string | null): string => (valor ? esc(formatearHora(valor)) : 'Por definir');
+    return `
+        <p class="asig-etapa-horario">
+            <span><span class="asig-etapa-rotulo">Hora de inicio:</span> ${hora(e.horaInicio)}</span>
+            <span class="asig-etapa-sep" aria-hidden="true">•</span>
+            <span><span class="asig-etapa-rotulo">Hora de fin:</span> ${hora(e.horaFin)}</span>
+        </p>`;
+}
+
 function renderEtapas(): void {
     const contenedor = $('asigEtapas');
     if (!contenedor || !datos) return;
     const asignable = datos.evento.asignable;
     const { porEtapa, sinEtapa } = agruparPorEtapa(datos.asignados);
+    // Con funciones concretas en "Asignar a" se resaltan esas; con "Todos" no se resalta ninguna.
+    const resaltar = asignable && !sonTodas(destinos);
     const tarjetas = ETAPAS.map((et) => {
         const lista = porEtapa[et];
-        const esDestino = asignable && et === destino;
+        const esDestino = resaltar && destinos.includes(et);
         return `
             <section class="asig-etapa${esDestino ? ' destino' : ''}" aria-labelledby="asigEtapa-${et}">
                 <div class="asig-etapa-head">
-                    <i class="fa-solid ${ETAPA_INFO[et].icono} asig-etapa-icono" aria-hidden="true"></i>
-                    <h4 id="asigEtapa-${et}">${nombreEtapa(et)}</h4>
-                    <span class="asig-etapa-conteo" aria-label="${lista.length} asignados">${lista.length}</span>
-                    ${asignable
-                        ? `<button type="button" class="asig-etapa-elegir" data-asig-destino="${et}" aria-pressed="${esDestino}">Asignar aquí</button>`
-                        : ''}
+                    <span class="asig-etapa-nombre">
+                        <i class="fa-solid ${ETAPA_INFO[et].icono} asig-etapa-icono" aria-hidden="true"></i>
+                        <h4 id="asigEtapa-${et}">${nombreEtapa(et)}</h4>
+                        <span class="asig-etapa-conteo" aria-label="${lista.length} asignados">${lista.length}</span>
+                    </span>
+                    ${htmlHorarioEtapa(datos!.evento)}
                 </div>
                 ${lista.length
                     ? `<ul class="asig-etapa-lista">${lista.map((a) => htmlPersonaEtapa(a, et)).join('')}</ul>`
-                    : '<p class="asig-etapa-vacia"><i class="fa-regular fa-calendar" aria-hidden="true"></i> Nadie asignado.</p>'}
+                    : `<div class="asig-etapa-vacia"><i class="fa-solid fa-users" aria-hidden="true"></i>
+                        <p>Aún no hay personal asignado a ${nombreEtapa(et)}.</p></div>`}
             </section>`;
     });
     if (sinEtapa.length > 0) {
         tarjetas.push(`
             <section class="asig-etapa asig-sin-etapa" aria-labelledby="asigEtapa-sin">
                 <div class="asig-etapa-head">
-                    <i class="fa-regular fa-circle-question asig-etapa-icono" aria-hidden="true"></i>
-                    <h4 id="asigEtapa-sin">Sin etapa</h4>
-                    <span class="asig-etapa-conteo" aria-label="${sinEtapa.length} sin etapa">${sinEtapa.length}</span>
+                    <span class="asig-etapa-nombre">
+                        <i class="fa-regular fa-circle-question asig-etapa-icono" aria-hidden="true"></i>
+                        <h4 id="asigEtapa-sin">Sin etapa</h4>
+                        <span class="asig-etapa-conteo" aria-label="${sinEtapa.length} sin etapa">${sinEtapa.length}</span>
+                    </span>
                 </div>
                 <p class="asig-ayuda">Personas asignadas sin una etapa. ${asignable ? 'Puedes asignarles una etapa en cualquier momento.' : ''}</p>
                 <ul class="asig-etapa-lista">${sinEtapa.map((a) => htmlPersonaEtapa(a, null)).join('')}</ul>
@@ -416,23 +440,22 @@ function ajustarElegidos(acciones: HTMLElement): void {
 function renderAcciones(): void {
     const acciones = $('asigAcciones');
     if (!acciones || !datos) return;
-    const hora = horaEscrita();
-    const cambiaHora = hora !== '' && hora !== (datos.evento.horaFin ?? '');
     const n = seleccion.size;
     const texto = guardando
         ? '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> Guardando...'
-        : n === 0 && cambiaHora
-            ? '<i class="fa-regular fa-clock" aria-hidden="true"></i> Guardar hora'
-            : `<i class="fa-solid fa-users" aria-hidden="true"></i> Asignar a ${esc(nombreEtapa(destino))}`;
-    const deshabilitado = guardando || hora === '' || (n === 0 && !cambiaHora);
+        : '<i class="fa-solid fa-users" aria-hidden="true"></i> Asignar a seleccionados';
+    const deshabilitado = guardando || n === 0 || !conHoraFin();
+    const ayuda = !conHoraFin()
+        ? 'Define primero la hora de finalización en la pestaña Horarios'
+        : `Asignar a ${nombresDestino()}`;
     acciones.innerHTML = `
         <span class="asig-seleccion${n === 0 ? ' vacia' : ''}" aria-live="polite">
             <strong class="asig-seleccion-numero">${n}</strong>
-            <span class="asig-seleccion-texto">${n === 1 ? 'empleado<br>seleccionado' : 'empleados<br>seleccionados'}</span>
+            <span class="asig-seleccion-texto">${n === 1 ? 'empleado <br>seleccionado' : 'empleados <br>seleccionados'}</span>
         </span>
         ${htmlElegidos()}
         ${n > 1 ? '<button type="button" class="asig-btn-texto asig-limpiar" data-asig-limpiar title="Quitar toda la selección">Limpiar</button>' : ''}
-        <button type="button" class="asig-btn-primario asig-btn-asignar" data-asig-guardar ${deshabilitado ? 'disabled' : ''}>${texto}</button>`;
+        <button type="button" class="asig-btn-primario asig-btn-asignar" data-asig-guardar title="${esc(ayuda)}" ${deshabilitado ? 'disabled' : ''}>${texto}</button>`;
     ajustarElegidos(acciones);
 }
 
@@ -443,41 +466,49 @@ function renderError(): void {
     el.hidden = !error;
 }
 
+/** "Asignar a": "Todos" marcado equivale a las tres funciones; si no, las funciones elegidas. */
 function renderControles(): void {
-    panel.querySelectorAll<HTMLElement>('.asig-destino [data-asig-destino]').forEach((b) => {
-        b.setAttribute('aria-pressed', String(b.dataset.asigDestino === destino));
+    const todas = sonTodas(destinos);
+    const casillaTodos = panel.querySelector<HTMLInputElement>('[data-asig-todos]');
+    if (casillaTodos) casillaTodos.checked = todas;
+    panel.querySelectorAll<HTMLInputElement>('[data-asig-funcion]').forEach((c) => {
+        c.checked = !todas && destinos.includes(c.dataset.asigFuncion as Etapa);
     });
-    actualizarDesplegable('asigVista', opcionesVista(), vista);
     const selectContrato = $<HTMLSelectElement>('asigContrato');
     if (selectContrato && selectContrato.value !== contrato) selectContrato.value = contrato;
-    selectContrato?.closest('.asig-caja')?.classList.toggle('activa', contrato !== '');
-    const nota = $('asigHoraAyuda');
-    if (nota && datos) {
-        nota.innerHTML = !datos.horaFinEvaluada
-            ? 'Escríbela para comprobar quién está disponible.'
-            : datos.terminaAlDiaSiguiente
-                ? '<i class="fa-regular fa-moon" aria-hidden="true"></i> Termina al día siguiente'
-                : '';
-        nota.classList.toggle('dia-siguiente', !!datos.horaFinEvaluada && datos.terminaAlDiaSiguiente);
+    selectContrato?.closest('.asig-contrato')?.classList.toggle('activa', contrato !== '');
+}
+
+function renderAviso(e: EventoDto): void {
+    const aviso = $('asigAviso')!;
+    if (e.motivo) {
+        aviso.innerHTML = `<p class="asig-aviso"><i class="fa-solid fa-circle-info"></i> ${esc(e.motivo.mensaje)}</p>`;
+    } else if (!e.horaFin) {
+        aviso.innerHTML = `
+            <div class="asig-aviso">
+                <i class="fa-regular fa-clock" aria-hidden="true"></i>
+                <span>Este evento aún no tiene hora de finalización. Defínela en la pestaña Horarios para comprobar quién está disponible y asignar personal.</span>
+                ${opciones.irAHorarios ? '<button type="button" class="asig-btn-texto asig-aviso-accion" data-asig-ir-horarios>Ir a Horarios</button>' : ''}
+            </div>`;
+    } else {
+        aviso.innerHTML = '';
     }
 }
 
-/** Pinta todo salvo los campos de hora y búsqueda, para no interrumpir a quien escribe. */
+/** Pinta todo salvo el campo de búsqueda, para no interrumpir a quien escribe. */
 function render(): void {
     if (!datos) return;
     const e = datos.evento;
-    const partes = [e.nombre, e.fecha ? formatearFecha(e.fecha) : 'Fecha por definir', horario(e.horaInicio, datos.horaFinEvaluada)];
+    const partes = [e.nombre, e.fecha ? formatearFecha(e.fecha) : 'Fecha por definir', horario(e.horaInicio, e.horaFin)];
     if (e.lugar) partes.push(e.lugar);
     $('asigSub')!.textContent = partes.join(' · ');
     $('asigEstadoEvento')!.innerHTML = e.confirmado
         ? '<span class="asig-estado-evento confirmado"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> Confirmado</span>'
         : '<span class="asig-estado-evento"><i class="fa-regular fa-circle" aria-hidden="true"></i> Sin confirmar</span>';
-    $('asigAviso')!.innerHTML = e.motivo
-        ? `<p class="asig-aviso"><i class="fa-solid fa-circle-info"></i> ${esc(e.motivo.mensaje)}</p>`
-        : '';
+    renderAviso(e);
 
     const cuerpo = $('asigCuerpo')!;
-    if (!$('asigColPersonal')) cuerpo.innerHTML = htmlColumnas(datos);
+    if (!$('asigColPersonal')) cuerpo.innerHTML = htmlColumnas();
     $('asigColPersonal')!.hidden = !e.asignable;
     cuerpo.classList.toggle('solo-etapas', !e.asignable);
 
@@ -495,11 +526,10 @@ function renderSeleccion(): void {
 }
 
 // ---------- Datos ----------
-async function cargar(horaFin?: string): Promise<void> {
+async function cargar(): Promise<void> {
     const mia = ++generacion;
     try {
-        const consulta = horaFin ? `?horaFin=${encodeURIComponent(horaFin)}` : '';
-        const respuesta = await api<ConsultaPersonal>('GET', `/api/eventos/${eventoId}/personal${consulta}`);
+        const respuesta = await api<ConsultaPersonal>('GET', `/api/eventos/${eventoId}/personal`);
         if (mia !== generacion) return;
         datos = respuesta;
         podarSeleccion();
@@ -520,7 +550,7 @@ async function cargar(horaFin?: string): Promise<void> {
     }
 }
 
-/** Quien ya no se puede elegir (cambió la hora o la etapa de destino) sale de la selección. */
+/** Quien ya no se puede elegir (cambiaron las funciones de destino o la disponibilidad) sale de la selección. */
 function podarSeleccion(): void {
     if (!datos) return;
     for (const clave of [...seleccion]) {
@@ -529,39 +559,67 @@ function podarSeleccion(): void {
     }
 }
 
+/**
+ * Asigna la selección a las funciones de destino. El servidor recibe una función por solicitud, así
+ * que se envía una por función, cada una solo con quienes todavía no están en ella. La primera es la
+ * que agrega a las personas nuevas al evento y el servidor la guarda todo o nada (si alguien choca con
+ * otro evento, no se guarda nada); las siguientes solo les suman la función.
+ */
 async function guardar(): Promise<void> {
-    const horaFin = horaEscrita();
+    if (!datos || guardando) return;
+    const horaFin = datos.evento.horaFin;
     if (!horaFin) {
-        error = 'Indica la hora de finalización del evento.';
+        error = 'Define la hora de finalización del evento en la pestaña Horarios.';
         renderError();
-        $('asigHoraFin')?.focus();
         return;
     }
+    const elegidas = elegidosEnOrden();
+    const pasos = planDeAsignacion(elegidas, destinos);
+    if (pasos.length === 0) return;
+
     guardando = true;
     error = null;
     renderError();
     renderAcciones();
-    try {
-        const respuesta = await api<ResultadoCambio>('POST', `/api/eventos/${eventoId}/personal`, {
-            horaFin,
-            etapa: destino,
-            personal: [...seleccion]
-        });
-        generacion += 1; // descarta cualquier consulta de disponibilidad que siga en camino
-        datos = respuesta;
-        seleccion.clear();
-        huboCambios = true;
-        guardando = false;
-        render();
-        opciones.alActualizar?.(respuesta);
-        opciones.avisar(respuesta.mensaje);
-    } catch (err) {
-        guardando = false;
-        error = (err as Error).message;
-        renderError();
-        renderAcciones();
-        await cargar(horaFin); // la disponibilidad pudo cambiar: se muestra la actual sin borrar el mensaje
+    const hechas: Etapa[] = [];
+    let ultima: ResultadoCambio | null = null;
+    let falla: { etapa: Etapa; mensaje: string } | null = null;
+    for (const paso of pasos) {
+        try {
+            ultima = await api<ResultadoCambio>('POST', `/api/eventos/${eventoId}/personal`, {
+                horaFin,
+                etapa: paso.etapa,
+                personal: paso.claves
+            });
+            hechas.push(paso.etapa);
+        } catch (err) {
+            falla = { etapa: paso.etapa, mensaje: (err as Error).message };
+            break;
+        }
     }
+    generacion += 1; // descarta cualquier consulta que siga en camino
+    guardando = false;
+    if (ultima) {
+        datos = ultima;
+        huboCambios = true;
+        opciones.alActualizar?.(ultima);
+    }
+
+    if (!falla) {
+        seleccion.clear();
+        render();
+        const n = elegidas.length;
+        opciones.avisar(hechas.length === 1 && ultima
+            ? ultima.mensaje
+            : `Se ${n === 1 ? 'asignó 1 persona' : `asignaron ${n} personas`} a ${unirNombres(hechas.map(nombreEtapa))}.`);
+        return;
+    }
+    error = hechas.length > 0
+        ? `Se asignó a ${unirNombres(hechas.map(nombreEtapa))}, pero no a ${nombreEtapa(falla.etapa)}: ${falla.mensaje}`
+        : falla.mensaje;
+    podarSeleccion();
+    render();
+    await cargar(); // la disponibilidad pudo cambiar: se muestra la actual sin borrar el mensaje
 }
 
 async function quitar(perfilId: string, etapa: Etapa | null): Promise<void> {
@@ -587,7 +645,6 @@ async function quitar(perfilId: string, etapa: Etapa | null): Promise<void> {
 /** Vacía la pestaña; lo que siga en camino ya no se pinta. panel-evento.ts la usa al cerrar el panel. */
 export function cerrarAsignacionPersonal(): void {
     generacion += 1;
-    window.clearTimeout(horaTimer);
     panel.innerHTML = '';
 }
 
@@ -596,9 +653,9 @@ function cerrar(): void {
     void opciones.alCerrar(huboCambios);
 }
 
-/** Cambia de etapa de destino y deja ambas columnas en sintonía. */
-function elegirDestino(etapa: Etapa): void {
-    destino = etapa;
+/** Cambia las funciones de destino y deja ambas columnas en sintonía. */
+function elegirDestinos(nuevos: Etapa[]): void {
+    destinos = nuevos;
     podarSeleccion();
     renderControles();
     renderLista();
@@ -608,7 +665,7 @@ function elegirDestino(etapa: Etapa): void {
 
 function quitarFiltros(): void {
     busqueda = '';
-    vista = 'todos';
+    soloDisponibles = false;
     contrato = '';
     const buscar = $<HTMLInputElement>('asigBuscar');
     if (buscar) buscar.value = '';
@@ -628,24 +685,14 @@ panel.addEventListener('click', (ev) => {
         void cargar();
         return;
     }
-    if (t.closest('[data-asig-hora-selector]')) {
-        const campo = $<HTMLInputElement>('asigHoraFin');
-        campo?.focus();
-        try {
-            campo?.showPicker();
-        } catch {
-            // Navegador sin selector: queda el campo enfocado para escribir la hora.
-        }
+    if (t.closest('[data-asig-ir-horarios]')) {
+        opciones.irAHorarios?.();
         return;
     }
-    if (t.closest('[data-asig-hora]') && !t.closest('input')) {
-        $<HTMLInputElement>('asigHoraFin')?.focus();
-        return;
-    }
-    const botonDestino = t.closest<HTMLElement>('[data-asig-destino]');
-    if (botonDestino?.dataset.asigDestino) {
-        elegirDestino(botonDestino.dataset.asigDestino as Etapa);
-        if (botonDestino.classList.contains('asig-etapa-elegir')) $('asigBuscar')?.focus();
+    if (t.closest('[data-asig-solo-disponibles]')) {
+        soloDisponibles = !soloDisponibles;
+        renderLista();
+        panel.querySelector<HTMLElement>('[data-asig-solo-disponibles]')?.focus();
         return;
     }
     if (t.closest('[data-asig-quitar-filtros]')) {
@@ -689,16 +736,16 @@ panel.addEventListener('click', (ev) => {
     }
 });
 
-// Desplegable "Mostrar": Todos, Disponibles o Ya en [etapa de destino].
-conectarDesplegables(panel, (id, valor) => {
-    if (id !== 'asigVista') return;
-    vista = valor as VistaPersonal;
-    renderControles();
-    renderLista();
-});
-
 panel.addEventListener('change', (ev) => {
     const t = ev.target as HTMLInputElement;
+    if (t.matches('[data-asig-todos]')) {
+        elegirDestinos([...ETAPAS]);
+        return;
+    }
+    if (t.dataset.asigFuncion) {
+        elegirDestinos(alternarDestino(destinos, t.dataset.asigFuncion as Etapa));
+        return;
+    }
     if (t.id === 'asigContrato') {
         contrato = (t as unknown as HTMLSelectElement).value as TipoContrato | '';
         renderControles();
@@ -727,17 +774,9 @@ panel.addEventListener('change', (ev) => {
 
 panel.addEventListener('input', (ev) => {
     const t = ev.target as HTMLElement;
-    if (t.id === 'asigBuscar') {
-        busqueda = (t as HTMLInputElement).value;
-        renderLista();
-        return;
-    }
-    if (t.id !== 'asigHoraFin') return;
-    error = null;
-    renderError();
-    renderAcciones();
-    window.clearTimeout(horaTimer);
-    horaTimer = window.setTimeout(() => void cargar(horaEscrita() || undefined), ESPERA_HORA_MS);
+    if (t.id !== 'asigBuscar') return;
+    busqueda = (t as HTMLInputElement).value;
+    renderLista();
 });
 
 // Al cambiar el tamaño de la ventana (o el zoom), las etiquetas del pie se vuelven a acomodar.
@@ -755,11 +794,8 @@ window.addEventListener('resize', () => {
  */
 export function actualizarAsignacionPersonal(respuesta: ConsultaPersonal): void {
     if (respuesta.evento.id !== eventoId || !$('asigCuerpo')) return;
-    generacion += 1; // descarta cualquier consulta de disponibilidad que siga en camino
-    window.clearTimeout(horaTimer);
+    generacion += 1; // descarta cualquier consulta que siga en camino
     datos = respuesta;
-    const campo = $<HTMLInputElement>('asigHoraFin');
-    if (campo) campo.value = respuesta.evento.horaFin ?? '';
     error = null;
     podarSeleccion();
     render();
@@ -774,9 +810,9 @@ export function abrirAsignacionPersonal(id: number, opts: OpcionesAsignacion): v
     guardando = false;
     huboCambios = false;
     quitarPendiente = null;
-    destino = 'carga';
+    destinos = [...ETAPAS];
     busqueda = '';
-    vista = 'todos';
+    soloDisponibles = false;
     contrato = '';
     seleccion.clear();
     panel.innerHTML = esqueleto();

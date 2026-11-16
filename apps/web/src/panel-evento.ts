@@ -1,7 +1,7 @@
 // Panel del evento que abre "Asignar personal" en el menú Eventos (eventos.ts). Ocupa el lugar de la
 // vista de eventos y se organiza en tres pestañas:
 //   Horarios  horario del evento por tipo de actividad (horarios-evento.ts)
-//   Personal  la asignación de personal (asignacion-personal.ts), igual que antes
+//   Personal  la asignación de personal por función (asignacion-personal.ts)
 //   Resumen   por ahora solo su estructura, para desarrollarla después
 // Cambiar de pestaña solo muestra u oculta cada una: lo que se está editando en las demás se conserva
 // hasta volver al evento. Personal se carga la primera vez que se abre su pestaña.
@@ -80,7 +80,8 @@ function activar(pestana: Pestana, foco: 'pestana' | 'titulo'): void {
                 huboCambios = true;
                 actualizarEventoHorarios(respuesta.evento);
                 alCambiarEvento(respuesta.evento);
-            }
+            },
+            irAHorarios: () => activar('horarios', 'titulo')
         });
     }
 
