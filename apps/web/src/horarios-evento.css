@@ -1,0 +1,750 @@
+/* ---------- Pestaña Horarios del panel del evento (src/horarios-evento.ts) ----------
+   Usa los tonos del panel (variables --asig-* de eventos.css, tomadas de la paleta clara) y el
+   mismo encabezado y botones que la pestaña Personal. */
+
+.hor-contenido {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+#horAviso:empty {
+    display: none;
+}
+
+.hor-cuerpo {
+    display: grid;
+    grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr);
+    gap: 1.25rem;
+    align-items: start;
+}
+
+.hor-card {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-width: 0;
+    padding: 1.25rem 1.4rem;
+    background: var(--asig-superficie);
+    border: 1px solid var(--asig-borde);
+    border-radius: 18px;
+}
+
+/* ----- Encabezado de la tarjeta ----- */
+.hor-card-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.hor-icono-grande {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 3.25rem;
+    height: 3.25rem;
+    font-size: 1.6rem;
+    color: var(--orange-main);
+    background: var(--asig-naranja-suave);
+    border: 1px solid rgba(229, 96, 26, 0.3);
+    border-radius: 14px;
+}
+
+.hor-card-head h3 {
+    font-size: 1.45rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.hor-card-head p {
+    margin-top: 0.25rem;
+    font-size: 0.92rem;
+    line-height: 1.45;
+    color: var(--asig-tenue);
+}
+
+/* ----- Filas: etiqueta a la izquierda y controles a la derecha ----- */
+.hor-fila {
+    display: grid;
+    grid-template-columns: 11.5rem minmax(0, 1fr);
+    align-items: center;
+    gap: 0.75rem 1rem;
+}
+
+.hor-etiqueta {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: var(--text-light);
+}
+
+.hor-etiqueta i {
+    width: 1.3rem;
+    font-size: 1.15rem;
+    text-align: center;
+}
+
+.hor-nota {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    font-size: 0.84rem;
+    line-height: 1.4;
+    color: var(--asig-tenue);
+}
+
+.hor-nota i {
+    margin-top: 0.15rem;
+}
+
+/* ----- Tipos de actividad ----- */
+.hor-tipos {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    padding: 0.75rem 0.85rem;
+    background: rgba(229, 96, 26, 0.035);
+    border: 1px solid var(--asig-borde);
+    border-radius: 14px;
+}
+
+.hor-chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.55rem;
+}
+
+.hor-chips-divisor {
+    width: 1px;
+    height: 1.9rem;
+    margin: 0 0.15rem;
+    background: var(--asig-borde-fuerte);
+}
+
+.hor-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    height: 2.6rem;
+    padding: 0 1.05rem;
+    font: inherit;
+    font-size: 0.93rem;
+    font-weight: 600;
+    color: var(--text-light);
+    background: var(--asig-superficie);
+    border: 1.5px solid var(--asig-borde-fuerte);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.hor-chip i {
+    color: var(--asig-tenue);
+}
+
+.hor-chip:hover {
+    border-color: var(--orange-main);
+}
+
+.hor-chip:focus-visible {
+    outline: 2px solid var(--orange-main);
+    outline-offset: 2px;
+}
+
+.hor-chip-marca {
+    display: none;
+}
+
+.hor-chip[aria-pressed="true"] {
+    color: var(--orange-text);
+    background: var(--asig-naranja-suave);
+    border-color: var(--orange-main);
+}
+
+.hor-chip[aria-pressed="true"] i {
+    color: var(--orange-main);
+}
+
+.hor-chip[aria-pressed="true"] .hor-chip-marca {
+    display: inline;
+}
+
+/* "Todos": naranja sólido con texto tinta cuando están los tres; borde naranja si hay algunos. */
+.hor-chip-todos[aria-pressed="true"] {
+    color: var(--ink);
+    background: var(--orange-main);
+    box-shadow: 0 6px 16px rgba(229, 96, 26, 0.25);
+}
+
+.hor-chip-todos[aria-pressed="true"] i {
+    color: var(--ink);
+}
+
+.hor-chip-todos[aria-pressed="mixed"] {
+    border-color: var(--orange-main);
+    border-style: dashed;
+}
+
+.hor-chip:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* ----- Fecha del evento ----- */
+.hor-fecha {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem 1rem;
+    padding: 0.7rem 1.15rem;
+    font-size: 1rem;
+    background: var(--asig-control);
+    border: 1px solid var(--asig-borde);
+    border-radius: 14px;
+}
+
+.hor-fecha-nota {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.84rem;
+    color: var(--asig-tenue);
+}
+
+/* ----- Horas de inicio y de finalización ----- */
+.hor-horas {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    gap: 1.25rem;
+    padding-top: 0.25rem;
+}
+
+.hor-hora {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+.hor-hora legend {
+    margin-bottom: 0.75rem;
+    padding: 0;
+}
+
+.hor-divisor-v {
+    width: 1px;
+    background: var(--asig-borde);
+}
+
+.hor-controles {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.hor-dos-puntos {
+    font-weight: 700;
+}
+
+.hor-select {
+    position: relative;
+    display: inline-flex;
+}
+
+.hor-select select {
+    height: 2.75rem;
+    min-width: 4.6rem;
+    padding: 0 2.1rem 0 0.95rem;
+    font: inherit;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-light);
+    background: var(--asig-superficie);
+    border: 1px solid var(--asig-borde-fuerte);
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(28, 20, 16, 0.05);
+    appearance: none;
+    cursor: pointer;
+}
+
+.hor-select i {
+    position: absolute;
+    top: 50%;
+    right: 0.8rem;
+    font-size: 0.75rem;
+    color: var(--asig-tenue);
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.hor-select select:hover:not(:disabled) {
+    border-color: var(--orange-main);
+}
+
+.hor-select select:focus-visible {
+    outline: 2px solid var(--orange-main);
+    outline-offset: 2px;
+}
+
+/* Bloqueada (la hora de inicio del evento antes de pulsar "Cambiar"): se lee, pero no se elige. */
+.hor-select select:disabled {
+    color: var(--text-light);
+    background: var(--asig-control);
+    box-shadow: none;
+    cursor: default;
+}
+
+.hor-select:has(select:disabled) i {
+    opacity: 0.4;
+}
+
+.hor-periodo,
+.hor-btn-sec {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    height: 2.75rem;
+    padding: 0 1rem;
+    font: inherit;
+    font-size: 0.93rem;
+    font-weight: 700;
+    color: var(--text-light);
+    background: var(--asig-superficie);
+    border: 1px solid var(--asig-borde-fuerte);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.hor-periodo {
+    min-width: 4.4rem;
+    background: var(--asig-control);
+}
+
+.hor-periodo:hover:not(:disabled),
+.hor-btn-sec:hover:not(:disabled) {
+    border-color: var(--orange-main);
+    background: var(--asig-fila-hover);
+}
+
+.hor-periodo:focus-visible,
+.hor-btn-sec:focus-visible {
+    outline: 2px solid var(--orange-main);
+    outline-offset: 2px;
+}
+
+.hor-periodo:disabled {
+    cursor: default;
+    opacity: 0.75;
+}
+
+.hor-btn-sec:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.hor-cambiar[hidden] {
+    display: none;
+}
+
+.hor-fecha-fin {
+    display: inline-flex;
+    align-items: center;
+    height: 2.75rem;
+    padding: 0 0.9rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+    background: var(--asig-control);
+    border: 1px solid var(--asig-borde);
+    border-radius: 12px;
+}
+
+.hor-fecha-fin[hidden] {
+    display: none;
+}
+
+.hor-fecha-fin.dia-siguiente {
+    color: var(--orange-text);
+    background: var(--asig-naranja-suave);
+    border-color: rgba(229, 96, 26, 0.4);
+}
+
+.hor-ayuda {
+    min-height: 1.15rem;
+    margin-top: 0.45rem;
+    font-size: 0.8rem;
+    color: var(--asig-tenue);
+}
+
+.hor-ayuda.dia-siguiente {
+    color: var(--orange-text);
+}
+
+.hor-ayuda.alerta {
+    color: var(--danger);
+}
+
+/* ----- Ajustes rápidos ----- */
+.hor-fila-ajustes {
+    padding-top: 1rem;
+    border-top: 1px solid var(--asig-borde);
+}
+
+.hor-ajuste-cabeza {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem 1rem;
+}
+
+.hor-modo .asig-segmento {
+    height: 2.35rem;
+    padding: 0 1.15rem;
+    font-size: 0.9rem;
+}
+
+.hor-modo .asig-segmento:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.hor-duracion {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--asig-tenue);
+}
+
+.hor-ajustes {
+    display: grid;
+    grid-template-columns: 11.5rem minmax(0, 1fr);
+    align-items: center;
+    gap: 0.65rem 1rem;
+}
+
+.hor-ajustes-nombre {
+    padding-left: 1.9rem;
+    font-size: 0.88rem;
+    color: var(--asig-tenue);
+}
+
+.hor-ajustes-botones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+}
+
+.hor-ajuste {
+    min-width: 5.4rem;
+    height: 2.4rem;
+    padding: 0 1rem;
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 700;
+    white-space: nowrap;
+    color: var(--text-light);
+    background: var(--asig-superficie);
+    border: 1px solid var(--asig-borde-fuerte);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.hor-ajuste:hover:not(:disabled),
+.hor-ajuste:active:not(:disabled) {
+    color: var(--ink);
+    background: var(--orange-main);
+    border-color: var(--orange-main);
+}
+
+.hor-ajuste:focus-visible {
+    outline: 2px solid var(--orange-main);
+    outline-offset: 2px;
+}
+
+.hor-ajuste:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+}
+
+/* ----- Resumen del horario ----- */
+.hor-resumen-head {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.hor-resumen-head i {
+    font-size: 1.4rem;
+    color: var(--orange-main);
+}
+
+.hor-resumen-head h3 {
+    font-size: 1.35rem;
+    font-weight: 700;
+}
+
+.hor-resumen-lista {
+    margin: 0;
+    overflow: hidden;
+    border: 1px solid var(--asig-borde);
+    border-radius: 14px;
+}
+
+.hor-resumen-lista > div {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.85rem 1rem;
+}
+
+.hor-resumen-lista > div + div {
+    border-top: 1px solid var(--asig-borde);
+}
+
+.hor-resumen-lista > div:first-child {
+    background: linear-gradient(90deg, rgba(229, 96, 26, 0.07), transparent 75%);
+}
+
+.hor-resumen-lista dt {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    font-weight: 700;
+}
+
+.hor-resumen-lista dt i {
+    width: 1.3rem;
+    font-size: 1.1rem;
+    text-align: center;
+    color: var(--orange-main);
+}
+
+.hor-resumen-lista dd {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    font-size: 0.92rem;
+    line-height: 1.35;
+}
+
+.hor-por-definir,
+.hor-ninguno {
+    color: var(--asig-tenue);
+}
+
+.hor-resumen-tipos {
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--asig-borde);
+    border-radius: 14px;
+}
+
+.hor-resumen-tipos h4 {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.7rem;
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.hor-resumen-tipos ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.hor-resumen-tipos li:not(.hor-ninguno) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.4rem 0.85rem;
+    font-size: 0.9rem;
+    font-weight: 700;
+    background: var(--asig-naranja-suave);
+    border-radius: 999px;
+}
+
+.hor-resumen-tipos li i {
+    color: var(--orange-main);
+}
+
+.hor-nota-caja {
+    padding: 0.85rem 1rem;
+    background: rgba(229, 96, 26, 0.05);
+    border: 1px solid rgba(229, 96, 26, 0.22);
+    border-radius: 14px;
+}
+
+.hor-nota-caja i {
+    color: var(--orange-main);
+}
+
+/* ----- Pie con las acciones ----- */
+.hor-pie {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1.25rem;
+    padding: 0.9rem 1.25rem;
+    background: var(--asig-superficie);
+    border: 1px solid var(--asig-borde);
+    border-radius: 18px;
+}
+
+.hor-pie-estado {
+    display: flex;
+    flex: 1 1 18rem;
+    flex-direction: column;
+    gap: 0.35rem;
+    min-width: 0;
+    font-size: 0.86rem;
+    line-height: 1.4;
+}
+
+.hor-estado {
+    color: var(--asig-tenue);
+}
+
+.hor-estado.listo i {
+    color: var(--asig-verde);
+}
+
+.hor-estado.pendiente {
+    color: var(--orange-text);
+}
+
+.hor-borrador {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.6rem;
+    color: var(--asig-tenue);
+}
+
+.hor-borrador[hidden],
+.hor-error[hidden] {
+    display: none;
+}
+
+.hor-pie-botones {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+.hor-btn-guardar {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    height: 2.75rem;
+    padding: 0 1.4rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hor-chip,
+    .hor-periodo,
+    .hor-btn-sec,
+    .hor-ajuste {
+        transition: none;
+    }
+}
+
+/* Escritorio: las acciones quedan siempre a la vista al desplazarse. */
+@media (min-width: 641px) {
+    .hor-pie {
+        position: sticky;
+        bottom: 0.75rem;
+        z-index: 4;
+        box-shadow: 0 10px 28px rgba(28, 20, 16, 0.1);
+    }
+}
+
+@media (max-width: 1100px) {
+    .hor-cuerpo {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 760px) {
+    .hor-fila,
+    .hor-ajustes {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .hor-ajustes-nombre {
+        padding-left: 0;
+    }
+
+    .hor-horas {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .hor-divisor-v {
+        display: none;
+    }
+}
+
+@media (max-width: 640px) {
+    .hor-card {
+        padding: 1rem;
+    }
+
+    .hor-card-head h3 {
+        font-size: 1.25rem;
+    }
+
+    .hor-icono-grande {
+        width: 2.75rem;
+        height: 2.75rem;
+        font-size: 1.3rem;
+    }
+
+    .hor-chips-divisor {
+        display: none;
+    }
+
+    /* Extender/Quitar: dos botones iguales (eventos.css pone tres columnas a .asig-segmentos). */
+    .hor-modo.asig-segmentos {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .hor-ajuste {
+        flex: 1 1 4.5rem;
+        min-width: 0;
+        padding: 0 0.4rem;
+    }
+
+    .hor-resumen-lista > div {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.3rem;
+    }
+
+    /* Un botón por fila, con la acción principal primero. */
+    .hor-pie-botones {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        width: 100%;
+    }
+
+    .hor-btn-guardar {
+        order: -1;
+        justify-content: center;
+    }
+}
