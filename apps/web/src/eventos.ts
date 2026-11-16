@@ -7,7 +7,7 @@ import './eventos.css';
 import { api } from './api';
 import { exigirSesion, rutaPanelPorRol, type SesionActual } from './shared/api';
 import { initPanelLayout } from './shared/layout';
-import { abrirAsignacionPersonal } from './asignacion-personal';
+import { abrirPanelEvento } from './panel-evento';
 import { hidratarBloquePersonal, htmlBloquePersonal } from './personal-evento';
 import type { ConsultaPersonal } from './shared/etapasPersonal';
 
@@ -644,13 +644,14 @@ async function recargarEventos(): Promise<void> {
 }
 
 /**
- * "Asignar personal" abre un panel que ocupa el lugar de la vista de eventos (filtros, lista,
- * calendario y detalle); al volver se muestran de nuevo y, si hubo cambios, se refrescan.
+ * "Asignar personal" abre el panel del evento (pestañas Horarios, Personal y Resumen), que ocupa el
+ * lugar de la vista de eventos (filtros, lista, calendario y detalle); al volver se muestran de nuevo
+ * y, si hubo cambios, se refrescan.
  */
 function abrirPanelPersonal(id: number): void {
     const vista = [document.querySelector<HTMLElement>('.eventos-filtros'), deck, detalle];
     vista.forEach(el => { if (el) el.hidden = true; });
-    abrirAsignacionPersonal(id, {
+    abrirPanelEvento(id, {
         avisar,
         alCerrar: async (huboCambios) => {
             vista.forEach(el => { if (el) el.hidden = false; });

@@ -1,5 +1,6 @@
 // Panel "Asignar personal" del menú Eventos (historia de usuario 2).
 //
+// Es la pestaña Personal del panel del evento (panel-evento.ts).
 // Ocupa el lugar de la vista de eventos (como el detalle ampliado de Consulta) y se cierra con
 // "Volver al evento". A la izquierda está todo el personal, con buscador, filtros (qué mostrar y
 // tipo de contrato) y su disponibilidad; se eligen una o varias personas y se asignan a la etapa
@@ -40,6 +41,8 @@ export interface OpcionesAsignacion {
     avisar: (mensaje: string) => void;
     /** Al volver al evento; `huboCambios` indica si hay que refrescar la lista de eventos. */
     alCerrar: (huboCambios: boolean) => void | Promise<void>;
+    /** Tras asignar o quitar: la respuesta trae el evento (con su hora de finalización) actualizado. */
+    alActualizar?: (respuesta: ResultadoCambio) => void;
 }
 
 const ETIQUETA_ESTADO: Record<Exclude<EstadoPersona, 'ASIGNADO'>, string> = {
@@ -55,7 +58,8 @@ const ESPERA_HORA_MS = 400;
 /** Máximo de seleccionados con etiqueta en el pie; se muestran menos si no caben enteras (ver ajustarElegidos). */
 const ELEGIDOS_MAXIMO = 4;
 
-const panel = document.getElementById('panelAsignacion') as HTMLElement;
+/** La pestaña Personal del panel del evento; panel-evento.ts la muestra u oculta. */
+const panel = document.getElementById('vistaPersonal') as HTMLElement;
 
 let eventoId = 0;
 let opciones: OpcionesAsignacion = { avisar: () => undefined, alCerrar: () => undefined };
@@ -549,6 +553,7 @@ async function guardar(): Promise<void> {
         huboCambios = true;
         guardando = false;
         render();
+        opciones.alActualizar?.(respuesta);
         opciones.avisar(respuesta.mensaje);
     } catch (err) {
         guardando = false;
@@ -571,6 +576,7 @@ async function quitar(perfilId: string, etapa: Etapa | null): Promise<void> {
         podarSeleccion();
         huboCambios = true;
         render();
+        opciones.alActualizar?.(respuesta);
         opciones.avisar(respuesta.mensaje);
     } catch (err) {
         error = (err as Error).message;
@@ -578,11 +584,15 @@ async function quitar(perfilId: string, etapa: Etapa | null): Promise<void> {
     }
 }
 
-function cerrar(): void {
-    generacion += 1; // lo que siga en camino ya no se pinta
+/** Vacía la pestaña; lo que siga en camino ya no se pinta. panel-evento.ts la usa al cerrar el panel. */
+export function cerrarAsignacionPersonal(): void {
+    generacion += 1;
     window.clearTimeout(horaTimer);
-    panel.hidden = true;
     panel.innerHTML = '';
+}
+
+function cerrar(): void {
+    cerrarAsignacionPersonal();
     void opciones.alCerrar(huboCambios);
 }
 
@@ -739,7 +749,23 @@ window.addEventListener('resize', () => {
     }, 120);
 });
 
-/** Abre el panel para un evento y carga su personal. Quien llama oculta la vista de eventos. */
+/**
+ * Otra pestaña guardó la hora de finalización (Horarios): se muestra la respuesta del servidor, que
+ * ya trae el personal con su disponibilidad para la hora nueva.
+ */
+export function actualizarAsignacionPersonal(respuesta: ConsultaPersonal): void {
+    if (respuesta.evento.id !== eventoId || !$('asigCuerpo')) return;
+    generacion += 1; // descarta cualquier consulta de disponibilidad que siga en camino
+    window.clearTimeout(horaTimer);
+    datos = respuesta;
+    const campo = $<HTMLInputElement>('asigHoraFin');
+    if (campo) campo.value = respuesta.evento.horaFin ?? '';
+    error = null;
+    podarSeleccion();
+    render();
+}
+
+/** Abre la pestaña para un evento y carga su personal. panel-evento.ts la muestra. */
 export function abrirAsignacionPersonal(id: number, opts: OpcionesAsignacion): void {
     eventoId = id;
     opciones = opts;
@@ -754,7 +780,6 @@ export function abrirAsignacionPersonal(id: number, opts: OpcionesAsignacion): v
     contrato = '';
     seleccion.clear();
     panel.innerHTML = esqueleto();
-    panel.hidden = false;
     $('asigTitulo')?.focus();
     void cargar();
 }

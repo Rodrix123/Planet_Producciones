@@ -121,8 +121,19 @@
             <div class="detalle-contenido" id="detalleContenido"></div>
         </section>
 
-        <!-- Panel "Asignar personal": ocupa el lugar de la vista de eventos (src/asignacion-personal.ts) -->
-        <section class="asig-panel" id="panelAsignacion" aria-labelledby="asigTitulo" hidden></section>
+        <!-- Panel del evento que abre "Asignar personal": ocupa el lugar de la vista de eventos, con las
+             pestañas Horarios (src/horarios-evento.ts), Personal (src/asignacion-personal.ts) y Resumen
+             (src/panel-evento.ts) -->
+        <section class="asig-panel" id="panelAsignacion" aria-label="Horarios y personal del evento" hidden>
+            <div class="asig-pestanas" role="tablist" aria-label="Secciones del evento">
+                <button type="button" class="asig-pestana" role="tab" id="pestanaHorarios" data-pestana="horarios" aria-controls="vistaHorarios" aria-selected="true">Horarios</button>
+                <button type="button" class="asig-pestana" role="tab" id="pestanaPersonal" data-pestana="personal" aria-controls="vistaPersonal" aria-selected="false" tabindex="-1">Personal</button>
+                <button type="button" class="asig-pestana" role="tab" id="pestanaResumen" data-pestana="resumen" aria-controls="vistaResumen" aria-selected="false" tabindex="-1">Resumen</button>
+            </div>
+            <div class="asig-vista" id="vistaHorarios" role="tabpanel" aria-labelledby="pestanaHorarios"></div>
+            <div class="asig-vista asig-vista-personal" id="vistaPersonal" role="tabpanel" aria-labelledby="pestanaPersonal" hidden></div>
+            <div class="asig-vista" id="vistaResumen" role="tabpanel" aria-labelledby="pestanaResumen" hidden></div>
+        </section>
     </main>
 
     <div id="modal" class="modal" aria-hidden="true">

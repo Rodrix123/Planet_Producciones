@@ -1252,6 +1252,95 @@
     display: none;
 }
 
+/* ----- Pestañas del panel del evento (src/panel-evento.ts): Horarios, Personal y Resumen ----- */
+.asig-pestanas {
+    display: flex;
+    gap: 0.35rem;
+    border-bottom: 1px solid var(--asig-borde);
+}
+
+.asig-pestana {
+    flex-shrink: 0;
+    margin-bottom: -1px;
+    padding: 0.6rem 1.15rem;
+    font: inherit;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-light);
+    background: transparent;
+    border: none;
+    border-radius: 10px 10px 0 0;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.asig-pestana:hover {
+    background: var(--asig-fila-hover);
+}
+
+.asig-pestana:focus-visible {
+    outline: 2px solid var(--orange-main);
+    outline-offset: -2px;
+}
+
+/* Subrayado naranja de la pestaña elegida (sombra interior: no choca con las esquinas redondeadas). */
+.asig-pestana[aria-selected="true"] {
+    color: var(--orange-text);
+    background: var(--asig-naranja-suave);
+    box-shadow: inset 0 -3px 0 var(--orange-main);
+}
+
+/* Cada pestaña apila su encabezado y su contenido como lo hacía el panel antes de tener pestañas. */
+.asig-vista {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    min-width: 0;
+}
+
+.asig-vista[hidden] {
+    display: none;
+}
+
+/* ----- Pestaña Resumen: solo la estructura por ahora ----- */
+.res-cuerpo {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+}
+
+.res-seccion {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-width: 0;
+    padding: 1.1rem 1.25rem;
+    background: var(--asig-superficie);
+    border: 1px solid var(--asig-borde);
+    border-radius: 18px;
+}
+
+.res-seccion h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+}
+
+.res-seccion h3 i {
+    color: var(--orange-main);
+}
+
+.res-vacio {
+    padding: 1.75rem 1rem;
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--asig-tenue);
+    border: 1px dashed var(--asig-borde-fuerte);
+    border-radius: 14px;
+}
+
 /* Con el panel abierto, el contenido usa todo el ancho: sin el tope de 1400 px que style.css pone
    a <main> ni su margen superior, y con un encabezado de página más compacto. */
 .panel-main:has(> .asig-panel:not([hidden])) {
@@ -2683,16 +2772,18 @@
 /* ----- Escritorio con altura suficiente: la página ocupa justo la ventana y cada lista se
    desplaza por dentro, sin alturas fijas (se adapta al zoom y a la resolución). Con menos de
    800 px de alto (zoom alto o portátil de 768 px) la lista quedaría con dos o tres filas, así que
-   ahí la página se desplaza, la lista tiene un tope alto y el pie queda fijo abajo. ----- */
+   ahí la página se desplaza, la lista tiene un tope alto y el pie queda fijo abajo. Solo con la
+   pestaña Personal abierta: Horarios y Resumen se desplazan con la página. ----- */
 @media (min-width: 1001px) and (min-height: 800px) {
-    .panel-main:has(> .asig-panel:not([hidden])) {
+    .panel-main:has(> .asig-panel:not([hidden]) > .asig-vista-personal:not([hidden])) {
         display: flex;
         flex-direction: column;
         height: 100vh;
         height: 100dvh;
     }
 
-    .asig-panel {
+    .asig-panel,
+    .asig-vista-personal {
         flex: 1;
         min-height: 0;
     }
@@ -2727,7 +2818,8 @@
 }
 
 @media (max-width: 1000px) {
-    .asig-cuerpo {
+    .asig-cuerpo,
+    .res-cuerpo {
         grid-template-columns: minmax(0, 1fr);
     }
 }
@@ -2745,6 +2837,12 @@
     .asig-barra .asig-divisor-v,
     .asig-barra-icono {
         display: none;
+    }
+
+    /* Las tres pestañas a lo ancho, del mismo tamaño. */
+    .asig-pestana {
+        flex: 1;
+        padding: 0.6rem 0.5rem;
     }
 
     .asig-estado-evento {
