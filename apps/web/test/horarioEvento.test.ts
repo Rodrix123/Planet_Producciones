@@ -1,7 +1,7 @@
 // Pruebas de la pestaña Horarios del panel del evento: cálculo de horarios (duración, eventos que
-// terminan al día siguiente, ajustes rápidos), selección múltiple de tipos de actividad, qué se
-// guarda con "Guardar y continuar" y el borrador. Son funciones puras: no necesitan navegador ni
-// servidor.
+// terminan al día siguiente, ajustes rápidos), selección múltiple de tipos de actividad, tipo de
+// horario y estado de asignación del resumen, qué se guarda con "Guardar y continuar" y el
+// borrador. Son funciones puras: no necesitan navegador ni servidor.
 //
 // Ejecutar:  npm run test --workspace apps/web
 
@@ -23,14 +23,17 @@ import {
     duracion,
     DURACION_MAXIMA,
     estadoDeTodas,
+    estadosDeAsignacion,
     etiquetaAjuste,
     evaluarGuardado,
     fechaDeFin,
     formatearDuracion,
     formatearFechaCorta,
     formatearHora12,
+    horarioRegistrado,
     MENSAJE_OTRO_INICIO,
     MENSAJE_SOLO_ALGUNOS_TIPOS,
+    nombreDelTipo,
     sumarDias,
     terminaAlDiaSiguiente,
     todasLasEtapas,
@@ -232,6 +235,31 @@ describe('selección múltiple de tipos de actividad', () => {
         assert.equal(estadoDeTodas(alternarEtapa(TODAS, 'organizacion')), 'mixed');
         assert.equal(estadoDeTodas(alternarEtapa(['carga', 'desmonte'], 'organizacion')), 'true');
         assert.equal(todasLasEtapas(['desmonte', 'carga', 'organizacion']), true);
+    });
+});
+
+describe('resumen: tipo de horario y estado de asignación', () => {
+    it('con los tres tipos el horario es "General"; si no, se nombran los elegidos en su orden', () => {
+        assert.equal(nombreDelTipo(TODAS), 'General');
+        assert.equal(nombreDelTipo(['desmonte', 'organizacion', 'carga']), 'General');
+        assert.equal(nombreDelTipo(['organizacion']), 'Organización');
+        assert.equal(nombreDelTipo(['desmonte', 'carga']), 'Carga y Desmonte');
+        assert.equal(nombreDelTipo([]), null);
+    });
+
+    it('un horario está registrado con inicio y finalización distintos, aunque pase la medianoche', () => {
+        assert.equal(horarioRegistrado(h('21:00', '01:00')), true);
+        assert.equal(horarioRegistrado(h('08:08', '18:05')), true);
+        for (const incompleto of [h('21:00', null), h(null, '01:00'), h(null, null), h('21:00', '21:00')]) {
+            assert.equal(horarioRegistrado(incompleto), false, JSON.stringify(incompleto));
+        }
+    });
+
+    it('los tres tipos quedan asignados solo si el evento tiene su horario guardado (es uno solo para los tres)', () => {
+        const estados = (guardado: Horario): string[] => estadosDeAsignacion(guardado).map((x) => `${x.etapa}:${x.estado}`);
+        assert.deepEqual(estados(h('21:00', '01:00')), ['carga:asignado', 'organizacion:asignado', 'desmonte:asignado']);
+        assert.deepEqual(estados(h('21:00', null)), ['carga:sin-asignar', 'organizacion:sin-asignar', 'desmonte:sin-asignar']);
+        assert.deepEqual(estados(h(null, null)), ['carga:sin-asignar', 'organizacion:sin-asignar', 'desmonte:sin-asignar']);
     });
 });
 

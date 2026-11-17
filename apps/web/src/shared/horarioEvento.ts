@@ -6,7 +6,8 @@
 // Si la hora de finalización es menor que la de inicio, el evento termina al día siguiente; si son
 // iguales, el horario no es válido (apps/server/src/asignaciones/reglas.ts, intervaloDe).
 
-import { ETAPAS, type Etapa } from './etapasPersonal';
+import { ETAPA_INFO, ETAPAS, type Etapa } from './etapasPersonal';
+import { unirNombres } from './listaPersonal';
 
 export const MINUTOS_DIA = 24 * 60;
 /** La duración va de 1 minuto a 23 h 59 min: el fin es una hora del día distinta de la de inicio. */
@@ -157,6 +158,36 @@ export function estadoDeTodas(seleccion: readonly Etapa[]): 'true' | 'false' | '
 }
 
 export const mismoHorario = (a: Horario, b: Horario): boolean => a.inicio === b.inicio && a.fin === b.fin;
+
+// ---------- Resumen: tipo de horario y estado de asignación ----------
+
+/**
+ * Nombre del horario que se está definiendo ("Tipo" en la pestaña): "General" si es para los tres
+ * tipos de actividad; si no, los elegidos en su orden ("Carga y Desmonte"); null si no hay ninguno.
+ */
+export function nombreDelTipo(seleccion: readonly Etapa[]): string | null {
+    if (todasLasEtapas(seleccion)) return 'General';
+    const nombres = ETAPAS.filter((e) => seleccion.includes(e)).map((e) => ETAPA_INFO[e].nombre);
+    return nombres.length ? unirNombres(nombres) : null;
+}
+
+/** Un horario está registrado cuando tiene hora de inicio y de finalización, y son distintas. */
+export const horarioRegistrado = (h: Horario): boolean => duracion(h) !== null;
+
+export type EstadoAsignacion = 'asignado' | 'sin-asignar';
+
+/**
+ * "Estado de asignación de horarios": si cada tipo de actividad ya tiene horario guardado en el
+ * servidor. Hoy el evento tiene un solo horario (su hora de inicio y events.hora_fin) para Carga,
+ * Organización y Desmonte, así que los tres comparten estado. Lo que se está editando y el borrador
+ * del navegador no cuentan: todavía no están registrados.
+ *
+ * @param guardado horario que el evento tiene guardado
+ */
+export function estadosDeAsignacion(guardado: Horario): { etapa: Etapa; estado: EstadoAsignacion }[] {
+    const estado: EstadoAsignacion = horarioRegistrado(guardado) ? 'asignado' : 'sin-asignar';
+    return ETAPAS.map((etapa) => ({ etapa, estado }));
+}
 
 // ---------- Qué se puede guardar ----------
 
