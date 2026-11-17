@@ -37,6 +37,7 @@ import {
     de12Horas,
     duracion,
     estadoDeTodas,
+    estadosDeAsignacion,
     etiquetaAjuste,
     evaluarGuardado,
     fechaDeFin,
@@ -240,18 +241,25 @@ function htmlFormulario(e: EventoDto): string {
                 <div class="hor-resumen-head">
                     <i class="fa-regular fa-calendar-check" aria-hidden="true"></i>
                     <h3 id="horTituloResumen">Resumen del horario</h3>
+                    <span class="hor-resumen-divisor" aria-hidden="true"></span>
+                    <span class="hor-tipo" data-hor-tipo></span>
                 </div>
                 <dl class="hor-resumen-lista">
                     <div><dt><i class="fa-regular fa-circle-play" aria-hidden="true"></i> Inicio</dt><dd id="horResumenInicio"></dd></div>
                     <div><dt><i class="fa-regular fa-flag" aria-hidden="true"></i> Finalización</dt><dd id="horResumenFin"></dd></div>
                     <div><dt><i class="fa-regular fa-hourglass-half" aria-hidden="true"></i> Duración estimada</dt><dd id="horResumenDuracion" aria-live="polite"></dd></div>
                 </dl>
-                <div class="hor-resumen-tipos">
-                    <h4><i class="fa-solid fa-list-check" aria-hidden="true"></i> Tipos asignados</h4>
-                    <ul id="horResumenTipos"></ul>
-                </div>
-                <p class="hor-nota hor-nota-caja"><i class="fa-solid fa-circle-info" aria-hidden="true"></i>
-                    En la pestaña Personal, la disponibilidad de cada persona se revisa con el horario general del evento.</p>
+                <section class="hor-bloque" aria-labelledby="horTituloGeneral">
+                    <h4 id="horTituloGeneral"><i class="fa-regular fa-calendar-days" aria-hidden="true"></i> Horario general del evento</h4>
+                    <p class="hor-general"><strong>Desde:</strong> <span id="horGeneralDesde"></span></p>
+                    <p class="hor-general"><strong>Hasta:</strong> <span id="horGeneralHasta"></span></p>
+                    <p class="hor-nota"><i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                        En la pestaña Personal, la disponibilidad de cada persona se revisa con el horario general del evento.</p>
+                </section>
+                <section class="hor-bloque hor-asignacion" aria-labelledby="horTituloAsignacion">
+                    <h4 id="horTituloAsignacion"><i class="fa-solid fa-list-ul" aria-hidden="true"></i> Estado de asignación de horarios</h4>
+                    <ul id="horAsignacion"></ul>
+                </section>
             </aside>
         </div>
 
@@ -295,6 +303,27 @@ function pintarHora(cual: Cual, minutos: number | null, habilitada: boolean): vo
 function htmlFechaYHora(fecha: string | null, minutos: number | null): string {
     if (minutos === null) return '<span class="hor-por-definir">Por definir</span>';
     return `${fecha ? `<span>${esc(formatearFecha(fecha))}</span>` : ''}<strong>${formatearHora12(minutos)}</strong>`;
+}
+
+/** "Domingo, 29 de noviembre de 2026, 8:08 a. m." (horario general del evento). */
+function htmlMomento(fecha: string | null, minutos: number | null): string {
+    if (minutos === null) return '<span class="hor-por-definir">Por definir</span>';
+    return `${fecha ? `${esc(formatearFecha(fecha))}, ` : ''}<strong>${formatearHora12(minutos)}</strong>`;
+}
+
+/** Lo que el evento tiene guardado en el servidor: su horario general y el estado de cada tipo de actividad. */
+function pintarRegistrado(fecha: string | null): void {
+    $('horGeneralDesde')!.innerHTML = htmlMomento(fecha, guardado.inicio);
+    $('horGeneralHasta')!.innerHTML = htmlMomento(fecha ? fechaDeFin(fecha, guardado) : null, guardado.fin);
+    $('horAsignacion')!.innerHTML = estadosDeAsignacion(guardado)
+        .map(({ etapa, estado }) => `
+            <li>
+                <span class="hor-asig-tipo"><i class="fa-solid ${ETAPA_INFO[etapa].icono}" aria-hidden="true"></i> ${ETAPA_INFO[etapa].nombre}</span>
+                ${estado === 'asignado'
+                    ? '<span class="hor-asig-estado asignado"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> Asignado</span>'
+                    : '<span class="hor-asig-estado"><i class="fa-regular fa-circle" aria-hidden="true"></i> Sin asignar</span>'}
+            </li>`)
+        .join('');
 }
 
 function textoAjuste(minutos: number): string {
@@ -392,9 +421,7 @@ function pintar(): void {
     $('horResumenInicio')!.innerHTML = htmlFechaYHora(fecha, horario.inicio);
     $('horResumenFin')!.innerHTML = htmlFechaYHora(fechaFin, horario.fin);
     $('horResumenDuracion')!.innerHTML = textoDuracion ? `<strong>${textoDuracion}</strong>` : '<span class="hor-por-definir">Por definir</span>';
-    $('horResumenTipos')!.innerHTML = etapas.length
-        ? etapas.map((et) => `<li><i class="fa-solid fa-check" aria-hidden="true"></i> ${ETAPA_INFO[et].nombre}</li>`).join('')
-        : '<li class="hor-ninguno">Ningún tipo elegido</li>';
+    pintarRegistrado(fecha);
 
     pintarPie(soloLectura);
 }
