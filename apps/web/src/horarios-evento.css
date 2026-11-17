@@ -30,6 +30,11 @@
     border-radius: 18px;
 }
 
+/* La franja de tipo y duración se acomoda al ancho de la tarjeta, no al de la ventana. */
+.hor-config {
+    container: horario / inline-size;
+}
+
 /* ----- Encabezado de la tarjeta ----- */
 .hor-card-head {
     display: flex;
@@ -220,7 +225,8 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     gap: 1.25rem;
-    padding-top: 0.25rem;
+    padding: 0.25rem 0 0.75rem;
+    border-bottom: 1px solid var(--asig-borde);
 }
 
 .hor-hora {
@@ -391,18 +397,161 @@
     color: var(--danger);
 }
 
-/* ----- Ajustes rápidos ----- */
-.hor-fila-ajustes {
-    padding-top: 1rem;
-    border-top: 1px solid var(--asig-borde);
-}
-
-.hor-ajuste-cabeza {
+/* ----- Tipo y duración del horario: franja al pie de la tarjeta ----- */
+/* Si no cabe en una línea, pasan piezas enteras a la siguiente ("Tipo: General" no se parte). */
+.hor-total {
+    position: relative;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: space-between;
-    gap: 0.6rem 1rem;
+    gap: 0.75rem 1.25rem;
+    min-height: 6.25rem;
+    padding: 1rem 1.5rem;
+    overflow: hidden;
+    background: linear-gradient(90deg, rgba(229, 96, 26, 0.05), rgba(229, 96, 26, 0.12));
+    border: 1px solid rgba(229, 96, 26, 0.16);
+    border-radius: 16px;
+}
+
+/* Círculo decorativo detrás de la ilustración, como en el diseño. */
+.hor-total::before {
+    content: '';
+    position: absolute;
+    right: 1.5rem;
+    bottom: -5rem;
+    width: 11rem;
+    height: 11rem;
+    background: rgba(229, 96, 26, 0.06);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.hor-total-icono {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 3.6rem;
+    height: 3.6rem;
+    font-size: 1.6rem;
+    color: var(--orange-main);
+    background: rgba(229, 96, 26, 0.1);
+    border: 1px solid rgba(229, 96, 26, 0.35);
+    border-radius: 12px;
+}
+
+.hor-total-divisor {
+    flex-shrink: 0;
+    width: 1px;
+    height: 2.25rem;
+    background: rgba(229, 96, 26, 0.25);
+}
+
+.hor-total-dato {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.6rem;
+    font-size: 1.45rem;
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+/* "General", o los tipos elegidos: también va en el encabezado del resumen. */
+.hor-tipo {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.3rem 0.85rem;
+    font-weight: 700;
+    color: var(--text-light);
+    background: rgba(229, 96, 26, 0.16);
+    border-radius: 10px;
+}
+
+.hor-tipo.vacio {
+    font-weight: 600;
+    color: var(--asig-tenue);
+    background: var(--asig-control);
+}
+
+.hor-total-ilustracion {
+    position: relative;
+    flex-shrink: 0;
+    margin: 0 0.85rem 0 auto;
+    font-size: 3.6rem;
+    line-height: 1;
+    color: rgba(229, 96, 26, 0.5);
+}
+
+/* El reloj tapa una esquina del calendario. */
+.hor-total-reloj {
+    position: absolute;
+    right: -0.9rem;
+    bottom: -0.6rem;
+    font-size: 2rem;
+    color: var(--orange-main);
+    background: var(--asig-superficie);
+    border-radius: 50%;
+}
+
+/* ----- Ajustes rápidos: plegados bajo la franja (la duración ya se ve en ella) ----- */
+.hor-plegable > summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-height: 2.5rem;
+    padding: 0.4rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-light);
+    list-style: none;
+    border: 1px solid var(--asig-borde-fuerte);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.hor-plegable > summary::-webkit-details-marker {
+    display: none;
+}
+
+.hor-plegable > summary i {
+    color: var(--orange-main);
+}
+
+.hor-plegable > summary:hover {
+    border-color: var(--orange-main);
+    background: var(--asig-fila-hover);
+}
+
+.hor-plegable > summary:focus-visible {
+    outline: 2px solid var(--orange-main);
+    outline-offset: 2px;
+}
+
+.hor-plegable-flecha {
+    font-size: 0.75rem;
+    transition: transform 0.15s;
+}
+
+.hor-plegable[open] .hor-plegable-flecha {
+    transform: rotate(180deg);
+}
+
+.hor-plegable-cuerpo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    margin-top: 0.75rem;
+    padding: 1rem 1.15rem;
+    background: rgba(229, 96, 26, 0.035);
+    border: 1px solid var(--asig-borde);
+    border-radius: 14px;
+}
+
+.hor-modo {
+    align-self: flex-start;
 }
 
 .hor-modo .asig-segmento {
@@ -416,26 +565,20 @@
     opacity: 0.6;
 }
 
-.hor-duracion {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    font-size: 0.88rem;
-    font-weight: 600;
-    color: var(--asig-tenue);
-}
-
+/* Cada grupo de botones bajo su nombre: así caben en una fila también con la tarjeta angosta. */
 .hor-ajustes {
     display: grid;
-    grid-template-columns: 11.5rem minmax(0, 1fr);
-    align-items: center;
-    gap: 0.65rem 1rem;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.45rem;
 }
 
 .hor-ajustes-nombre {
-    padding-left: 1.9rem;
     font-size: 0.88rem;
     color: var(--asig-tenue);
+}
+
+.hor-ajustes-nombre:not(:first-child) {
+    margin-top: 0.4rem;
 }
 
 .hor-ajustes-botones {
@@ -475,6 +618,63 @@
 .hor-ajuste:disabled {
     cursor: not-allowed;
     opacity: 0.4;
+}
+
+/* Franja de tipo y duración, y botón de los ajustes, según el ancho de la tarjeta (.hor-config). */
+@container horario (max-width: 760px) {
+    .hor-total-dato {
+        font-size: 1.25rem;
+    }
+
+    .hor-total-ilustracion {
+        font-size: 2.9rem;
+    }
+
+    .hor-total-reloj {
+        font-size: 1.6rem;
+    }
+}
+
+@container horario (max-width: 640px) {
+    .hor-total {
+        min-height: 0;
+        padding: 0.9rem 1.1rem;
+    }
+
+    .hor-total-ilustracion {
+        display: none;
+    }
+
+    .hor-total-dato {
+        font-size: 1.2rem;
+    }
+}
+
+@container horario (max-width: 440px) {
+    .hor-total-divisor {
+        display: none;
+    }
+
+    .hor-total-icono {
+        width: 2.75rem;
+        height: 2.75rem;
+        font-size: 1.25rem;
+    }
+
+    /* Muy angosto: un tipo largo ("Organización y Desmonte") puede pasar a la línea siguiente. */
+    .hor-total-dato {
+        white-space: normal;
+    }
+
+    /* El botón de los ajustes ocupa el ancho: si el texto pasa a dos líneas, no queda en una píldora. */
+    .hor-plegable > summary {
+        display: flex;
+        border-radius: 14px;
+    }
+
+    .hor-plegable-flecha {
+        margin-left: auto;
+    }
 }
 
 /* ----- Resumen del horario ----- */
@@ -661,7 +861,9 @@
     .hor-chip,
     .hor-periodo,
     .hor-btn-sec,
-    .hor-ajuste {
+    .hor-ajuste,
+    .hor-plegable > summary,
+    .hor-plegable-flecha {
         transition: none;
     }
 }
@@ -683,13 +885,8 @@
 }
 
 @media (max-width: 760px) {
-    .hor-fila,
-    .hor-ajustes {
+    .hor-fila {
         grid-template-columns: minmax(0, 1fr);
-    }
-
-    .hor-ajustes-nombre {
-        padding-left: 0;
     }
 
     .hor-horas {

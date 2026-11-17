@@ -44,6 +44,7 @@ import {
     formatearFechaCorta,
     formatearHora12,
     mismoHorario,
+    nombreDelTipo,
     terminaAlDiaSiguiente,
     todasLasEtapas,
     DURACION_MAXIMA,
@@ -182,7 +183,7 @@ function htmlFormulario(e: EventoDto): string {
 
                 <div class="hor-horas">
                     <fieldset class="hor-hora">
-                        <legend class="hor-etiqueta"><i class="fa-regular fa-circle-play" aria-hidden="true"></i> Hora de inicio</legend>
+                        <legend class="hor-etiqueta"><i class="fa-regular fa-clock" aria-hidden="true"></i> Hora de inicio</legend>
                         <div class="hor-controles">
                             ${htmlControlesHora('inicio', periodoInicio)}
                             <button type="button" class="hor-btn-sec hor-cambiar" data-hor-cambiar-inicio></button>
@@ -200,24 +201,39 @@ function htmlFormulario(e: EventoDto): string {
                     </fieldset>
                 </div>
 
-                <div class="hor-fila hor-fila-ajustes">
-                    <span class="hor-etiqueta" id="horEtiquetaAjuste"><i class="fa-solid fa-circle-plus" aria-hidden="true"></i> Ajustar tiempo desde el inicio</span>
-                    <div class="hor-ajuste-cabeza">
+                <div class="hor-total">
+                    <span class="hor-total-icono" aria-hidden="true"><i class="fa-solid fa-hourglass-half"></i></span>
+                    <span class="hor-total-divisor" aria-hidden="true"></span>
+                    <p class="hor-total-dato">Tipo: <span class="hor-tipo" data-hor-tipo></span></p>
+                    <span class="hor-total-divisor" aria-hidden="true"></span>
+                    <p class="hor-total-dato" id="horTotalDuracion"></p>
+                    <span class="hor-total-ilustracion" aria-hidden="true">
+                        <i class="fa-regular fa-calendar-days"></i>
+                        <i class="fa-regular fa-clock hor-total-reloj"></i>
+                    </span>
+                </div>
+
+                <details class="hor-plegable">
+                    <summary>
+                        <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+                        <span id="horEtiquetaAjuste">Ajustar tiempo desde el inicio</span>
+                        <i class="fa-solid fa-chevron-down hor-plegable-flecha" aria-hidden="true"></i>
+                    </summary>
+                    <div class="hor-plegable-cuerpo">
                         <div class="asig-segmentos hor-modo" role="group" aria-labelledby="horEtiquetaAjuste">
                             <button type="button" class="asig-segmento" data-hor-modo="extender" aria-pressed="true">
                                 <i class="fa-solid fa-arrow-up" aria-hidden="true"></i> Extender</button>
                             <button type="button" class="asig-segmento" data-hor-modo="quitar" aria-pressed="false">
                                 <i class="fa-solid fa-arrow-down" aria-hidden="true"></i> Quitar</button>
                         </div>
-                        <span class="hor-duracion" id="horDuracion"></span>
+                        <div class="hor-ajustes">
+                            <span class="hor-ajustes-nombre">Ajustar por minutos</span>
+                            <div class="hor-ajustes-botones">${AJUSTES_MINUTOS.map(htmlBotonAjuste).join('')}</div>
+                            <span class="hor-ajustes-nombre">Ajustar por horas</span>
+                            <div class="hor-ajustes-botones">${AJUSTES_HORAS.map(htmlBotonAjuste).join('')}</div>
+                        </div>
                     </div>
-                </div>
-                <div class="hor-ajustes">
-                    <span class="hor-ajustes-nombre">Ajustar por minutos</span>
-                    <div class="hor-ajustes-botones">${AJUSTES_MINUTOS.map(htmlBotonAjuste).join('')}</div>
-                    <span class="hor-ajustes-nombre">Ajustar por horas</span>
-                    <div class="hor-ajustes-botones">${AJUSTES_HORAS.map(htmlBotonAjuste).join('')}</div>
-                </div>
+                </details>
             </section>
 
             <aside class="hor-card hor-resumen" aria-labelledby="horTituloResumen">
@@ -363,8 +379,14 @@ function pintar(): void {
     });
     const minutosDuracion = duracion(horario);
     const textoDuracion = minutosDuracion === null ? null : formatearDuracion(minutosDuracion);
-    const duracionCorta = $('horDuracion');
-    if (duracionCorta) duracionCorta.innerHTML = textoDuracion ? `<i class="fa-regular fa-hourglass-half" aria-hidden="true"></i> Duración: ${textoDuracion}` : '';
+
+    // Tipo de horario ("General" con los tres tipos) y duración
+    const tipo = nombreDelTipo(etapas);
+    raiz.querySelectorAll<HTMLElement>('[data-hor-tipo]').forEach((el) => {
+        el.textContent = tipo ?? 'Sin elegir';
+        el.classList.toggle('vacio', !tipo);
+    });
+    $('horTotalDuracion')!.innerHTML = `Duración: ${textoDuracion ?? '<span class="hor-por-definir">Por definir</span>'}`;
 
     // Resumen
     $('horResumenInicio')!.innerHTML = htmlFechaYHora(fecha, horario.inicio);
