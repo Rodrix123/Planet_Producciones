@@ -1,6 +1,6 @@
 // Pruebas de la pestaña Horarios del panel del evento: cálculo de horarios (duración, eventos que
 // terminan al día siguiente, ajustes rápidos), selección múltiple de tipos de actividad, tipo de
-// horario y estado de asignación del resumen, qué se guarda con "Guardar y continuar" y el
+// horario y estado de asignación del resumen, qué se guarda con "Guardar y confirmar" y el
 // borrador. Son funciones puras: no necesitan navegador ni servidor.
 //
 // Ejecutar:  npm run test --workspace apps/web
@@ -263,7 +263,7 @@ describe('resumen: tipo de horario y estado de asignación', () => {
     });
 });
 
-describe('"Guardar y continuar": qué se puede guardar', () => {
+describe('"Guardar y confirmar": qué se puede guardar', () => {
     const guardado = h('21:00', '01:00');
 
     it('con los tres tipos y la hora de inicio del evento, guarda la nueva hora de finalización', () => {

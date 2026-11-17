@@ -5,9 +5,10 @@
 // cálculos (duración, medianoche, ajustes y qué se puede guardar) están en shared/horarioEvento.ts.
 //
 // Guardado: hoy la base tiene un solo horario por evento (su hora de inicio y events.hora_fin), el
-// mismo para los tres tipos. "Guardar y continuar" guarda la hora de finalización con el endpoint
+// mismo para los tres tipos. "Guardar y confirmar" guarda la hora de finalización con el endpoint
 // que ya usa la pestaña Personal (POST /api/eventos/:id/personal, sin personas), así que el servidor
-// aplica sus mismas reglas (evento confirmado, plazo de 12 horas, choques del personal ya asignado).
+// aplica sus mismas reglas (evento confirmado, plazo de 12 horas, choques del personal ya asignado),
+// y luego pasa a la pestaña Personal, como antes.
 // Un horario solo para algunos tipos, o con otra hora de inicio, todavía no tiene dónde guardarse en
 // la base: queda como borrador en el navegador (shared/borradorHorario.ts).
 
@@ -63,7 +64,7 @@ export interface OpcionesHorarios {
     alCargarEvento: (evento: EventoDto) => void;
     /** Se guardó en el servidor: la respuesta trae el evento y su personal ya actualizados. */
     alGuardar: (respuesta: ResultadoCambio) => void;
-    /** Después de "Guardar y continuar": pasar a la pestaña Personal. */
+    /** Después de "Guardar y confirmar": pasar a la pestaña Personal. */
     alContinuar: () => void;
 }
 
@@ -461,7 +462,7 @@ function pintarPie(soloLectura: boolean): void {
         guardar.disabled = soloLectura || guardando || resultado.estado === 'invalido' || resultado.estado === 'pendiente';
         guardar.innerHTML = guardando
             ? '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> Guardando...'
-            : '<i class="fa-regular fa-floppy-disk" aria-hidden="true"></i> Guardar y continuar';
+            : '<i class="fa-solid fa-file-circle-check" aria-hidden="true"></i> Guardar y confirmar';
     }
     const botonBorrador = raiz.querySelector<HTMLButtonElement>('[data-hor-borrador]');
     if (botonBorrador) botonBorrador.disabled = soloLectura || guardando;
@@ -554,7 +555,7 @@ function descartarBorrador(): void {
     opciones.avisar('Se descartó el borrador del horario.');
 }
 
-async function guardarYContinuar(): Promise<void> {
+async function guardarYConfirmar(): Promise<void> {
     const resultado = evaluarGuardado(horario, etapas, guardado);
     if (resultado.estado === 'invalido' || resultado.estado === 'pendiente') {
         error = resultado.mensaje;
@@ -655,7 +656,7 @@ raiz.addEventListener('click', (ev) => {
         descartarBorrador();
         return;
     } else if (boton.matches('[data-hor-guardar]')) {
-        void guardarYContinuar();
+        void guardarYConfirmar();
         return;
     } else {
         return;

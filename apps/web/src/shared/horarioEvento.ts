@@ -192,7 +192,7 @@ export function estadosDeAsignacion(guardado: Horario): { etapa: Etapa; estado: 
 // ---------- Qué se puede guardar ----------
 
 /**
- * Lo que pasa al pulsar "Guardar y continuar":
+ * Lo que pasa al pulsar "Guardar y confirmar":
  * - invalido:    falta algo o el horario no tiene sentido (no se envía nada).
  * - pendiente:   es válido, pero la base de datos todavía no tiene dónde guardarlo (horario solo para
  *                algunos tipos de actividad, u otra hora de inicio). Se puede guardar como borrador.
